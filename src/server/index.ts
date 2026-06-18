@@ -1,4 +1,3 @@
-import http from "http";
 import express from "express";
 import cors from "cors";
 import { Server } from "colyseus";
@@ -7,23 +6,27 @@ import { RichupRoom } from "./RichupRoom";
 
 const port = Number(process.env.PORT || 2567);
 
-const app = express();
-
-app.use(cors({ origin: "*" }));
-app.use(express.json());
-
-app.get("/health", (_req, res) => {
-  res.send("Odogwu Empire Server is running!");
-});
-
-const httpServer = http.createServer(app);
-
+// Initialize Colyseus Game Server.
+// The `express` callback receives the transport's Express app BEFORE the
+// matchmaking routes are registered, so middleware added here (CORS, JSON)
+// applies to /matchmake/* as well.
 const gameServer = new Server({
-  transport: new WebSocketTransport({ server: httpServer }),
+  transport: new WebSocketTransport(),
+  express: (app) => {
+    app.use(cors({ origin: "*" }));
+    app.use(express.json());
+
+    // Health check endpoint
+    app.get("/health", (_req, res) => {
+      res.send("Odogwu Empire Server is running!");
+    });
+  },
 });
 
+// Register the game room
 gameServer.define("richup", RichupRoom);
 
-httpServer.listen(port, () => {
+// Start listening
+gameServer.listen(port).then(() => {
   console.log(`Odogwu Empire Server is listening on http://localhost:${port}`);
 });

@@ -128,7 +128,7 @@ export default function App() {
 
       newLogs.forEach((logLine: string) => {
         if (logLine === "Game started.") {
-          toast.success("🇳🇬 Game started! Let the hustle begin!", { toastId: "game-start", autoClose: 3000 });
+          toast.success(" Game started! Let the hustle begin!", { toastId: "game-start", autoClose: 3000 });
           return;
         }
 
@@ -335,7 +335,6 @@ export default function App() {
       {/* Header */}
       <header className="app-header">
         <div className="logo-container">
-          <span className="logo-emoji">🇳🇬</span>
           <span className="logo-text">Odogwu Empire</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -538,7 +537,7 @@ export default function App() {
                   disabled={roomState.lobbyPlayers.size < 2}
                   onClick={startGame}
                 >
-                  {roomState.lobbyPlayers.size < 2 ? "Need at least 2 players" : "Start Game 🇳🇬"}
+                  {roomState.lobbyPlayers.size < 2 ? "Need at least 2 players" : "Start Game "}
                 </button>
               ) : (
                 <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem", fontStyle: "italic" }}>
@@ -725,7 +724,7 @@ export default function App() {
                     >👑</motion.span>
                     <div>
                       <span className="winner-name">{winner.name}</span>
-                      {winner.id === room.sessionId ? " — You don hammer! 🇳🇬" : " is the Odogwu! 🇳🇬"}
+                      {winner.id === room.sessionId ? " — You don hammer! " : " is the Odogwu! "}
                     </div>
                     <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", fontStyle: "italic", marginTop: "0.25rem" }}>
                       {winner.id === room.sessionId

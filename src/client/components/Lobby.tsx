@@ -88,7 +88,6 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 200, damping: 18, delay: 0.1 }}
         >
-          <span className="lobby-flag">🇳🇬</span>
           <h1 className="lobby-logo-text">Odogwu Empire</h1>
         </motion.div>
         <motion.p

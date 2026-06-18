@@ -6,9 +6,6 @@ services:
     buildCommand: npm install --legacy-peer-deps
     startCommand: npm run start
     healthCheckPath: /health
-    envVars:
-      - key: NODE_ENV
-        value: production
 
 # NOTE: The client (Vite static site) must be created manually on Render.
 # Render Blueprint does not support type: static.

@@ -5,7 +5,7 @@ import { formatNaira } from "../data/board";
 describe("Odogwu Empire Console Playground", () => {
   it("runs a simulated game play-through", () => {
     console.log("\n=======================================================");
-    console.log("      🇳🇬   NAIJA RICHUP GAME SIMULATION   🇳🇬           ");
+    console.log("         NAIJA RICHUP GAME SIMULATION              ");
     console.log("=======================================================\n");
 
     const playerIds = ["Chidi", "Funmi", "Tunde"];
