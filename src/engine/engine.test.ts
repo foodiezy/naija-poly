@@ -550,4 +550,69 @@ describe("Game Engine", () => {
       expect(nextState.phase).toBe("game-over");
     });
   });
+
+  describe("Lobby Settings & Retheming", () => {
+    it("supports custom starting cash in createGame", () => {
+      const state = createGame(["p1", "p2"], { startingCash: 1_000_000 });
+      expect(state.players[0].cash).toBe(1_000_000);
+      expect(state.settings.startingCash).toBe(1_000_000);
+    });
+
+    it("redirects tax payments to freeParkingPot when enabled", () => {
+      const state = createGame(["p1", "p2"], { freeParkingJackpot: true });
+      state.players[0].position = 2; // Esusu Box
+      state.currentPlayerIndex = 0;
+
+      const mockRng = MockRNG.makeRoll(1, 1); // roll 2 -> lands on pos 4 (FIRS Income Tax, 200k)
+      const nextState = applyAction(state, "p1", { type: "ROLL" }, mockRng.getRNG());
+
+      expect(nextState.freeParkingPot).toBe(200_000);
+      expect(nextState.players[0].cash).toBe(STARTING_CASH - 200_000);
+      expect(nextState.log[nextState.log.length - 1]).toContain("added to Bukka Rest Stop Pot");
+    });
+
+    it("pays out freeParkingPot on Bukka Rest Stop landing", () => {
+      const state = createGame(["p1", "p2"], { freeParkingJackpot: true });
+      state.freeParkingPot = 350_000;
+      state.players[0].position = 18; // Calabar (pos 18)
+      state.currentPlayerIndex = 0;
+
+      const mockRng = MockRNG.makeRoll(1, 1); // roll 2 -> lands on pos 20 (Bukka Rest Stop)
+      const nextState = applyAction(state, "p1", { type: "ROLL" }, mockRng.getRNG());
+
+      expect(nextState.players[0].cash).toBe(STARTING_CASH + 350_000);
+      expect(nextState.freeParkingPot).toBe(0);
+      expect(nextState.log[nextState.log.length - 1]).toContain("collected the Bukka Pot of ₦350,000");
+    });
+
+    it("ends game and calculates winner by net worth when turn limit is reached", () => {
+      // Set turn limit to 1 round
+      const state = createGame(["p1", "p2"], { turnLimit: 1 });
+      
+      // Let's make p1 own surulere (pos 9, price 120k) and built a Bungalow (houseCost 50k)
+      state.tiles[9] = { ownerId: "p1", houses: 1, mortgaged: false };
+      state.players[0].cash = 1_500_000 - 120_000 - 50_000;
+      
+      // Let's make p1 own another unmortgaged property to ensure p1 has higher net worth
+      state.tiles[1] = { ownerId: "p1", houses: 0, mortgaged: false }; // Ajegunle (price 60k)
+      state.players[0].cash -= 60_000;
+      state.players[0].cash += 5_000; // p1 has 1,505,000 net worth
+      
+      state.currentPlayerIndex = 0;
+      state.phase = "awaiting-end-turn";
+      
+      // End p1's turn
+      let nextState = applyAction(state, "p1", { type: "END_TURN" });
+      expect(nextState.currentPlayerIndex).toBe(1);
+      expect(nextState.currentTurn).toBe(1);
+      
+      // Now it's p2's turn. End p2's turn. This completes Round 1 and wraps around back to p1 (index 0 < current index 1).
+      nextState.phase = "awaiting-end-turn";
+      const finalState = applyAction(nextState, "p2", { type: "END_TURN" });
+      
+      expect(finalState.phase).toBe("game-over");
+      expect(finalState.winnerId).toBe("p1"); // p1 wins due to higher net worth
+      expect(finalState.log[finalState.log.length - 1]).toContain("wins the game with a net worth of ₦1,505,000");
+    });
+  });
 });

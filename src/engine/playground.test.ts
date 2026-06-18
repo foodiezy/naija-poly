@@ -2,7 +2,7 @@ import { describe, it } from "vitest";
 import { createGame, applyAction } from "./engine";
 import { formatNaira } from "../data/board";
 
-describe("Naija Richup Console Playground", () => {
+describe("Odogwu Empire Console Playground", () => {
   it("runs a simulated game play-through", () => {
     console.log("\n=======================================================");
     console.log("      🇳🇬   NAIJA RICHUP GAME SIMULATION   🇳🇬           ");

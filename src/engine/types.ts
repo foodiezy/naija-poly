@@ -43,6 +43,12 @@ export interface AuctionState {
   currentPlayerIndex: number;
 }
 
+export interface GameSettings {
+  startingCash: number;
+  turnLimit: number; // 0 = unlimited
+  freeParkingJackpot: boolean;
+}
+
 export interface GameState {
   players: Player[];
   currentPlayerIndex: number;
@@ -59,6 +65,9 @@ export interface GameState {
   auctionState?: AuctionState | null;
   activeTrade?: TradeOffer | null;
   owedToId?: PlayerId | "bank" | null;
+  settings: GameSettings;
+  currentTurn: number; // current round number
+  freeParkingPot: number; // Bukka Rest Stop jackpot pot
 }
 
 // ---- Actions the reducer will accept -------------------------------------

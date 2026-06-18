@@ -4,7 +4,7 @@ Project context for Claude Code. This file is read automatically at the start
 of every session — keep it accurate and it steers the agent's work.
 
 ## What this is
-A Nigerian-themed, Richup/Monopoly-style **online multiplayer** board game.
+**Odogwu Empire** — A Nigerian-themed, Richup/Monopoly-style **online multiplayer** board game.
 Players roll dice, buy Nigerian properties (Ajegunle → Banana Island), build
 houses/hotels, pay rent in Naira, draw Chance/Esusu cards (written in Pidgin),
 and try to bankrupt each other.

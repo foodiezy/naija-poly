@@ -17,7 +17,7 @@ import {
   HOTEL_SUPPLY,
   type PropertyTile,
 } from "../data/board";
-import type { Action, GameState, PlayerId, TileState, Player } from "./types";
+import type { Action, GameState, PlayerId, TileState, Player, GameSettings } from "./types";
 
 // Helper: Shuffles an array using Fisher-Yates and the injected rng
 function shuffle<T>(array: T[], rng: () => number): T[] {
@@ -27,6 +27,18 @@ function shuffle<T>(array: T[], rng: () => number): T[] {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+export function getDevelopmentName(houses: number): string {
+  switch (houses) {
+    case 0: return "Vacant Land";
+    case 1: return "Bungalow";
+    case 2: return "Duplex";
+    case 3: return "Mansion";
+    case 4: return "Mini-Estate";
+    case 5: return "Banana Tower";
+    default: return "Unknown";
+  }
 }
 
 /**
@@ -73,18 +85,39 @@ export function getRent(state: GameState, pos: number, diceTotal: number): numbe
   return 0;
 }
 
+const DEFAULT_SETTINGS: GameSettings = {
+  startingCash: STARTING_CASH,
+  turnLimit: 0,
+  freeParkingJackpot: false,
+};
+
 export function createGame(
   playerIds: PlayerId[],
+  settings?: Partial<GameSettings>,
   rng: () => number = Math.random,
 ): GameState {
   if (playerIds.length < 2) {
     throw new Error("A game must have at least 2 players");
   }
 
+  // Handle case where custom rng is passed as second argument if any old tests/code do so:
+  let finalSettings: Partial<GameSettings> = {};
+  let finalRng = rng;
+  if (typeof settings === "function") {
+    finalRng = settings as any;
+  } else if (settings) {
+    finalSettings = settings;
+  }
+
+  const mergedSettings: GameSettings = {
+    ...DEFAULT_SETTINGS,
+    ...finalSettings,
+  };
+
   const players: Player[] = playerIds.map((id, index) => ({
     id,
     name: id,
-    cash: STARTING_CASH,
+    cash: mergedSettings.startingCash,
     position: 0,
     inJail: false,
     jailTurns: 0,
@@ -104,8 +137,8 @@ export function createGame(
     }
   });
 
-  const chanceOrder = shuffle(CHANCE_CARDS.map((c) => c.id), rng);
-  const esusuOrder = shuffle(ESUSU_CARDS.map((c) => c.id), rng);
+  const chanceOrder = shuffle(CHANCE_CARDS.map((c) => c.id), finalRng);
+  const esusuOrder = shuffle(ESUSU_CARDS.map((c) => c.id), finalRng);
 
   return {
     players,
@@ -120,6 +153,9 @@ export function createGame(
     esusuPtr: 0,
     log: ["Game started."],
     winnerId: null,
+    settings: mergedSettings,
+    currentTurn: 1,
+    freeParkingPot: 0,
   };
 }
 
@@ -174,9 +210,16 @@ export function applyAction(
             currentPlayer.cash -= JAIL_FINE;
             currentPlayer.inJail = false;
             currentPlayer.jailTurns = 0;
-            nextState.log.push(
-              `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine and moved.`
-            );
+            if (nextState.settings.freeParkingJackpot) {
+              nextState.freeParkingPot += JAIL_FINE;
+              nextState.log.push(
+                `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine (added to Bukka Rest Stop Pot) and moved.`
+              );
+            } else {
+              nextState.log.push(
+                `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine and moved.`
+              );
+            }
 
             movePlayerAndResolve(nextState, currentPlayer, diceTotal, rng);
           } else {
@@ -300,7 +343,7 @@ export function applyAction(
 
       // Upgrade capacity: max is 5 (hotel)
       if (tileState.houses >= 5) {
-        throw new Error("Property is already fully developed (hotel)");
+        throw new Error("Property is already fully developed (Banana Tower)");
       }
 
       // Even build constraint: cannot build a house on this property if it has more houses than another in the group
@@ -325,12 +368,12 @@ export function applyAction(
       if (isUpgradingToHotel) {
         // consumes 1 hotel, frees 4 houses
         if (currentTotalHotels >= HOTEL_SUPPLY) {
-          throw new Error("No hotels remaining in the bank");
+          throw new Error("No Banana Towers remaining in the bank");
         }
       } else {
         // consumes 1 house
         if (currentTotalHouses >= HOUSE_SUPPLY) {
-          throw new Error("No houses remaining in the bank");
+          throw new Error("No Bungalows/Duplexes/Mansions/Estates remaining in the bank");
         }
       }
 
@@ -342,14 +385,14 @@ export function applyAction(
       currentPlayer.cash -= tile.houseCost;
       tileState.houses += 1;
 
-      const buildType = tileState.houses === 5 ? "Hotel" : `House ${tileState.houses}`;
+      const buildType = getDevelopmentName(tileState.houses);
       nextState.log.push(`${currentPlayer.name} built a ${buildType} on ${tile.name} for ₦${tile.houseCost.toLocaleString("en-NG")}.`);
       break;
     }
 
     case "SELL_HOUSE": {
       if (nextState.phase !== "awaiting-roll" && nextState.phase !== "awaiting-end-turn") {
-        throw new Error(`Cannot sell houses in phase ${nextState.phase}`);
+        throw new Error(`Cannot sell developments in phase ${nextState.phase}`);
       }
       const pos = action.pos;
       const tile = BOARD[pos];
@@ -386,7 +429,7 @@ export function applyAction(
         });
 
         if (HOUSE_SUPPLY - currentTotalHouses < 4) {
-          throw new Error("Not enough houses in the bank to degrade hotel");
+          throw new Error("Not enough Bungalows/Duplexes in the bank to downgrade Banana Tower");
         }
       }
 
@@ -394,7 +437,7 @@ export function applyAction(
       currentPlayer.cash += refund;
       tileState.houses -= 1;
 
-      const sellType = tileState.houses === 4 ? "Hotel" : `House ${tileState.houses + 1}`;
+      const sellType = getDevelopmentName(tileState.houses + 1);
       nextState.log.push(
         `${currentPlayer.name} sold a ${sellType} on ${tile.name} for ₦${refund.toLocaleString("en-NG")}.`
       );
@@ -478,7 +521,12 @@ export function applyAction(
       currentPlayer.cash -= JAIL_FINE;
       currentPlayer.inJail = false;
       currentPlayer.jailTurns = 0;
-      nextState.log.push(`${currentPlayer.name} paid ₦50,000 fine and was released from Jail.`);
+      if (nextState.settings.freeParkingJackpot) {
+        nextState.freeParkingPot += JAIL_FINE;
+        nextState.log.push(`${currentPlayer.name} paid ₦50,000 fine (added to Bukka Rest Stop Pot) and was released from Jail.`);
+      } else {
+        nextState.log.push(`${currentPlayer.name} paid ₦50,000 fine and was released from Jail.`);
+      }
       // Remain in awaiting-roll so the player can take their turn normally
       break;
     }
@@ -526,6 +574,65 @@ export function applyAction(
         while (nextState.players[nextIndex].bankrupt) {
           nextIndex = (nextIndex + 1) % nextState.players.length;
         }
+
+        // Did we complete a round?
+        if (nextIndex < nextState.currentPlayerIndex) {
+          // Yes, we wrapped around. Check turn limit BEFORE incrementing round count to limit current round play
+          if (nextState.settings.turnLimit > 0 && nextState.currentTurn >= nextState.settings.turnLimit) {
+            // Game over! Calculate winner by net worth
+            const solventPlayers = nextState.players.filter(p => !p.bankrupt);
+            let highestNetWorth = -Infinity;
+            let winnerId: string | null = null;
+            
+            nextState.log.push("Turn limit reached! Calculating player net worths...");
+            
+            solventPlayers.forEach(p => {
+              // Cash
+              let netWorth = p.cash;
+              
+              // Value of all properties owned by this player
+              Object.keys(nextState.tiles).forEach(posStr => {
+                const pos = parseInt(posStr, 10);
+                const ts = nextState.tiles[pos];
+                if (ts.ownerId === p.id) {
+                  const tile = BOARD[pos];
+                  if ("price" in tile) {
+                    if (ts.mortgaged) {
+                      // Mortgaged properties have value = mortgage amount
+                      netWorth += tile.mortgage;
+                    } else {
+                      // Unmortgaged properties have full purchase value
+                      netWorth += tile.price;
+                      // Plus development costs
+                      if (tile.type === "property" && ts.houses > 0) {
+                        netWorth += ts.houses * tile.houseCost;
+                      }
+                    }
+                  }
+                }
+              });
+              
+              nextState.log.push(`${p.name}'s Net Worth: ₦${netWorth.toLocaleString("en-NG")}`);
+              
+              if (netWorth > highestNetWorth) {
+                highestNetWorth = netWorth;
+                winnerId = p.id;
+              }
+            });
+            
+            if (winnerId) {
+              const winnerName = nextState.players.find(p => p.id === winnerId)!.name;
+              nextState.winnerId = winnerId;
+              nextState.phase = "game-over";
+              nextState.log.push(`Turn limit of ${nextState.settings.turnLimit} rounds was reached! ${winnerName} wins the game with a net worth of ₦${highestNetWorth.toLocaleString("en-NG")}!`);
+              return nextState;
+            }
+          }
+
+          nextState.currentTurn += 1;
+          nextState.log.push(`--- Round ${nextState.currentTurn} ---`);
+        }
+
         nextState.currentPlayerIndex = nextIndex;
         nextState.doublesCount = 0;
         nextState.dice = null;
@@ -865,13 +972,24 @@ function resolveLanding(
     if (player.cash < 0) {
       state.owedToId = "bank";
     }
-    state.log.push(`${player.name} paid ₦${tile.amount.toLocaleString("en-NG")} for ${tile.name}.`);
+    if (state.settings.freeParkingJackpot) {
+      state.freeParkingPot += tile.amount;
+      state.log.push(`${player.name} paid ₦${tile.amount.toLocaleString("en-NG")} for ${tile.name} (added to Bukka Rest Stop Pot).`);
+    } else {
+      state.log.push(`${player.name} paid ₦${tile.amount.toLocaleString("en-NG")} for ${tile.name}.`);
+    }
     state.phase = "awaiting-end-turn";
   } else if (tile.type === "jail") {
     state.log.push(`${player.name} is just visiting Kirikiri Prison.`);
     state.phase = "awaiting-end-turn";
   } else if (tile.type === "free") {
-    state.log.push(`${player.name} landed on Bukka Rest Stop (Free Parking).`);
+    if (state.settings.freeParkingJackpot && state.freeParkingPot > 0) {
+      player.cash += state.freeParkingPot;
+      state.log.push(`${player.name} landed on Bukka Rest Stop (Free Parking) and collected the Bukka Pot of ₦${state.freeParkingPot.toLocaleString("en-NG")}!`);
+      state.freeParkingPot = 0;
+    } else {
+      state.log.push(`${player.name} landed on Bukka Rest Stop (Free Parking).`);
+    }
     state.phase = "awaiting-end-turn";
   } else if (tile.type === "gotojail") {
     player.inJail = true;
@@ -948,7 +1066,12 @@ function applyCardAction(
       }
       const verb = action.amount >= 0 ? "received" : "lost";
       const amtAbs = Math.abs(action.amount);
-      state.log.push(`${player.name} ${verb} ₦${amtAbs.toLocaleString("en-NG")}.`);
+      if (action.amount < 0 && state.settings.freeParkingJackpot) {
+        state.freeParkingPot += amtAbs;
+        state.log.push(`${player.name} lost ₦${amtAbs.toLocaleString("en-NG")} (added to Bukka Rest Stop Pot).`);
+      } else {
+        state.log.push(`${player.name} ${verb} ₦${amtAbs.toLocaleString("en-NG")}.`);
+      }
       state.phase = "awaiting-end-turn";
       break;
     }
@@ -1042,9 +1165,16 @@ function applyCardAction(
       if (player.cash < 0) {
         state.owedToId = "bank";
       }
-      state.log.push(
-        `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} houses, ${hotelsCount} hotels).`
-      );
+      if (state.settings.freeParkingJackpot) {
+        state.freeParkingPot += totalCost;
+        state.log.push(
+          `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} Bungalow/Duplex/Mansion/Estate(s), ${hotelsCount} Banana Tower(s)) (added to Bukka Rest Stop Pot).`
+        );
+      } else {
+        state.log.push(
+          `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} Bungalow/Duplex/Mansion/Estate(s), ${hotelsCount} Banana Tower(s)).`
+        );
+      }
       state.phase = "awaiting-end-turn";
       break;
     }

@@ -1,7 +1,7 @@
 {
-  "name": "naija-richup",
+  "name": "odogwu-empire",
   "version": "0.1.0",
-  "description": "A Nigerian-themed Richup/Monopoly-style multiplayer board game.",
+  "description": "A Nigerian-themed online multiplayer board game. Buy the land. Become the Odogwu.",
   "type": "module",
   "scripts": {
     "test": "vitest run",
@@ -29,7 +29,9 @@
     "colyseus": "^0.17.10",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "framer-motion": "^12.40.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-toastify": "^11.1.0"
   }
 }

@@ -1,6 +1,8 @@
-# Naija Richup
+# Odogwu Empire
 
-A Nigerian-themed, Richup/Monopoly-style online multiplayer board game.
+> **Buy the land. Become the Odogwu.**
+
+A Nigerian-themed online multiplayer board game.
 Buy properties from Ajegunle to Banana Island, charge rent in Naira, and bankrupt
 your opponents. Chance and Esusu cards talk Pidgin: _"You don hammer federal
 contract! Waka go Banana Island."_

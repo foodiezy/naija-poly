@@ -15,7 +15,7 @@ const gameServer = new Server({
 
     // Health check endpoint
     app.get("/health", (_req, res) => {
-      res.send("Naija Richup Server is running!");
+      res.send("Odogwu Empire Server is running!");
     });
   }
 });
@@ -25,5 +25,5 @@ gameServer.define("richup", RichupRoom);
 
 // Start listening via gameServer.listen
 gameServer.listen(port).then(() => {
-  console.log(`🇳🇬 Naija Richup Server is listening on http://localhost:${port}`);
+  console.log(`🇳🇬 Odogwu Empire Server is listening on http://localhost:${port}`);
 });

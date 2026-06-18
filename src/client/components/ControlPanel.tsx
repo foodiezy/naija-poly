@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { BOARD, PropertyTile } from "../../data/board";
 import { TradeOffer } from "../../engine/types";
 
@@ -6,10 +7,43 @@ interface ControlPanelProps {
   room: any;
   engineState: any;
   onSendAction: (action: any) => void;
+  chatMessages: any[];
+  onSendChatMessage: (text: string) => void;
 }
 
-export default function ControlPanel({ room, engineState, onSendAction }: ControlPanelProps) {
+export default function ControlPanel({ room, engineState, onSendAction, chatMessages, onSendChatMessage }: ControlPanelProps) {
   const [bidAmount, setBidAmount] = useState<number>(0);
+  const [activeTab, setActiveTab] = useState<"logs" | "chat">("logs");
+  const [unreadChats, setUnreadChats] = useState<number>(0);
+  const [lastMessageCount, setLastMessageCount] = useState(0);
+
+  useEffect(() => {
+    if (chatMessages.length > lastMessageCount) {
+      if (activeTab !== "chat") {
+        setUnreadChats((prev) => prev + (chatMessages.length - lastMessageCount));
+      }
+      setLastMessageCount(chatMessages.length);
+    } else if (chatMessages.length === 0) {
+      setUnreadChats(0);
+      setLastMessageCount(0);
+    }
+  }, [chatMessages.length, activeTab, lastMessageCount]);
+
+  const handleTabChange = (tab: "logs" | "chat") => {
+    setActiveTab(tab);
+    if (tab === "chat") {
+      setUnreadChats(0);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "chat") {
+      const chatElement = document.getElementById("game-chat-box");
+      if (chatElement) {
+        chatElement.scrollTop = chatElement.scrollHeight;
+      }
+    }
+  }, [chatMessages, activeTab]);
   const [tradeTargetId, setTradeTargetId] = useState<string>("");
   const [tradeGiveCash, setTradeGiveCash] = useState<number>(0);
   const [tradeGetCash, setTradeGetCash] = useState<number>(0);
@@ -47,6 +81,17 @@ export default function ControlPanel({ room, engineState, onSendAction }: Contro
   }, [engineState?.currentPlayerIndex, engineState?.phase]);
 
   if (!engineState) return null;
+
+  const getDevelopmentText = (houses: number) => {
+    switch (houses) {
+      case 5: return "🏢 Banana Tower";
+      case 4: return "🏘️ Mini-Estate";
+      case 3: return "🏰 Mansion";
+      case 2: return "🏠 Duplex";
+      case 1: return "🏡 Bungalow";
+      default: return "";
+    }
+  };
 
   // Get recipient player object if trading is in progress
   const activeTrade = engineState.activeTrade;
@@ -180,22 +225,134 @@ export default function ControlPanel({ room, engineState, onSendAction }: Contro
 
   return (
     <div className="console-panel glass-panel">
-      {/* Logs section */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-        <h4 style={{ textTransform: "uppercase", fontSize: "0.8rem", color: "var(--text-secondary)", letterSpacing: "0.05em" }}>Game Feed Log</h4>
-        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{engineState.log?.length || 0} entries</span>
-      </div>
-      <div id="console-logs-box" className="console-logs">
-        {engineState.log?.map((logLine: string, idx: number) => (
-          <div key={idx} className={getLogClass(logLine)}>
-            {logLine}
-          </div>
-        ))}
+      {/* Tabs Header */}
+      <div className="panel-tabs" style={{ display: "flex", gap: "0.5rem", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "0.5rem", marginBottom: "0.75rem" }}>
+        <button
+          className={`panel-tab-btn ${activeTab === "logs" ? "active" : ""}`}
+          onClick={() => handleTabChange("logs")}
+          style={{
+            background: activeTab === "logs" ? "rgba(255,255,255,0.05)" : "transparent",
+            border: "none",
+            color: activeTab === "logs" ? "var(--text-primary)" : "var(--text-muted)",
+            padding: "0.4rem 0.8rem",
+            borderRadius: "6px",
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            transition: "all 0.2s"
+          }}
+        >
+          Game Feed
+        </button>
+        <button
+          className={`panel-tab-btn ${activeTab === "chat" ? "active" : ""}`}
+          onClick={() => handleTabChange("chat")}
+          style={{
+            background: activeTab === "chat" ? "rgba(255,255,255,0.05)" : "transparent",
+            border: "none",
+            color: activeTab === "chat" ? "var(--text-primary)" : "var(--text-muted)",
+            padding: "0.4rem 0.8rem",
+            borderRadius: "6px",
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            position: "relative",
+            transition: "all 0.2s"
+          }}
+        >
+          Room Chat
+          {unreadChats > 0 && (
+            <span style={{
+              position: "absolute",
+              top: "-4px",
+              right: "-4px",
+              background: "var(--color-danger)",
+              color: "#fff",
+              fontSize: "0.65rem",
+              borderRadius: "50%",
+              minWidth: "16px",
+              height: "16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: "bold",
+              boxShadow: "0 0 5px rgba(239, 68, 68, 0.5)"
+            }}>
+              {unreadChats}
+            </span>
+          )}
+        </button>
       </div>
 
+      {activeTab === "logs" ? (
+        <div id="console-logs-box" className="console-logs">
+          <AnimatePresence initial={false}>
+            {engineState.log?.map((logLine: string, idx: number) => (
+              <motion.div
+                key={idx}
+                className={getLogClass(logLine)}
+                initial={{ opacity: 0, x: -18 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+              >
+                {logLine}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "150px" }}>
+          <div id="game-chat-box" className="console-logs" style={{ flex: 1, minHeight: "100px" }}>
+            {chatMessages.length === 0 ? (
+              <div className="chat-empty-msg" style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "1rem" }}>
+                No messages yet. Chat with other players!
+              </div>
+            ) : (
+              chatMessages.map((msg, idx) => (
+                <div key={idx} className="chat-msg-row" style={{ fontSize: "0.8rem", margin: "2px 0", border: "none" }}>
+                  <strong style={{ color: msg.senderId === mySessionId ? "var(--color-naira)" : "var(--color-gold)" }}>
+                    {msg.tokenId === "danfo_bus" ? "🚌" : msg.tokenId === "okada" ? "🏍️" : msg.tokenId === "agbada" ? "🧥" : msg.tokenId === "eagle" ? "🦅" : "👤"} {msg.senderName}:
+                  </strong>{" "}
+                  <span style={{ color: "#fff" }}>{msg.text}</span>
+                </div>
+              ))
+            )}
+          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.currentTarget;
+              const input = form.elements.namedItem("chatText") as HTMLInputElement;
+              if (input && input.value.trim()) {
+                onSendChatMessage(input.value);
+                input.value = "";
+              }
+            }}
+            style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}
+          >
+            <input
+              type="text"
+              name="chatText"
+              placeholder="Send message..."
+              className="input-field"
+              autoComplete="off"
+              style={{ flex: 1, padding: "0.4rem 0.6rem", fontSize: "0.8rem", background: "rgba(0,0,0,0.4)" }}
+            />
+            <button type="submit" className="button-primary" style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", width: "auto" }}>Send</button>
+          </form>
+        </div>
+      )}
+
       {/* Trade response overlay (modal style) */}
+      <AnimatePresence>
       {activeTrade && activeTrade.toId === mySessionId && (
-        <div className="trade-overlay">
+        <motion.div
+          className="trade-overlay"
+          initial={{ opacity: 0, x: 60 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 60 }}
+          transition={{ type: "spring", stiffness: 300, damping: 26 }}
+        >
           <div className="trade-card glass-panel" style={{ border: "2px solid var(--color-gold)", background: "#0e1525" }}>
             <h3 className="auction-title" style={{ color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "0.5rem" }}>
               🤝 Incoming Trade Offer
@@ -238,12 +395,20 @@ export default function ControlPanel({ room, engineState, onSendAction }: Contro
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Trade proposal building interface */}
+      <AnimatePresence>
       {showTradeBuilder && (
-        <div className="trade-overlay">
+        <motion.div
+          className="trade-overlay"
+          initial={{ opacity: 0, y: 60 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 40 }}
+          transition={{ type: "spring", stiffness: 280, damping: 24 }}
+        >
           <div className="trade-card glass-panel" style={{ background: "#0e1525", maxWidth: "550px", overflowY: "auto", maxHeight: "90vh" }}>
             <h3 className="auction-title">🤝 Propose Trade Deal</h3>
             
@@ -317,7 +482,7 @@ export default function ControlPanel({ room, engineState, onSendAction }: Contro
                         </label>
                       ))}
                       {myProperties.filter((t: any) => (tilesState[t.pos]?.houses ?? 0) === 0).length === 0 && (
-                        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontStyle: "italic" }}>No properties with 0 houses</div>
+                        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontStyle: "italic" }}>No unimproved properties</div>
                       )}
                     </div>
                   </div>
@@ -337,7 +502,7 @@ export default function ControlPanel({ room, engineState, onSendAction }: Contro
                         </label>
                       ))}
                       {targetProperties.filter((t: any) => (tilesState[t.pos]?.houses ?? 0) === 0).length === 0 && (
-                        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontStyle: "italic" }}>No properties with 0 houses</div>
+                        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontStyle: "italic" }}>No unimproved properties</div>
                       )}
                     </div>
                   </div>
@@ -363,8 +528,9 @@ export default function ControlPanel({ room, engineState, onSendAction }: Contro
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Main HUD actions container */}
       <div className="action-controls">
@@ -390,6 +556,13 @@ export default function ControlPanel({ room, engineState, onSendAction }: Contro
         {activeTrade && activeTrade.fromId === mySessionId && (
           <div className="action-status-indicator" style={{ border: "1px solid var(--color-gold)", background: "rgba(245, 158, 11, 0.05)", borderRadius: "6px" }}>
             🤝 Waiting for recipient player to respond to your trade offer...
+          </div>
+        )}
+
+        {/* Passive trade status */}
+        {activeTrade && activeTrade.fromId !== mySessionId && activeTrade.toId !== mySessionId && (
+          <div className="action-status-indicator" style={{ border: "1px solid rgba(255, 255, 255, 0.1)", background: "rgba(255, 255, 255, 0.02)", borderRadius: "6px" }}>
+            🤝 {players.find((p: any) => p.id === activeTrade.fromId)?.name || "Host"} is negotiating a trade deal with {players.find((p: any) => p.id === activeTrade.toId)?.name || "Player"}...
           </div>
         )}
 
@@ -482,9 +655,16 @@ export default function ControlPanel({ room, engineState, onSendAction }: Contro
                     </div>
                   </>
                 ) : (
-                  <button className="button-primary full-width-btn" style={{ padding: "1rem" }} onClick={() => onSendAction({ type: "ROLL" })}>
-                    Roll Dice 🎲
-                  </button>
+          <motion.button
+            className="button-primary full-width-btn"
+            style={{ padding: "1rem" }}
+            onClick={() => onSendAction({ type: "ROLL" })}
+            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+          >
+            Roll Dice 🎲
+          </motion.button>
                 )}
               </div>
             )}
@@ -555,8 +735,8 @@ export default function ControlPanel({ room, engineState, onSendAction }: Contro
                             {tile.name}
                           </span>
                           {ts?.houses > 0 && (
-                            <span style={{ fontSize: "0.7rem", background: "rgba(245, 158, 11, 0.15)", color: "var(--color-gold)", padding: "1px 4px", borderRadius: "3px" }}>
-                              {ts.houses === 5 ? "🏨" : `${ts.houses}🏡`}
+                            <span style={{ fontSize: "0.75rem", background: "rgba(245, 158, 11, 0.15)", color: "var(--color-gold)", padding: "2px 6px", borderRadius: "4px", fontWeight: "bold" }}>
+                              {getDevelopmentText(ts.houses)}
                             </span>
                           )}
                           {ts?.mortgaged && (
@@ -573,17 +753,17 @@ export default function ControlPanel({ room, engineState, onSendAction }: Contro
                                 style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(16, 185, 129, 0.1)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "3px", cursor: "pointer" }}
                                 disabled={!canBuild(tile.pos)}
                                 onClick={() => onSendAction({ type: "BUILD", pos: tile.pos })}
-                                title={`Build house: ₦${(tile as PropertyTile).houseCost.toLocaleString()}`}
+                                title={`Build (₦${(tile as PropertyTile).houseCost.toLocaleString()})`}
                               >
-                                +🏡
+                                Build
                               </button>
                               <button
                                 style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(239, 68, 68, 0.15)", color: "var(--color-danger)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "3px", cursor: "pointer" }}
                                 disabled={!canSellHouse(tile.pos)}
                                 onClick={() => onSendAction({ type: "SELL_HOUSE", pos: tile.pos })}
-                                title="Sell house"
+                                title={`Sell ${getDevelopmentText(ts.houses)}`}
                               >
-                                -🏡
+                                Sell
                               </button>
                             </>
                           )}
@@ -592,18 +772,18 @@ export default function ControlPanel({ room, engineState, onSendAction }: Contro
                               style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(245, 158, 11, 0.1)", color: "var(--color-gold)", border: "1px solid rgba(245, 158, 11, 0.2)", borderRadius: "3px", cursor: "pointer" }}
                               disabled={!canMortgage(tile.pos)}
                               onClick={() => onSendAction({ type: "MORTGAGE", pos: tile.pos })}
-                              title={`Mortgage: +₦${("mortgage" in tile ? tile.mortgage : 0).toLocaleString()}`}
+                              title={`Mortgage for +₦${("mortgage" in tile ? tile.mortgage : 0).toLocaleString()}`}
                             >
-                              Mort
+                              Mortgage
                             </button>
                           ) : (
                             <button
                               style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(16, 185, 129, 0.15)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "3px", cursor: "pointer" }}
                               disabled={!canUnmortgage(tile.pos)}
                               onClick={() => onSendAction({ type: "UNMORTGAGE", pos: tile.pos })}
-                              title={`Unmortgage: -₦${("mortgage" in tile ? Math.round(tile.mortgage * 1.1) : 0).toLocaleString()}`}
+                              title={`Unmortgage for -₦${("mortgage" in tile ? Math.round(tile.mortgage * 1.1) : 0).toLocaleString()}`}
                             >
-                              Unmort
+                              Lift Mort.
                             </button>
                           )}
                         </div>

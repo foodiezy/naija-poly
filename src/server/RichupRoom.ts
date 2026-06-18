@@ -14,6 +14,9 @@ export class GameRoomState extends Schema {
   @type({ map: LobbyPlayer }) lobbyPlayers = new MapSchema<LobbyPlayer>();
   @type("string") gameStateJson: string = "";
   @type("string") hostId: string = "";
+  @type("number") startingCash: number = 1500000;
+  @type("number") turnLimit: number = 0; // 0 = unlimited
+  @type("boolean") freeParkingJackpot: boolean = false;
 }
 
 export class RichupRoom extends Room<{ state: GameRoomState }> {
@@ -32,6 +35,27 @@ export class RichupRoom extends Room<{ state: GameRoomState }> {
       }
     });
 
+    // Message handler to update lobby settings
+    this.onMessage("UPDATE_SETTINGS", (client, message: { startingCash?: number; turnLimit?: number; freeParkingJackpot?: boolean }) => {
+      if (this.state.status !== "lobby") {
+        throw new Error("Cannot change settings once game starts");
+      }
+      if (client.sessionId !== this.state.hostId) {
+        throw new Error("Only the host can modify settings");
+      }
+
+      if (message.startingCash !== undefined) {
+        this.state.startingCash = message.startingCash;
+      }
+      if (message.turnLimit !== undefined) {
+        this.state.turnLimit = message.turnLimit;
+      }
+      if (message.freeParkingJackpot !== undefined) {
+        this.state.freeParkingJackpot = message.freeParkingJackpot;
+      }
+      console.log(`Lobby settings updated: startingCash=${this.state.startingCash}, turnLimit=${this.state.turnLimit}, jackpot=${this.state.freeParkingJackpot}`);
+    });
+
     // Message handler to start game
     this.onMessage("START_GAME", (client, _message) => {
       if (this.state.status !== "lobby") {
@@ -46,8 +70,12 @@ export class RichupRoom extends Room<{ state: GameRoomState }> {
         throw new Error("Must have at least 2 players to start");
       }
 
-      // Initialize the pure game engine state
-      const initialEngineState = createGame(playerIds);
+      // Initialize the pure game engine state with lobby settings
+      const initialEngineState = createGame(playerIds, {
+        startingCash: this.state.startingCash,
+        turnLimit: this.state.turnLimit,
+        freeParkingJackpot: this.state.freeParkingJackpot,
+      });
 
       // Map custom lobby player display names back to engine players
       initialEngineState.players.forEach((p) => {
@@ -84,6 +112,31 @@ export class RichupRoom extends Room<{ state: GameRoomState }> {
         client.send("ERROR", { message: err.message });
         console.error(`Error applying action from client ${client.sessionId}: ${err.message}`);
       }
+    });
+
+    // Message handler to reset game back to lobby
+    this.onMessage("RESET_GAME", (client, _message) => {
+      if (client.sessionId !== this.state.hostId) {
+        throw new Error("Only the host can reset the game");
+      }
+      this.state.status = "lobby";
+      this.state.gameStateJson = "";
+      console.log(`Game reset back to lobby by host ${client.sessionId}`);
+    });
+
+    // Message handler for in-game chat messages
+    this.onMessage("SEND_CHAT", (client, message: { text: string }) => {
+      const sender = this.state.lobbyPlayers.get(client.sessionId);
+      const senderName = sender ? sender.name : "System";
+      const tokenId = sender ? sender.tokenId : "";
+      
+      this.broadcast("CHAT_MESSAGE", {
+        senderId: client.sessionId,
+        senderName,
+        tokenId,
+        text: message.text,
+        timestamp: Date.now()
+      });
     });
   }
 
