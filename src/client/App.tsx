@@ -13,7 +13,7 @@ import * as sound from "./utils/sound";
 const isDev = (import.meta as any).env.DEV;
 const endpoint = isDev
   ? "ws://localhost:2567"
-  : window.location.origin.replace(/^http/, "ws");
+  : ((import.meta as any).env.VITE_SERVER_URL ?? window.location.origin.replace(/^http/, "ws"));
 
 // Compatibility patch for Colyseus 0.17 matchmaking response in 0.16.22 client
 function patchClientForV017(client: Client) {

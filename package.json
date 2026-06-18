@@ -10,7 +10,8 @@
     "dev:server": "tsx watch src/server/index.ts",
     "dev:client": "vite",
     "build:client": "tsc && vite build",
-    "preview:client": "vite preview"
+    "preview:client": "vite preview",
+    "start": "tsx src/server/index.ts"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
