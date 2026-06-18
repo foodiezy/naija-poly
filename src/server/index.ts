@@ -1,3 +1,4 @@
+import http from "http";
 import express from "express";
 import cors from "cors";
 import { Server } from "colyseus";
@@ -6,24 +7,23 @@ import { RichupRoom } from "./RichupRoom";
 
 const port = Number(process.env.PORT || 2567);
 
-// Initialize Colyseus Game Server
-const gameServer = new Server({
-  transport: new WebSocketTransport(),
-  express: (app) => {
-    app.use(cors({ origin: "*" }));
-    app.use(express.json());
+const app = express();
 
-    // Health check endpoint
-    app.get("/health", (_req, res) => {
-      res.send("Odogwu Empire Server is running!");
-    });
-  }
+app.use(cors({ origin: "*" }));
+app.use(express.json());
+
+app.get("/health", (_req, res) => {
+  res.send("Odogwu Empire Server is running!");
 });
 
-// Register the game room
+const httpServer = http.createServer(app);
+
+const gameServer = new Server({
+  transport: new WebSocketTransport({ server: httpServer }),
+});
+
 gameServer.define("richup", RichupRoom);
 
-// Start listening via gameServer.listen
-gameServer.listen(port).then(() => {
-  console.log(` Odogwu Empire Server is listening on http://localhost:${port}`);
+httpServer.listen(port, () => {
+  console.log(`Odogwu Empire Server is listening on http://localhost:${port}`);
 });
