@@ -10,12 +10,6 @@ services:
       - key: NODE_ENV
         value: production
 
-  # Client (Vite static build)
-  - type: static
-    name: odogwu-empire-client
-    buildCommand: npm run build:client
-    staticPublishPath: dist
-    envVars:
-      - key: VITE_SERVER_URL
-        sync: false  # Set this in the Render dashboard after the server is deployed
-                     # Value should be: wss://odogwu-empire-server.onrender.com
+# NOTE: The client (Vite static site) must be created manually on Render.
+# Render Blueprint does not support type: static.
+# See README for instructions.
