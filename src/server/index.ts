@@ -10,13 +10,7 @@ const port = Number(process.env.PORT || 2567);
 const gameServer = new Server({
   transport: new WebSocketTransport(),
   express: (app) => {
-    app.use(cors({
-      origin: [
-        "http://localhost:5173",
-        "https://naija-richup.onrender.com",
-      ],
-      credentials: true,
-    }));
+    app.use(cors({ origin: "*" }));
     app.use(express.json());
 
     // Health check endpoint
