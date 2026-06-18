@@ -10,7 +10,13 @@ const port = Number(process.env.PORT || 2567);
 const gameServer = new Server({
   transport: new WebSocketTransport(),
   express: (app) => {
-    app.use(cors());
+    app.use(cors({
+      origin: [
+        "http://localhost:5173",
+        "https://naija-richup.onrender.com",
+      ],
+      credentials: true,
+    }));
     app.use(express.json());
 
     // Health check endpoint
@@ -25,5 +31,5 @@ gameServer.define("richup", RichupRoom);
 
 // Start listening via gameServer.listen
 gameServer.listen(port).then(() => {
-  console.log(`🇳🇬 Odogwu Empire Server is listening on http://localhost:${port}`);
+  console.log(` Odogwu Empire Server is listening on http://localhost:${port}`);
 });
