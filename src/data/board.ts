@@ -1,5 +1,5 @@
 // =============================================================================
-// board.ts — Nigerian-themed board definition for a Richup/Monopoly-style game
+// board.ts — Nigerian-themed board definition for a property-trading board game
 // -----------------------------------------------------------------------------
 // This is PURE DATA + TYPES. No game logic lives here. The engine (reducer)
 // reads this to know prices, rents, card effects, and tile layout.
@@ -109,6 +109,21 @@ export const HOTEL_SUPPLY = 12;
 
 export const formatNaira = (n: number): string =>
   "₦" + Math.round(n).toLocaleString("en-NG");
+
+// ----------------------------- Auctions --------------------------------------
+// Auctions are open-outcry, fixed-increment, and timed. Each bid window lasts
+// this long and is reset on every new bid (the server owns the clock).
+export const AUCTION_BID_DURATION_MS = 12_000;
+
+// Derive the set of legal raise amounts from the tile's price so a ₦400k tile
+// auctions as briskly as a ₦60k one. Base step ≈ 10% of price, floored at ₦10k
+// and rounded to a clean ₦10k figure; buttons offer 1×, 2×, and 5× that step.
+export const auctionIncrements = (
+  price: number,
+): { minIncrement: number; bidIncrements: number[] } => {
+  const base = Math.max(10_000, Math.round(price / 100_000) * 10_000);
+  return { minIncrement: base, bidIncrements: [base, base * 2, base * 5] };
+};
 
 // ----------------------------- The Board -------------------------------------
 // 40 tiles, clockwise from START. Property positions mirror Monopoly's layout
@@ -257,69 +272,69 @@ export const UTILITY_COUNT = BOARD.filter((t) => t.type === "utility").length; /
 export const CHANCE_CARDS: Card[] = [
   { id: "ch01", text: "Waka go START. Collect ₦200,000.",
     action: { kind: "moveTo", pos: 0, collectIfPass: true } },
-  { id: "ch02", text: "NEPA don bring light after 3 weeks. Collect ₦50,000 refund.",
+  { id: "ch02", text: "Opay pay you POS dividend. Collect ₦50,000.",
     action: { kind: "money", amount: 50_000 } },
-  { id: "ch03", text: "Danfo conductor no give you correct change. Pay ₦20,000.",
-    action: { kind: "money", amount: -20_000 } },
-  { id: "ch04", text: "You don hammer federal contract! Waka go Banana Island.",
+  { id: "ch03", text: "You don hammer big deal! Waka go Lekki Phase 1. If you pass START, collect ₦200,000.",
+    action: { kind: "moveTo", pos: 32, collectIfPass: true } },
+  { id: "ch04", text: "Federal contract don land! Waka go Banana Island. If you pass START, collect ₦200,000.",
     action: { kind: "moveTo", pos: 39, collectIfPass: true } },
-  { id: "ch05", text: "LASTMA catch you for one-way. Go Kirikiri Prison sharp sharp.",
-    action: { kind: "goToJail" } },
-  { id: "ch06", text: "Fuel scarcity don land! Pay ₦100,000 make your tank full.",
-    action: { kind: "money", amount: -100_000 } },
+  { id: "ch05", text: "Carry go Benin City. If you pass START, collect ₦200,000.",
+    action: { kind: "moveTo", pos: 16, collectIfPass: true } },
+  { id: "ch06", text: "Coal City dey call. Waka go Enugu. If you pass START, collect ₦200,000.",
+    action: { kind: "moveTo", pos: 14, collectIfPass: true } },
   { id: "ch07", text: "Your lawyer don settle am. Comot from Jail Free.",
     action: { kind: "getOutOfJailFree" } },
-  { id: "ch08", text: "Generator don knock. Service am: pay ₦40,000 per Bungalow/Duplex/Mansion/Mini-Estate, ₦115,000 per Banana Tower.",
+  { id: "ch08", text: "Rainy season don land, make general repairs: pay ₦40,000 per Bungalow/Duplex/Mansion/Mini-Estate, ₦115,000 per Hotel.",
     action: { kind: "repairs", perHouse: 40_000, perHotel: 115_000 } },
   { id: "ch09", text: "Enter flight. Waka go the nearest airport; if person own am, pay double.",
     action: { kind: "nearestAirport" } },
-  { id: "ch10", text: "You don win baba ijebu! Collect ₦150,000.",
-    action: { kind: "money", amount: 150_000 } },
-  { id: "ch11", text: "Your people for abroad don send money. Collect ₦100,000.",
-    action: { kind: "money", amount: 100_000 } },
-  { id: "ch12", text: "Waka back 3 spaces.",
+  { id: "ch10", text: "Waka back 3 spaces.",
     action: { kind: "moveRelative", steps: -3 } },
-  { id: "ch13", text: "You dey go Abuja. Waka go Nnamdi Azikiwe Airport.",
+  { id: "ch11", text: "EFCC don catch you! Go Kirikiri Prison straight. No collect ₦200,000.",
+    action: { kind: "goToJail" } },
+  { id: "ch12", text: "Something for the boys! Police flog you for over-speeding. Pay ₦20,000.",
+    action: { kind: "money", amount: -20_000 } },
+  { id: "ch13", text: "You dey go Abuja. Waka go Nnamdi Azikiwe Airport. If you pass START, collect ₦200,000.",
     action: { kind: "moveTo", pos: 15, collectIfPass: true } },
-  { id: "ch14", text: "Customs don hold your container. Pay ₦75,000.",
-    action: { kind: "money", amount: -75_000 } },
-  { id: "ch15", text: "Na your birthday! Collect ₦20,000 from every player.",
-    action: { kind: "collectFromEach", amount: 20_000 } },
-  { id: "ch16", text: "Dem wan check your light bill. Waka go the nearest utility.",
+  { id: "ch14", text: "Dem elect you for House of Reps. Show the boys love: pay every player ₦50,000.",
+    action: { kind: "payEach", amount: 50_000 } },
+  { id: "ch15", text: "Your building loan don mature. Collect ₦150,000.",
+    action: { kind: "money", amount: 150_000 } },
+  { id: "ch16", text: "Dem wan check your light bill. Waka go the nearest utility; throw dice, pay owner ten times wetin you throw.",
     action: { kind: "nearestUtility" } },
 ];
 
 export const ESUSU_CARDS: Card[] = [
-  { id: "es01", text: "Your esusu don mature. Collect ₦200,000.",
+  { id: "es01", text: "Waka go START. Collect ₦200,000.",
+    action: { kind: "moveTo", pos: 0, collectIfPass: true } },
+  { id: "es02", text: "Bank error for your favour! Collect ₦200,000.",
     action: { kind: "money", amount: 200_000 } },
-  { id: "es02", text: "Hospital bill for private clinic. Pay ₦100,000.",
-    action: { kind: "money", amount: -100_000 } },
-  { id: "es03", text: "You win raffle for village meeting. Collect ₦50,000.",
-    action: { kind: "money", amount: 50_000 } },
-  { id: "es04", text: "School fees don reach. Pay ₦50,000.",
+  { id: "es03", text: "Doctor bill. Pay ₦50,000.",
     action: { kind: "money", amount: -50_000 } },
-  { id: "es05", text: "Bank make mistake for your favour. Collect ₦150,000.",
-    action: { kind: "money", amount: 150_000 } },
-  { id: "es06", text: "Owambe aso-ebi money. Pay ₦30,000.",
-    action: { kind: "money", amount: -30_000 } },
+  { id: "es04", text: "You sell your shares for NGX. Collect ₦50,000.",
+    action: { kind: "money", amount: 50_000 } },
+  { id: "es05", text: "EFCC freeze your account. Go Kirikiri Prison. No collect ₦200,000.",
+    action: { kind: "goToJail" } },
+  { id: "es06", text: "Your holiday savings don mature. Collect ₦100,000.",
+    action: { kind: "money", amount: 100_000 } },
   { id: "es07", text: "Community elder talk for you. Comot from Jail Free.",
     action: { kind: "getOutOfJailFree" } },
-  { id: "es08", text: "Waka go START. Collect ₦200,000.",
-    action: { kind: "moveTo", pos: 0, collectIfPass: true } },
-  { id: "es09", text: "Your POS business hammer this month. Collect ₦100,000.",
-    action: { kind: "money", amount: 100_000 } },
-  { id: "es10", text: "NEPA estimated bill don land. Pay ₦40,000.",
-    action: { kind: "money", amount: -40_000 } },
-  { id: "es11", text: "Inheritance: family land for village. Collect ₦100,000.",
-    action: { kind: "money", amount: 100_000 } },
-  { id: "es12", text: "Community development levy: pay ₦40,000 per Bungalow/Duplex/Mansion/Mini-Estate, ₦115,000 per Banana Tower.",
-    action: { kind: "repairs", perHouse: 40_000, perHotel: 115_000 } },
-  { id: "es13", text: "Wedding contribution. Give every player ₦20,000.",
-    action: { kind: "payEach", amount: 20_000 } },
-  { id: "es14", text: "FIRS don refund your tax. Collect ₦20,000.",
+  { id: "es08", text: "FIRS don refund your tax. Collect ₦20,000.",
     action: { kind: "money", amount: 20_000 } },
-  { id: "es15", text: "Tax wahala don catch you. Go Kirikiri Prison.",
-    action: { kind: "goToJail" } },
-  { id: "es16", text: "Your fixed deposit don mature. Collect ₦25,000.",
+  { id: "es09", text: "Na your birthday! Collect ₦10,000 from every player.",
+    action: { kind: "collectFromEach", amount: 10_000 } },
+  { id: "es10", text: "Your life insurance policy don mature. Collect ₦100,000.",
+    action: { kind: "money", amount: 100_000 } },
+  { id: "es11", text: "Hospital bill for private clinic. Pay ₦100,000.",
+    action: { kind: "money", amount: -100_000 } },
+  { id: "es12", text: "School fees don reach. Pay ₦50,000.",
+    action: { kind: "money", amount: -50_000 } },
+  { id: "es13", text: "You collect consultancy fee. Receive ₦25,000.",
     action: { kind: "money", amount: 25_000 } },
+  { id: "es14", text: "Government assess you for street repair: pay ₦40,000 per Bungalow/Duplex/Mansion/Mini-Estate, ₦115,000 per Hotel.",
+    action: { kind: "repairs", perHouse: 40_000, perHotel: 115_000 } },
+  { id: "es15", text: "You win second prize for beauty pageant. Collect ₦10,000.",
+    action: { kind: "money", amount: 10_000 } },
+  { id: "es16", text: "Inheritance: family land for village. Collect ₦100,000.",
+    action: { kind: "money", amount: 100_000 } },
 ];

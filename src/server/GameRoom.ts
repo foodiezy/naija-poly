@@ -19,7 +19,60 @@ export class GameRoomState extends Schema {
   @type("boolean") freeParkingJackpot: boolean = false;
 }
 
-export class RichupRoom extends Room<{ state: GameRoomState }> {
+export class GameRoom extends Room<{ state: GameRoomState }> {
+  // Server-owned countdown for the active auction (Colyseus clock timer).
+  private auctionTimer: any = undefined;
+
+  // Single path for mutating game state: apply the action through the pure
+  // engine, (re)arm the auction timer if an auction is live, then persist.
+  private runEngineAction(playerId: string, action: Action) {
+    const engineState = JSON.parse(this.state.gameStateJson);
+    const nextEngineState = applyAction(engineState, playerId, action);
+    this.armAuctionTimer(nextEngineState);
+    this.state.gameStateJson = JSON.stringify(nextEngineState);
+
+    if (nextEngineState.phase === "game-over") {
+      this.state.status = "finished";
+    }
+  }
+
+  private clearAuctionTimer() {
+    if (this.auctionTimer) {
+      this.auctionTimer.clear();
+      this.auctionTimer = undefined;
+    }
+  }
+
+  // Stamp the bid deadline onto the broadcast state and schedule auto-resolve.
+  // Called after every engine action: arms a fresh window while an auction is
+  // live (each new bid nulls the deadline, so this resets the clock), and
+  // clears the timer once the auction is over.
+  private armAuctionTimer(state: any) {
+    this.clearAuctionTimer();
+    if (state.phase === "auction" && state.auctionState) {
+      const duration = state.auctionState.bidDurationMs ?? 12000;
+      state.auctionState.deadline = Date.now() + duration;
+      this.auctionTimer = this.clock.setTimeout(() => this.onAuctionTimeout(), duration);
+    }
+  }
+
+  private onAuctionTimeout() {
+    this.auctionTimer = undefined;
+    if (this.state.status !== "in_progress") return;
+    try {
+      const engineState = JSON.parse(this.state.gameStateJson);
+      if (engineState.phase !== "auction") return;
+      const nextEngineState = applyAction(engineState, "__server__", { type: "RESOLVE_AUCTION" });
+      this.armAuctionTimer(nextEngineState);
+      this.state.gameStateJson = JSON.stringify(nextEngineState);
+      if (nextEngineState.phase === "game-over") {
+        this.state.status = "finished";
+      }
+    } catch (err: any) {
+      console.error(`Error resolving auction on timeout: ${err.message}`);
+    }
+  }
+
   onCreate(_options: any) {
     this.setState(new GameRoomState());
 
@@ -97,16 +150,14 @@ export class RichupRoom extends Room<{ state: GameRoomState }> {
         throw new Error("Game is not in progress");
       }
 
-      const engineState = JSON.parse(this.state.gameStateJson);
+      // RESOLVE_AUCTION is a server-only timer event; clients must not fire it.
+      if (action.type === "RESOLVE_AUCTION") {
+        client.send("ERROR", { message: "Auctions resolve automatically when the timer runs out." });
+        return;
+      }
 
       try {
-        const nextEngineState = applyAction(engineState, client.sessionId, action);
-        this.state.gameStateJson = JSON.stringify(nextEngineState);
-
-        // If the game is over, set room status
-        if (nextEngineState.phase === "game-over") {
-          this.state.status = "finished";
-        }
+        this.runEngineAction(client.sessionId, action);
       } catch (err: any) {
         // Send error back to client
         client.send("ERROR", { message: err.message });
@@ -119,24 +170,44 @@ export class RichupRoom extends Room<{ state: GameRoomState }> {
       if (client.sessionId !== this.state.hostId) {
         throw new Error("Only the host can reset the game");
       }
+      this.clearAuctionTimer();
       this.state.status = "lobby";
       this.state.gameStateJson = "";
       console.log(`Game reset back to lobby by host ${client.sessionId}`);
     });
 
-    // Message handler for in-game chat messages
-    this.onMessage("SEND_CHAT", (client, message: { text: string }) => {
+    // Message handler for chat messages. With `toId` set, the message is a
+    // private/direct message delivered only to the sender and that recipient;
+    // otherwise it is broadcast to everyone (the general channel).
+    this.onMessage("SEND_CHAT", (client, message: { text: string; toId?: string }) => {
+      const text = (message.text || "").trim();
+      if (!text) return;
+
       const sender = this.state.lobbyPlayers.get(client.sessionId);
       const senderName = sender ? sender.name : "System";
       const tokenId = sender ? sender.tokenId : "";
-      
-      this.broadcast("CHAT_MESSAGE", {
+
+      const payload: any = {
         senderId: client.sessionId,
         senderName,
         tokenId,
-        text: message.text,
-        timestamp: Date.now()
-      });
+        text,
+        timestamp: Date.now(),
+        toId: message.toId ?? null,
+      };
+
+      if (message.toId) {
+        // Private: send to the recipient (if connected) and echo to the sender.
+        const recipient = this.state.lobbyPlayers.get(message.toId);
+        payload.toName = recipient ? recipient.name : "Player";
+        const recipientClient = this.clients.find((c) => c.sessionId === message.toId);
+        if (recipientClient && recipientClient !== client) {
+          recipientClient.send("CHAT_MESSAGE", payload);
+        }
+        client.send("CHAT_MESSAGE", payload);
+      } else {
+        this.broadcast("CHAT_MESSAGE", payload);
+      }
     });
   }
 
@@ -187,6 +258,7 @@ export class RichupRoom extends Room<{ state: GameRoomState }> {
   }
 
   onDispose() {
+    this.clearAuctionTimer();
     console.log(`Room ${this.roomId} disposed.`);
   }
 }

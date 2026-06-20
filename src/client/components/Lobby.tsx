@@ -23,7 +23,7 @@ const HOW_TO_PLAY = [
     emoji: "🏘️",
     color: "#3b82f6",
     title: "Buy and build",
-    desc: "Purchase properties and build from Bungalow → Duplex → Mansion → Banana Tower!",
+    desc: "Purchase properties and build from Bungalow → Duplex → Mansion → Hotel!",
   },
   {
     emoji: "💸",

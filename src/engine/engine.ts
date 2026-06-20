@@ -15,9 +15,31 @@ import {
   JAIL_FINE,
   HOUSE_SUPPLY,
   HOTEL_SUPPLY,
+  AUCTION_BID_DURATION_MS,
+  auctionIncrements,
   type PropertyTile,
 } from "../data/board";
 import type { Action, GameState, PlayerId, TileState, Player, GameSettings } from "./types";
+
+// Award the auctioned tile to the standing high bidder (or close with no sale),
+// then hand the turn back. Shared by BID / PASS_BID / RESOLVE_AUCTION.
+function finalizeAuction(state: GameState): void {
+  const auction = state.auctionState;
+  if (!auction) return;
+  const tile = BOARD[auction.tilePos];
+  if (auction.highestBidderId !== null) {
+    const winner = state.players.find((p) => p.id === auction.highestBidderId)!;
+    winner.cash -= auction.highestBid;
+    state.tiles[auction.tilePos].ownerId = winner.id;
+    state.log.push(
+      `${winner.name} won the auction for ${tile.name} for ₦${auction.highestBid.toLocaleString("en-NG")}!`,
+    );
+  } else {
+    state.log.push(`Auction ended with no sale for ${tile.name}.`);
+  }
+  state.auctionState = null;
+  state.phase = "awaiting-end-turn";
+}
 
 // Helper: Shuffles an array using Fisher-Yates and the injected rng
 function shuffle<T>(array: T[], rng: () => number): T[] {
@@ -36,7 +58,7 @@ export function getDevelopmentName(houses: number): string {
     case 2: return "Duplex";
     case 3: return "Mansion";
     case 4: return "Mini-Estate";
-    case 5: return "Banana Tower";
+    case 5: return "Hotel";
     default: return "Unknown";
   }
 }
@@ -174,7 +196,9 @@ export function applyAction(
   }
 
   // Validate player turn (unless declaring bankruptcy when bankrupt, bidding in auction, or responding to trade)
-  const isAuctionAction = action.type === "BID" || action.type === "PASS_BID";
+  // Auction actions are open to any participant; RESOLVE_AUCTION is a server-only timer event.
+  const isAuctionAction =
+    action.type === "BID" || action.type === "PASS_BID" || action.type === "RESOLVE_AUCTION";
   const isTradeResponse = action.type === "RESPOND_TRADE";
 
   if (playerId !== currentPlayer.id && !isAuctionAction && !isTradeResponse) {
@@ -294,18 +318,25 @@ export function applyAction(
         break;
       }
 
+      const price = "price" in tile ? (tile as PropertyTile).price : 0;
+      const { minIncrement, bidIncrements } = auctionIncrements(price);
+
       nextState.auctionState = {
         tilePos: pos,
         highestBid: 0,
         highestBidderId: null,
-        activePlayerIds: activePlayers.map((p) => p.id),
-        currentPlayerIndex: 0,
+        participantIds: activePlayers.map((p) => p.id),
+        passedIds: [],
+        minIncrement,
+        bidIncrements,
+        bidDurationMs: AUCTION_BID_DURATION_MS,
+        deadline: null, // the server stamps this when it arms the timer
       };
       nextState.phase = "auction";
 
-      const currentBidderId = nextState.auctionState.activePlayerIds[0];
-      const currentBidder = nextState.players.find((p) => p.id === currentBidderId)!;
-      nextState.log.push(`Auction started for ${tile.name}. Current bidder: ${currentBidder.name}.`);
+      nextState.log.push(
+        `Auction started for ${tile.name}! Bidding is open — raise fast before the clock runs out.`,
+      );
       break;
     }
 
@@ -343,7 +374,7 @@ export function applyAction(
 
       // Upgrade capacity: max is 5 (hotel)
       if (tileState.houses >= 5) {
-        throw new Error("Property is already fully developed (Banana Tower)");
+        throw new Error("Property is already fully developed (Hotel)");
       }
 
       // Even build constraint: cannot build a house on this property if it has more houses than another in the group
@@ -368,7 +399,7 @@ export function applyAction(
       if (isUpgradingToHotel) {
         // consumes 1 hotel, frees 4 houses
         if (currentTotalHotels >= HOTEL_SUPPLY) {
-          throw new Error("No Banana Towers remaining in the bank");
+          throw new Error("No Hotels remaining in the bank");
         }
       } else {
         // consumes 1 house
@@ -429,7 +460,7 @@ export function applyAction(
         });
 
         if (HOUSE_SUPPLY - currentTotalHouses < 4) {
-          throw new Error("Not enough Bungalows/Duplexes in the bank to downgrade Banana Tower");
+          throw new Error("Not enough Bungalows/Duplexes in the bank to downgrade Hotel");
         }
       }
 
@@ -648,14 +679,25 @@ export function applyAction(
       }
 
       const auction = nextState.auctionState;
-      const currentBidderId = auction.activePlayerIds[auction.currentPlayerIndex];
-      if (playerId !== currentBidderId) {
-        throw new Error(`It is not ${playerId}'s turn to bid in the auction. Current bidder: ${currentBidderId}`);
+      if (!auction.participantIds.includes(playerId)) {
+        throw new Error(`${playerId} is not part of this auction`);
+      }
+      if (auction.passedIds.includes(playerId)) {
+        throw new Error(`${playerId} has already passed and cannot bid again`);
+      }
+      if (auction.highestBidderId === playerId) {
+        throw new Error(`${playerId} is already the highest bidder`);
       }
 
+      // Bids must raise the top bid by exactly one of the set increments.
       const amount = action.amount;
-      if (amount <= auction.highestBid) {
-        throw new Error(`Bid amount must be higher than current highest bid (₦${auction.highestBid})`);
+      const raise = amount - auction.highestBid;
+      if (!auction.bidIncrements.includes(raise)) {
+        throw new Error(
+          `Bid must raise by a set increment (${auction.bidIncrements
+            .map((i) => `₦${i.toLocaleString("en-NG")}`)
+            .join(", ")})`,
+        );
       }
 
       const bidder = nextState.players.find((p) => p.id === playerId)!;
@@ -665,14 +707,16 @@ export function applyAction(
 
       auction.highestBid = amount;
       auction.highestBidderId = playerId;
-      nextState.log.push(`${bidder.name} bid ₦${amount.toLocaleString("en-NG")}.`);
+      auction.deadline = null; // the server resets the clock on each new bid
+      nextState.log.push(`${bidder.name} bid ₦${amount.toLocaleString("en-NG")}!`);
 
-      // Advance to next bidder
-      auction.currentPlayerIndex = (auction.currentPlayerIndex + 1) % auction.activePlayerIds.length;
-
-      const nextBidderId = auction.activePlayerIds[auction.currentPlayerIndex];
-      const nextBidder = nextState.players.find((p) => p.id === nextBidderId)!;
-      nextState.log.push(`It is now ${nextBidder.name}'s turn to bid.`);
+      // If nobody else is still in the running, the bidder wins immediately.
+      const challengers = auction.participantIds.filter(
+        (id) => id !== playerId && !auction.passedIds.includes(id),
+      );
+      if (challengers.length === 0) {
+        finalizeAuction(nextState);
+      }
       break;
     }
 
@@ -682,52 +726,44 @@ export function applyAction(
       }
 
       const auction = nextState.auctionState;
-      const currentBidderId = auction.activePlayerIds[auction.currentPlayerIndex];
-      if (playerId !== currentBidderId) {
-        throw new Error(`It is not ${playerId}'s turn to bid in the auction. Current bidder: ${currentBidderId}`);
+      if (!auction.participantIds.includes(playerId)) {
+        throw new Error(`${playerId} is not part of this auction`);
+      }
+      if (auction.passedIds.includes(playerId)) {
+        throw new Error(`${playerId} has already passed`);
+      }
+      if (auction.highestBidderId === playerId) {
+        throw new Error(`The highest bidder cannot pass`);
       }
 
       const bidder = nextState.players.find((p) => p.id === playerId)!;
+      auction.passedIds.push(playerId);
       nextState.log.push(`${bidder.name} passed.`);
 
-      // Remove from active bidders
-      const removedIndex = auction.currentPlayerIndex;
-      auction.activePlayerIds = auction.activePlayerIds.filter((id) => id !== playerId);
-
-      // Check if auction is finished
-      if (auction.activePlayerIds.length === 1 && auction.highestBidderId !== null) {
-        // Only one bidder remains, and someone has bid
-        const winnerId = auction.highestBidderId;
-        const winner = nextState.players.find((p) => p.id === winnerId)!;
-        const tile = BOARD[auction.tilePos];
-
-        winner.cash -= auction.highestBid;
-        nextState.tiles[auction.tilePos].ownerId = winnerId;
-        nextState.log.push(
-          `${winner.name} won the auction for ${tile.name} for ₦${auction.highestBid.toLocaleString("en-NG")}!`
-        );
-
-        nextState.auctionState = null;
-        nextState.phase = "awaiting-end-turn";
-      } else if (auction.activePlayerIds.length === 0) {
-        // Everyone passed with no bids
-        const tile = BOARD[auction.tilePos];
-        nextState.log.push(`Auction ended with no sale for ${tile.name}.`);
-
-        nextState.auctionState = null;
-        nextState.phase = "awaiting-end-turn";
-      } else {
-        // Bidding continues. Adjust currentPlayerIndex.
-        if (removedIndex >= auction.activePlayerIds.length) {
-          auction.currentPlayerIndex = 0;
-        } else {
-          auction.currentPlayerIndex = removedIndex;
+      // Who is still able to bid?
+      const remaining = auction.participantIds.filter(
+        (id) => !auction.passedIds.includes(id),
+      );
+      if (auction.highestBidderId !== null) {
+        // Someone has bid; once no challenger is left, the top bidder wins.
+        const challengers = remaining.filter((id) => id !== auction.highestBidderId);
+        if (challengers.length === 0) {
+          finalizeAuction(nextState);
         }
-
-        const nextBidderId = auction.activePlayerIds[auction.currentPlayerIndex];
-        const nextBidder = nextState.players.find((p) => p.id === nextBidderId)!;
-        nextState.log.push(`It is now ${nextBidder.name}'s turn to bid.`);
+      } else if (remaining.length === 0) {
+        // Everyone folded without a single bid.
+        finalizeAuction(nextState);
       }
+      break;
+    }
+
+    case "RESOLVE_AUCTION": {
+      // Fired by the server when the bid timer expires: award to the standing
+      // high bidder, or close with no sale if no one ever bid.
+      if (nextState.phase !== "auction" || !nextState.auctionState) {
+        throw new Error("No active auction");
+      }
+      finalizeAuction(nextState);
       break;
     }
 
@@ -1168,11 +1204,11 @@ function applyCardAction(
       if (state.settings.freeParkingJackpot) {
         state.freeParkingPot += totalCost;
         state.log.push(
-          `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} Bungalow/Duplex/Mansion/Estate(s), ${hotelsCount} Banana Tower(s)) (added to Bukka Rest Stop Pot).`
+          `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} Bungalow/Duplex/Mansion/Estate(s), ${hotelsCount} Hotel(s)) (added to Bukka Rest Stop Pot).`
         );
       } else {
         state.log.push(
-          `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} Bungalow/Duplex/Mansion/Estate(s), ${hotelsCount} Banana Tower(s)).`
+          `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} Bungalow/Duplex/Mansion/Estate(s), ${hotelsCount} Hotel(s)).`
         );
       }
       state.phase = "awaiting-end-turn";

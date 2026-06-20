@@ -110,6 +110,7 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.02em;
   background: linear-gradient(to right, #10b981, #f59e0b);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   text-transform: uppercase;
 }
@@ -161,6 +162,7 @@ h1, h2, h3, h4, h5, h6 {
   text-transform: uppercase;
   background: linear-gradient(135deg, #fff 0%, #a0a0c0 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   line-height: 1;
 }
@@ -214,6 +216,7 @@ h1, h2, h3, h4, h5, h6 {
   text-transform: uppercase;
   background: linear-gradient(135deg, #fff 0%, #9ca3af 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -464,6 +467,7 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.04em;
   background: linear-gradient(135deg, #10b981 0%, #f59e0b 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   transform: rotate(-30deg);
   opacity: 0.14;
@@ -606,25 +610,70 @@ h1, h2, h3, h4, h5, h6 {
 
 .tile-houses {
   display: flex;
-  gap: 1px;
+  gap: 2px;
   position: absolute;
-  top: 14px;
+  z-index: 3;
+}
+
+/* Bottom edge tiles: houses sit along the top (next to color bar) */
+.edge-bottom .tile-houses {
+  flex-direction: row;
+  top: 13px;
   left: 50%;
   transform: translateX(-50%);
 }
 
-.house-dot {
-  width: 5px;
-  height: 5px;
-  background: #f59e0b;
-  border-radius: 50%;
+/* Left edge tiles: houses sit along the right (next to color bar) */
+.edge-left .tile-houses {
+  flex-direction: column;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
-.hotel-dot {
-  width: 8px;
+/* Top edge tiles: houses sit along the bottom (next to color bar) */
+.edge-top .tile-houses {
+  flex-direction: row;
+  bottom: 13px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Right edge tiles: houses sit along the left (next to color bar) */
+.edge-right .tile-houses {
+  flex-direction: column;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* House shape — small pentagon (house with roof) */
+.house-dot {
+  width: 7px;
   height: 8px;
-  background: #ef4444;
-  border-radius: 50%;
+  background: #22c55e;
+  clip-path: polygon(50% 0%, 100% 40%, 100% 100%, 0% 100%, 0% 40%);
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.5));
+}
+
+/* Hotel shape — taller red building with flat roof accent */
+.hotel-dot {
+  width: 10px;
+  height: 10px;
+  background: linear-gradient(to bottom, #dc2626 0%, #ef4444 100%);
+  clip-path: polygon(
+    15% 0%, 85% 0%,
+    85% 15%, 100% 15%,
+    100% 100%, 0% 100%,
+    0% 15%, 15% 15%
+  );
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+  animation: hotelGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes hotelGlow {
+  0% { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); }
+  100% { filter: drop-shadow(0 0 4px rgba(239,68,68,0.6)); }
 }
 
 /* Tokens positioned inside Tile */
@@ -637,26 +686,86 @@ h1, h2, h3, h4, h5, h6 {
   position: absolute;
   bottom: 4px;
   width: 80%;
+  z-index: 10;
 }
 
 .player-token {
-  font-size: 1rem;
-  width: 18px;
-  height: 18px;
+  font-size: 1.1rem;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-  animation: tokenPulse 2s infinite;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6), 0 0 8px rgba(255,255,255,0.15);
+  z-index: 10;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-@keyframes tokenPulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
+/* Your own token — bright cyan ring */
+.player-token-me {
+  border-color: #22d3ee;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.6), 0 0 16px rgba(34, 211, 238, 0.3), 0 2px 6px rgba(0,0,0,0.6);
+  animation: myTokenPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes myTokenPulse {
+  0% { box-shadow: 0 0 8px rgba(34,211,238,0.6), 0 0 16px rgba(34,211,238,0.3), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1); }
+  50% { box-shadow: 0 0 14px rgba(34,211,238,0.8), 0 0 28px rgba(34,211,238,0.4), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1.12); }
+  100% { box-shadow: 0 0 8px rgba(34,211,238,0.6), 0 0 16px rgba(34,211,238,0.3), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1); }
+}
+
+/* Active turn player's token — gold ring */
+.player-token-active {
+  border-color: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.7), 0 0 18px rgba(245, 158, 11, 0.35), 0 2px 6px rgba(0,0,0,0.6);
+  animation: activeTokenPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes activeTokenPulse {
+  0% { box-shadow: 0 0 8px rgba(245,158,11,0.7), 0 0 18px rgba(245,158,11,0.35), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1); }
+  50% { box-shadow: 0 0 14px rgba(245,158,11,0.9), 0 0 30px rgba(245,158,11,0.5), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1.15); }
+  100% { box-shadow: 0 0 8px rgba(245,158,11,0.7), 0 0 18px rgba(245,158,11,0.35), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1); }
+}
+
+/* Both me AND active — layered cyan + gold */
+.player-token-me.player-token-active {
+  border-color: #22d3ee;
+  animation: myActiveTokenPulse 1.3s ease-in-out infinite;
+}
+
+@keyframes myActiveTokenPulse {
+  0% { box-shadow: 0 0 8px rgba(34,211,238,0.7), 0 0 20px rgba(245,158,11,0.4), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1); }
+  50% { box-shadow: 0 0 16px rgba(34,211,238,0.9), 0 0 32px rgba(245,158,11,0.6), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1.18); }
+  100% { box-shadow: 0 0 8px rgba(34,211,238,0.7), 0 0 20px rgba(245,158,11,0.4), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1); }
+}
+
+/* Tile highlights — any tile with a player gets a subtle highlight */
+.tile-has-player {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Tile where YOUR token is sitting — bright cyan glow border */
+.tile-has-me {
+  background-color: rgba(34, 211, 238, 0.08) !important;
+  box-shadow: inset 0 0 12px rgba(34, 211, 238, 0.15), 0 0 6px rgba(34, 211, 238, 0.2);
+  border-color: rgba(34, 211, 238, 0.4) !important;
+}
+
+/* Tile where the active turn player is — gold accent */
+.tile-active-player {
+  background-color: rgba(245, 158, 11, 0.06) !important;
+  box-shadow: inset 0 0 10px rgba(245, 158, 11, 0.1), 0 0 4px rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+/* When it's YOUR tile AND you're the active player — layered effect */
+.tile-has-me.tile-active-player {
+  background-color: rgba(34, 211, 238, 0.1) !important;
+  box-shadow: inset 0 0 14px rgba(34, 211, 238, 0.2), 0 0 8px rgba(245, 158, 11, 0.25);
+  border-color: rgba(34, 211, 238, 0.5) !important;
 }
 
 /* Right Control & HUD Panel */
@@ -841,6 +950,126 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0.4rem;
   border-radius: 4px;
   outline: none;
+}
+
+/* Timed auction: countdown bar + intensity cues */
+.auction-panel.auction-urgent {
+  border-color: var(--color-danger);
+  animation: auction-pulse 0.7s ease-in-out infinite;
+}
+
+@keyframes auction-pulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 16px rgba(239, 68, 68, 0.55); }
+}
+
+.auction-timer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.auction-timer-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.auction-timer-fill {
+  height: 100%;
+  background: var(--color-naira, #10b981);
+  border-radius: 999px;
+  transition: width 0.12s linear;
+}
+
+.auction-timer-fill.urgent {
+  background: var(--color-danger);
+}
+
+.auction-timer-secs {
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 3.5rem;
+  text-align: right;
+  color: var(--text-secondary);
+}
+
+.auction-timer-secs.urgent {
+  color: var(--color-danger);
+}
+
+.auction-increment-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.bid-increment-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0.5rem 0.25rem;
+  font-weight: 700;
+}
+
+.bid-increment-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.bid-increment-total {
+  font-size: 0.65rem;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* Chat channels: General + per-player private (direct) channels */
+.chat-channel-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.chat-channel-chip {
+  position: relative;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.chat-channel-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.chat-channel-chip.active {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: var(--color-naira, #10b981);
+  color: var(--color-naira, #10b981);
+}
+
+.chat-channel-dot {
+  margin-left: 0.3rem;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: bold;
+  border-radius: 999px;
+  padding: 0 5px;
+  min-width: 14px;
+  display: inline-block;
+  text-align: center;
 }
 
 /* Trade Modal / Section */
@@ -1155,6 +1384,7 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 800;
   background: linear-gradient(135deg, var(--color-gold) 0%, #ffffff 50%, var(--color-gold) 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0;
   letter-spacing: 2px;

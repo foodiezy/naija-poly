@@ -37,10 +37,19 @@ export type Phase =
 
 export interface AuctionState {
   tilePos: number;
-  highestBid: number;
+  highestBid: number; // current top bid (0 until the first bid lands)
   highestBidderId: PlayerId | null;
-  activePlayerIds: PlayerId[];
-  currentPlayerIndex: number;
+  participantIds: PlayerId[]; // everyone eligible to bid (all solvent players)
+  passedIds: PlayerId[]; // players who have folded out of this auction
+  // Open-outcry, fixed-increment bidding: a legal bid raises the top bid by
+  // exactly one of these set values. Keeps auctions fast and unambiguous.
+  minIncrement: number;
+  bidIncrements: number[];
+  // Server-driven countdown. The pure engine never reads `deadline` (it stays
+  // null in tests); the authoritative server stamps it (and re-stamps on every
+  // bid) so clients can render the timer and the room can auto-resolve on expiry.
+  bidDurationMs: number;
+  deadline: number | null;
 }
 
 export interface GameSettings {
@@ -77,6 +86,7 @@ export type Action =
   | { type: "DECLINE_BUY" } // triggers auction
   | { type: "BID"; amount: number }
   | { type: "PASS_BID" }
+  | { type: "RESOLVE_AUCTION" } // server-only: fired when the bid timer expires
   | { type: "BUILD"; pos: number }
   | { type: "SELL_HOUSE"; pos: number }
   | { type: "MORTGAGE"; pos: number }

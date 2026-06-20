@@ -4,6 +4,7 @@ import { BOARD, Tile, PropertyTile } from "../../data/board";
 interface GameBoardProps {
   engineState: any;
   roomState: any;
+  mySessionId?: string;
   onTileClick?: (pos: number) => void;
 }
 
@@ -70,7 +71,7 @@ function getTileGridCoords(pos: number): { row: number; col: number } {
   }
 }
 
-export default function GameBoard({ engineState, roomState, onTileClick }: GameBoardProps) {
+export default function GameBoard({ engineState, roomState, mySessionId, onTileClick }: GameBoardProps) {
   if (!engineState) {
     return (
       <div className="glass-panel" style={{ padding: "2rem", textAlign: "center" }}>
@@ -83,6 +84,12 @@ export default function GameBoard({ engineState, roomState, onTileClick }: GameB
   const players = engineState.players || [];
   const tilesState = engineState.tiles || {};
   const lobbyPlayers = roomState?.lobbyPlayers || new Map();
+
+  // Identify the local player's position and the active turn player
+  const myPlayer = mySessionId ? players.find((p: any) => p.id === mySessionId) : null;
+  const myPosition = myPlayer ? myPlayer.position : -1;
+  const activePlayerIndex = engineState.currentPlayerIndex ?? -1;
+  const activePlayerId = activePlayerIndex >= 0 && players[activePlayerIndex] ? players[activePlayerIndex].id : null;
 
   const getTokenEmoji = (playerId: string) => {
     const player = lobbyPlayers.get(playerId);
@@ -251,6 +258,8 @@ export default function GameBoard({ engineState, roomState, onTileClick }: GameB
 
         // Find players on this tile
         const playersOnTile = players.filter((p: any) => p.position === tile.pos && !p.bankrupt);
+        const hasMyToken = myPosition === tile.pos;
+        const hasActivePlayer = playersOnTile.some((p: any) => p.id === activePlayerId);
 
         // Render color bar for property tiles
         const hasColorBar = tile.type === "property";
@@ -285,7 +294,7 @@ export default function GameBoard({ engineState, roomState, onTileClick }: GameB
             if (tileState.mortgaged) {
               t += " (Mortgaged)";
             } else if (tileState.houses > 0) {
-              const devName = tileState.houses === 5 ? "Banana Tower" : tileState.houses === 4 ? "Mini-Estate" : tileState.houses === 3 ? "Mansion" : tileState.houses === 2 ? "Duplex" : "Bungalow";
+              const devName = tileState.houses === 5 ? "Hotel" : tileState.houses === 4 ? "Mini-Estate" : tileState.houses === 3 ? "Mansion" : tileState.houses === 2 ? "Duplex" : "Bungalow";
               t += ` (${devName})`;
             }
           }
@@ -298,7 +307,7 @@ export default function GameBoard({ engineState, roomState, onTileClick }: GameB
             return `Owned by ${ownerName} (Mortgaged)`;
           }
           if (tileState.houses > 0) {
-            const devName = tileState.houses === 5 ? "Banana Tower" : tileState.houses === 4 ? "Mini-Estate" : tileState.houses === 3 ? "Mansion" : tileState.houses === 2 ? "Duplex" : "Bungalow";
+            const devName = tileState.houses === 5 ? "Hotel" : tileState.houses === 4 ? "Mini-Estate" : tileState.houses === 3 ? "Mansion" : tileState.houses === 2 ? "Duplex" : "Bungalow";
             return `Owned by ${ownerName} - ${devName}`;
           }
           return `Owned by ${ownerName}`;
@@ -307,7 +316,7 @@ export default function GameBoard({ engineState, roomState, onTileClick }: GameB
         return (
           <div
             key={tile.pos}
-            className={`tile ${isCorner ? "tile-corner" : ""} edge-${getTileEdge(tile.pos)}`}
+            className={`tile ${isCorner ? "tile-corner" : ""} edge-${getTileEdge(tile.pos)}${hasMyToken ? " tile-has-me" : ""}${playersOnTile.length > 0 ? " tile-has-player" : ""}${hasActivePlayer ? " tile-active-player" : ""}`}
             style={{
               gridColumn: coords.col,
               gridRow: coords.row,
@@ -366,7 +375,7 @@ export default function GameBoard({ engineState, roomState, onTileClick }: GameB
                   <motion.div
                     key={p.id}
                     layoutId={`player-token-${p.id}`}
-                    className="player-token"
+                    className={`player-token${p.id === mySessionId ? " player-token-me" : ""}${p.id === activePlayerId ? " player-token-active" : ""}`}
                     title={p.name}
                     layout="position"
                     transition={{

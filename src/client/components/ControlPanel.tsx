@@ -8,34 +8,22 @@ interface ControlPanelProps {
   engineState: any;
   onSendAction: (action: any) => void;
   chatMessages: any[];
-  onSendChatMessage: (text: string) => void;
+  onSendChatMessage: (text: string, toId?: string) => void;
 }
 
 export default function ControlPanel({ room, engineState, onSendAction, chatMessages, onSendChatMessage }: ControlPanelProps) {
-  const [bidAmount, setBidAmount] = useState<number>(0);
+  const [now, setNow] = useState<number>(Date.now());
   const [activeTab, setActiveTab] = useState<"logs" | "chat">("logs");
-  const [unreadChats, setUnreadChats] = useState<number>(0);
+  // Chat channels: "general" (everyone) or a specific playerId (private/direct).
+  const [chatChannel, setChatChannel] = useState<string>("general");
+  const [channelUnread, setChannelUnread] = useState<Record<string, number>>({});
   const [lastMessageCount, setLastMessageCount] = useState(0);
-
-  useEffect(() => {
-    if (chatMessages.length > lastMessageCount) {
-      if (activeTab !== "chat") {
-        setUnreadChats((prev) => prev + (chatMessages.length - lastMessageCount));
-      }
-      setLastMessageCount(chatMessages.length);
-    } else if (chatMessages.length === 0) {
-      setUnreadChats(0);
-      setLastMessageCount(0);
-    }
-  }, [chatMessages.length, activeTab, lastMessageCount]);
 
   const handleTabChange = (tab: "logs" | "chat") => {
     setActiveTab(tab);
-    if (tab === "chat") {
-      setUnreadChats(0);
-    }
   };
 
+  // Keep the chat scrolled to the newest message in the active channel.
   useEffect(() => {
     if (activeTab === "chat") {
       const chatElement = document.getElementById("game-chat-box");
@@ -43,7 +31,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
         chatElement.scrollTop = chatElement.scrollHeight;
       }
     }
-  }, [chatMessages, activeTab]);
+  }, [chatMessages, activeTab, chatChannel]);
   const [tradeTargetId, setTradeTargetId] = useState<string>("");
   const [tradeGiveCash, setTradeGiveCash] = useState<number>(0);
   const [tradeGetCash, setTradeGetCash] = useState<number>(0);
@@ -58,17 +46,71 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
   const me = players.find((p: any) => p.id === mySessionId);
   const isMyTurn = players[engineState?.currentPlayerIndex]?.id === mySessionId;
   const isBankrupt = me?.bankrupt;
+  // Property management (build/sell/mortgage/trade) is only legal on your own
+  // turn while rolling or wrapping up — the engine rejects it otherwise. The
+  // holdings list itself stays visible regardless of whose turn it is.
+  const canManage =
+    isMyTurn &&
+    (engineState?.phase === "awaiting-roll" || engineState?.phase === "awaiting-end-turn");
 
-  // Auto-fill minimum bid when auction changes or when it is my bid turn
+  // Open-outcry auction: any participant who has not folded (and is not already
+  // the top bidder) may raise at any time, until the countdown expires.
   const auction = engineState?.auctionState;
   const isAuctionActive = engineState?.phase === "auction" && auction;
-  const isMyBidTurn = isAuctionActive && auction.activePlayerIds[auction.currentPlayerIndex] === mySessionId;
-  
+  const iAmParticipant = isAuctionActive && auction.participantIds?.includes(mySessionId);
+  const iPassed = isAuctionActive && auction.passedIds?.includes(mySessionId);
+  const iAmHighest = isAuctionActive && auction.highestBidderId === mySessionId;
+  const canBid = iAmParticipant && !iPassed && !iAmHighest;
+
+  // Tick a local clock (~10x/sec) while an auction is live so the countdown bar
+  // animates smoothly. The deadline itself is server-authoritative.
   useEffect(() => {
-    if (isMyBidTurn && auction) {
-      setBidAmount(auction.highestBid + 10000);
+    if (!isAuctionActive || !auction?.deadline) return;
+    const t = setInterval(() => setNow(Date.now()), 100);
+    return () => clearInterval(t);
+  }, [isAuctionActive, auction?.deadline]);
+
+  const msLeft = isAuctionActive && auction?.deadline ? Math.max(0, auction.deadline - now) : 0;
+  const secsLeft = Math.ceil(msLeft / 1000);
+  const timerPct = isAuctionActive && auction?.deadline
+    ? Math.max(0, Math.min(100, (msLeft / (auction.bidDurationMs || 12000)) * 100))
+    : 0;
+
+  // Which channel a message belongs to from MY perspective: "general" for
+  // broadcasts, otherwise the other party's id for private/direct messages.
+  const channelOf = (msg: any) => {
+    if (!msg?.toId) return "general";
+    return msg.senderId === mySessionId ? msg.toId : msg.senderId;
+  };
+
+  // Track unread counts per channel for messages that arrive while I'm not
+  // looking at that channel (and that I didn't send myself).
+  useEffect(() => {
+    if (chatMessages.length > lastMessageCount) {
+      const fresh = chatMessages.slice(lastMessageCount);
+      setChannelUnread((prev) => {
+        const next = { ...prev };
+        fresh.forEach((m: any) => {
+          if (m.senderId === mySessionId) return;
+          const ch = channelOf(m);
+          const viewing = activeTab === "chat" && chatChannel === ch;
+          if (!viewing) next[ch] = (next[ch] || 0) + 1;
+        });
+        return next;
+      });
+      setLastMessageCount(chatMessages.length);
+    } else if (chatMessages.length === 0) {
+      setChannelUnread({});
+      setLastMessageCount(0);
     }
-  }, [isMyBidTurn, auction?.highestBid]);
+  }, [chatMessages.length, activeTab, chatChannel, lastMessageCount, mySessionId]);
+
+  // Clear the badge for whichever channel I'm currently viewing.
+  useEffect(() => {
+    if (activeTab === "chat") {
+      setChannelUnread((prev) => (prev[chatChannel] ? { ...prev, [chatChannel]: 0 } : prev));
+    }
+  }, [activeTab, chatChannel, chatMessages.length]);
 
   // Reset trade builder when turn or phase changes
   useEffect(() => {
@@ -82,9 +124,19 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
 
   if (!engineState) return null;
 
+  // Chat: everyone except me gets a private channel; messages filtered to the
+  // active channel; tab badge sums unread across all channels.
+  const otherPlayers = players.filter((p: any) => p.id !== mySessionId);
+  const totalUnread = Object.values(channelUnread).reduce((a: number, b: number) => a + b, 0);
+  const visibleMessages = chatMessages.filter((m: any) => channelOf(m) === chatChannel);
+  const activeChannelName =
+    chatChannel === "general"
+      ? "Everyone"
+      : players.find((p: any) => p.id === chatChannel)?.name || "Player";
+
   const getDevelopmentText = (houses: number) => {
     switch (houses) {
-      case 5: return "🏢 Banana Tower";
+      case 5: return "🏨 Hotel";
       case 4: return "🏘️ Mini-Estate";
       case 3: return "🏰 Mansion";
       case 2: return "🏠 Duplex";
@@ -223,6 +275,108 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
     return (me?.cash || 0) >= cost;
   };
 
+  // Always-visible holdings panel. Off-turn it is read-only: the list shows so
+  // players can review what they own at any time, but the action buttons are
+  // disabled until it is their turn (gated by `canManage`).
+  const myPropertyManager = (
+    <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "0.75rem", marginTop: "0.25rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+        <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "var(--text-secondary)", textTransform: "uppercase" }}>My Properties ({myProperties.length})</span>
+        <button
+          className="button-secondary"
+          style={{ fontSize: "0.7rem", padding: "0.25rem 0.5rem" }}
+          onClick={() => setShowTradeBuilder(true)}
+          disabled={!canManage || players.length < 2 || activeTrade !== null}
+          title={!canManage ? "Available on your turn" : "Propose a trade"}
+        >
+          🤝 Propose Trade
+        </button>
+      </div>
+
+      {!canManage && myProperties.length > 0 && (
+        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontStyle: "italic", marginBottom: "0.4rem" }}>
+          Viewing only — build, mortgage & trade unlock on your turn.
+        </div>
+      )}
+
+      <div style={{ maxHeight: "150px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+        {myProperties.map((tile: any) => {
+          const ts = tilesState[tile.pos];
+          const isProp = tile.type === "property";
+          return (
+            <div key={tile.pos} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.02)", padding: "0.35rem 0.5rem", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.03)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                {isProp && (
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: `var(--color-${(tile as PropertyTile).group})` }} />
+                )}
+                <span style={{ fontSize: "0.8rem", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100px", whiteSpace: "nowrap" }}>
+                  {tile.name}
+                </span>
+                {ts?.houses > 0 && (
+                  <span style={{ fontSize: "0.75rem", background: "rgba(245, 158, 11, 0.15)", color: "var(--color-gold)", padding: "2px 6px", borderRadius: "4px", fontWeight: "bold" }}>
+                    {getDevelopmentText(ts.houses)}
+                  </span>
+                )}
+                {ts?.mortgaged && (
+                  <span style={{ fontSize: "0.65rem", background: "rgba(239, 68, 68, 0.15)", color: "var(--color-danger)", padding: "1px 4px", borderRadius: "3px" }}>
+                    M
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: "2px" }}>
+                {isProp && (
+                  <>
+                    <button
+                      style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(16, 185, 129, 0.1)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "3px", cursor: "pointer" }}
+                      disabled={!canManage || !canBuild(tile.pos)}
+                      onClick={() => onSendAction({ type: "BUILD", pos: tile.pos })}
+                      title={`Build (₦${(tile as PropertyTile).houseCost.toLocaleString()})`}
+                    >
+                      Build
+                    </button>
+                    <button
+                      style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(239, 68, 68, 0.15)", color: "var(--color-danger)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "3px", cursor: "pointer" }}
+                      disabled={!canManage || !canSellHouse(tile.pos)}
+                      onClick={() => onSendAction({ type: "SELL_HOUSE", pos: tile.pos })}
+                      title={`Sell ${getDevelopmentText(ts.houses)}`}
+                    >
+                      Sell
+                    </button>
+                  </>
+                )}
+                {!ts?.mortgaged ? (
+                  <button
+                    style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(245, 158, 11, 0.1)", color: "var(--color-gold)", border: "1px solid rgba(245, 158, 11, 0.2)", borderRadius: "3px", cursor: "pointer" }}
+                    disabled={!canManage || !canMortgage(tile.pos)}
+                    onClick={() => onSendAction({ type: "MORTGAGE", pos: tile.pos })}
+                    title={`Mortgage for +₦${("mortgage" in tile ? tile.mortgage : 0).toLocaleString()}`}
+                  >
+                    Mortgage
+                  </button>
+                ) : (
+                  <button
+                    style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(16, 185, 129, 0.15)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "3px", cursor: "pointer" }}
+                    disabled={!canManage || !canUnmortgage(tile.pos)}
+                    onClick={() => onSendAction({ type: "UNMORTGAGE", pos: tile.pos })}
+                    title={`Unmortgage for -₦${("mortgage" in tile ? Math.round(tile.mortgage * 1.1) : 0).toLocaleString()}`}
+                  >
+                    Lift Mort.
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {myProperties.length === 0 && (
+          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "0.5rem" }}>
+            You don't own any properties yet.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="console-panel glass-panel">
       {/* Tabs Header */}
@@ -261,7 +415,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
           }}
         >
           Room Chat
-          {unreadChats > 0 && (
+          {totalUnread > 0 && (
             <span style={{
               position: "absolute",
               top: "-4px",
@@ -278,7 +432,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
               fontWeight: "bold",
               boxShadow: "0 0 5px rgba(239, 68, 68, 0.5)"
             }}>
-              {unreadChats}
+              {totalUnread}
             </span>
           )}
         </button>
@@ -302,16 +456,47 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "150px" }}>
+          {/* Channel switcher: General (everyone) + a private channel per player */}
+          <div className="chat-channel-bar">
+            <button
+              type="button"
+              className={`chat-channel-chip ${chatChannel === "general" ? "active" : ""}`}
+              onClick={() => setChatChannel("general")}
+            >
+              📢 General
+              {chatChannel !== "general" && channelUnread["general"] > 0 && (
+                <span className="chat-channel-dot">{channelUnread["general"]}</span>
+              )}
+            </button>
+            {otherPlayers.map((p: any) => (
+              <button
+                key={p.id}
+                type="button"
+                className={`chat-channel-chip ${chatChannel === p.id ? "active" : ""}`}
+                onClick={() => setChatChannel(p.id)}
+                title={`Private chat with ${p.name}`}
+              >
+                🔒 {p.name}
+                {chatChannel !== p.id && channelUnread[p.id] > 0 && (
+                  <span className="chat-channel-dot">{channelUnread[p.id]}</span>
+                )}
+              </button>
+            ))}
+          </div>
+
           <div id="game-chat-box" className="console-logs" style={{ flex: 1, minHeight: "100px" }}>
-            {chatMessages.length === 0 ? (
+            {visibleMessages.length === 0 ? (
               <div className="chat-empty-msg" style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "1rem" }}>
-                No messages yet. Chat with other players!
+                {chatChannel === "general"
+                  ? "No messages yet. Chat with everyone!"
+                  : `No private messages with ${activeChannelName} yet.`}
               </div>
             ) : (
-              chatMessages.map((msg, idx) => (
+              visibleMessages.map((msg: any, idx: number) => (
                 <div key={idx} className="chat-msg-row" style={{ fontSize: "0.8rem", margin: "2px 0", border: "none" }}>
                   <strong style={{ color: msg.senderId === mySessionId ? "var(--color-naira)" : "var(--color-gold)" }}>
-                    {msg.tokenId === "danfo_bus" ? "🚌" : msg.tokenId === "okada" ? "🏍️" : msg.tokenId === "agbada" ? "🧥" : msg.tokenId === "eagle" ? "🦅" : "👤"} {msg.senderName}:
+                    {msg.toId && "🔒 "}
+                    {msg.tokenId === "danfo_bus" ? "🚌" : msg.tokenId === "okada" ? "🏍️" : msg.tokenId === "agbada" ? "🧥" : msg.tokenId === "eagle" ? "🦅" : "👤"} {msg.senderId === mySessionId ? "You" : msg.senderName}:
                   </strong>{" "}
                   <span style={{ color: "#fff" }}>{msg.text}</span>
                 </div>
@@ -324,7 +509,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
               const form = e.currentTarget;
               const input = form.elements.namedItem("chatText") as HTMLInputElement;
               if (input && input.value.trim()) {
-                onSendChatMessage(input.value);
+                onSendChatMessage(input.value, chatChannel === "general" ? undefined : chatChannel);
                 input.value = "";
               }
             }}
@@ -333,7 +518,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
             <input
               type="text"
               name="chatText"
-              placeholder="Send message..."
+              placeholder={chatChannel === "general" ? "Message everyone…" : `Whisper to ${activeChannelName}…`}
               className="input-field"
               autoComplete="off"
               style={{ flex: 1, padding: "0.4rem 0.6rem", fontSize: "0.8rem", background: "rgba(0,0,0,0.4)" }}
@@ -573,40 +758,54 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
           </div>
         ) : isAuctionActive ? (
           /* Active Auction Panel */
-          <div className="auction-panel">
-            <div className="auction-title">🔨 AUCTION IN PROGRESS</div>
+          <div className={`auction-panel ${secsLeft <= 3 && auction.deadline ? "auction-urgent" : ""}`}>
+            <div className="auction-title">🔨 LIVE AUCTION — BID FAST!</div>
             <div style={{ textAlign: "center", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
               Tile: <strong>{BOARD[auction.tilePos].name}</strong> | Valuation: ₦{("price" in BOARD[auction.tilePos] ? (BOARD[auction.tilePos] as any).price : 0).toLocaleString()}
             </div>
-            
+
+            {/* Countdown timer */}
+            {auction.deadline && (
+              <div className="auction-timer">
+                <div className="auction-timer-bar">
+                  <div
+                    className={`auction-timer-fill ${secsLeft <= 3 ? "urgent" : ""}`}
+                    style={{ width: `${timerPct}%` }}
+                  />
+                </div>
+                <div className={`auction-timer-secs ${secsLeft <= 3 ? "urgent" : ""}`}>
+                  {secsLeft > 0 ? `${secsLeft}s` : "GOING, GONE!"}
+                </div>
+              </div>
+            )}
+
             <div className="auction-bid-hud">
-              <span>Highest Bid: <strong style={{ color: "var(--color-naira)" }}>₦{auction.highestBid.toLocaleString()}</strong></span>
-              <span>By: <strong>{auction.highestBidderId ? players.find((p: any) => p.id === auction.highestBidderId)?.name : "None"}</strong></span>
+              <span>Top Bid: <strong style={{ color: "var(--color-naira)" }}>₦{auction.highestBid.toLocaleString()}</strong></span>
+              <span>By: <strong>{auction.highestBidderId ? players.find((p: any) => p.id === auction.highestBidderId)?.name : "No bids yet"}</strong></span>
             </div>
 
-            {isMyBidTurn ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
+            {canBid ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.25rem" }}>
                 <div className="action-status-indicator" style={{ color: "var(--color-gold)", fontWeight: "bold" }}>
-                  It is your turn to BID!
+                  Raise the bid 👇
                 </div>
-                <div className="bid-input-wrapper">
-                  <input
-                    type="number"
-                    className="bid-input"
-                    style={{ flex: 1 }}
-                    step={10000}
-                    min={auction.highestBid + 1}
-                    max={me?.cash || 0}
-                    value={bidAmount}
-                    onChange={(e) => setBidAmount(Math.max(auction.highestBid + 1, Number(e.target.value)))}
-                  />
-                  <button
-                    className="button-primary"
-                    disabled={(me?.cash || 0) < bidAmount || bidAmount <= auction.highestBid}
-                    onClick={() => onSendAction({ type: "BID", amount: bidAmount })}
-                  >
-                    Bid ₦{bidAmount.toLocaleString()}
-                  </button>
+                <div className="auction-increment-buttons">
+                  {auction.bidIncrements.map((inc: number) => {
+                    const total = auction.highestBid + inc;
+                    const tooRich = (me?.cash || 0) < total;
+                    return (
+                      <button
+                        key={inc}
+                        className="button-primary bid-increment-btn"
+                        disabled={tooRich}
+                        title={tooRich ? "Not enough cash" : `Bid ₦${total.toLocaleString()}`}
+                        onClick={() => onSendAction({ type: "BID", amount: total })}
+                      >
+                        ▲ ₦{inc.toLocaleString()}
+                        <span className="bid-increment-total">₦{total.toLocaleString()}</span>
+                      </button>
+                    );
+                  })}
                 </div>
                 <button
                   className="button-secondary"
@@ -618,15 +817,25 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
                   Your cash: ₦{me?.cash.toLocaleString()}
                 </div>
               </div>
+            ) : iAmHighest ? (
+              <div className="action-status-indicator" style={{ color: "var(--color-naira)", fontWeight: "bold" }}>
+                🥇 You hold the top bid — hang on!
+              </div>
+            ) : iPassed ? (
+              <div className="action-status-indicator">
+                You folded. Watching the rest fight it out…
+              </div>
             ) : (
               <div className="action-status-indicator">
-                Waiting for <strong>{players.find((p: any) => p.id === auction.activePlayerIds[auction.currentPlayerIndex])?.name}</strong> to bid...
+                Spectating the auction…
               </div>
             )}
           </div>
-        ) : isMyTurn ? (
-          /* Active Turn Actions */
+        ) : (
+          /* Non-auction: your-turn actions or a waiting note, plus always-visible holdings */
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            {isMyTurn ? (
+            <>
             <div className="action-status-indicator" style={{ background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
               🟢 It is <strong style={{ color: "var(--color-naira)" }}>YOUR TURN</strong>!
             </div>
@@ -706,103 +915,15 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
               </button>
             )}
 
-            {/* General administration sub-actions (Build/Mortgage/Trade) */}
-            {(engineState.phase === "awaiting-roll" || engineState.phase === "awaiting-end-turn") && (
-              <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "0.75rem", marginTop: "0.25rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                  <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "var(--text-secondary)", textTransform: "uppercase" }}>My Properties ({myProperties.length})</span>
-                  <button
-                    className="button-secondary"
-                    style={{ fontSize: "0.7rem", padding: "0.25rem 0.5rem" }}
-                    onClick={() => setShowTradeBuilder(true)}
-                    disabled={players.length < 2 || activeTrade !== null}
-                  >
-                    🤝 Propose Trade
-                  </button>
-                </div>
-                
-                <div style={{ maxHeight: "150px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                  {myProperties.map((tile: any) => {
-                    const ts = tilesState[tile.pos];
-                    const isProp = tile.type === "property";
-                    return (
-                      <div key={tile.pos} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.02)", padding: "0.35rem 0.5rem", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.03)" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                          {isProp && (
-                            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: `var(--color-${(tile as PropertyTile).group})` }} />
-                          )}
-                          <span style={{ fontSize: "0.8rem", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100px", whiteSpace: "nowrap" }}>
-                            {tile.name}
-                          </span>
-                          {ts?.houses > 0 && (
-                            <span style={{ fontSize: "0.75rem", background: "rgba(245, 158, 11, 0.15)", color: "var(--color-gold)", padding: "2px 6px", borderRadius: "4px", fontWeight: "bold" }}>
-                              {getDevelopmentText(ts.houses)}
-                            </span>
-                          )}
-                          {ts?.mortgaged && (
-                            <span style={{ fontSize: "0.65rem", background: "rgba(239, 68, 68, 0.15)", color: "var(--color-danger)", padding: "1px 4px", borderRadius: "3px" }}>
-                              M
-                            </span>
-                          )}
-                        </div>
-
-                        <div style={{ display: "flex", gap: "2px" }}>
-                          {isProp && (
-                            <>
-                              <button
-                                style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(16, 185, 129, 0.1)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "3px", cursor: "pointer" }}
-                                disabled={!canBuild(tile.pos)}
-                                onClick={() => onSendAction({ type: "BUILD", pos: tile.pos })}
-                                title={`Build (₦${(tile as PropertyTile).houseCost.toLocaleString()})`}
-                              >
-                                Build
-                              </button>
-                              <button
-                                style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(239, 68, 68, 0.15)", color: "var(--color-danger)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "3px", cursor: "pointer" }}
-                                disabled={!canSellHouse(tile.pos)}
-                                onClick={() => onSendAction({ type: "SELL_HOUSE", pos: tile.pos })}
-                                title={`Sell ${getDevelopmentText(ts.houses)}`}
-                              >
-                                Sell
-                              </button>
-                            </>
-                          )}
-                          {!ts?.mortgaged ? (
-                            <button
-                              style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(245, 158, 11, 0.1)", color: "var(--color-gold)", border: "1px solid rgba(245, 158, 11, 0.2)", borderRadius: "3px", cursor: "pointer" }}
-                              disabled={!canMortgage(tile.pos)}
-                              onClick={() => onSendAction({ type: "MORTGAGE", pos: tile.pos })}
-                              title={`Mortgage for +₦${("mortgage" in tile ? tile.mortgage : 0).toLocaleString()}`}
-                            >
-                              Mortgage
-                            </button>
-                          ) : (
-                            <button
-                              style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(16, 185, 129, 0.15)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "3px", cursor: "pointer" }}
-                              disabled={!canUnmortgage(tile.pos)}
-                              onClick={() => onSendAction({ type: "UNMORTGAGE", pos: tile.pos })}
-                              title={`Unmortgage for -₦${("mortgage" in tile ? Math.round(tile.mortgage * 1.1) : 0).toLocaleString()}`}
-                            >
-                              Lift Mort.
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {myProperties.length === 0 && (
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "0.5rem" }}>
-                      You don't own any properties yet.
-                    </div>
-                  )}
-                </div>
+            </>
+            ) : (
+              <div className="action-status-indicator">
+                ⏳ Waiting for <strong>{players[engineState.currentPlayerIndex]?.name || "other players"}</strong> to act...
               </div>
             )}
-          </div>
-        ) : (
-          /* Spectator / Other player's turn */
-          <div className="action-status-indicator">
-            ⏳ Waiting for <strong>{players[engineState.currentPlayerIndex]?.name || "other players"}</strong> to act...
+
+            {/* Holdings are always visible; the action buttons enable only on your turn */}
+            {myPropertyManager}
           </div>
         )}
       </div>

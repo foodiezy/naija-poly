@@ -286,7 +286,7 @@ describe("Game Engine", () => {
   describe("Chance and Esusu Cards", () => {
     it("handles money cards", () => {
       const state = createGame(["p1", "p2"]);
-      // force CHANCE_CARDS ch02 ("NEPA don bring light. Collect ₦50,000") to be on top
+      // force CHANCE_CARDS ch02 ("Opay pay you POS dividend. Collect ₦50,000") to be on top
       state.chanceOrder = ["ch02"];
       state.players[0].position = 5; // MM Airport
 
@@ -315,7 +315,7 @@ describe("Game Engine", () => {
 
     it("handles repairs card", () => {
       const state = createGame(["p1", "p2"]);
-      // force ch08 ("Generator don knock: pay ₦40,000 per house, ₦115,000 per hotel")
+      // force ch08 ("Rainy season general repairs: pay ₦40,000 per house, ₦115,000 per hotel")
       state.chanceOrder = ["ch08"];
       state.players[0].position = 5; // MM Airport
       // Give player some properties with houses
@@ -453,9 +453,9 @@ describe("Game Engine", () => {
   });
 
   describe("Auctions, Trading, and Bankruptcy", () => {
-    it("handles auction bidding cycles, passes, and winning", () => {
+    it("handles open-outcry bidding, a pass, and winning", () => {
       const state = createGame(["p1", "p2"]);
-      state.players[0].position = 1; // Ajegunle
+      state.players[0].position = 1; // Ajegunle (₦60k -> increments 10k/20k/50k)
       state.phase = "awaiting-buy-decision";
 
       // Decline buy -> triggers auction
@@ -463,16 +463,19 @@ describe("Game Engine", () => {
       expect(nextState.phase).toBe("auction");
       expect(nextState.auctionState).toBeDefined();
       expect(nextState.auctionState?.tilePos).toBe(1);
+      expect(nextState.auctionState?.participantIds).toEqual(["p1", "p2"]);
+      expect(nextState.auctionState?.passedIds).toEqual([]);
+      expect(nextState.auctionState?.bidIncrements).toEqual([10_000, 20_000, 50_000]);
 
-      // p1 bids 10,000
+      // p1 bids the smallest increment (raise of 10k from 0)
       nextState = applyAction(nextState, "p1", { type: "BID", amount: 10_000 });
       expect(nextState.auctionState?.highestBid).toBe(10_000);
       expect(nextState.auctionState?.highestBidderId).toBe("p1");
-      expect(nextState.auctionState?.currentPlayerIndex).toBe(1); // p2's turn to bid
+      // p2 is still in the running, so the auction continues
+      expect(nextState.phase).toBe("auction");
 
-      // p2 passes
+      // p2 passes -> no challenger remains, p1 wins
       nextState = applyAction(nextState, "p2", { type: "PASS_BID" });
-      // p1 wins
       expect(nextState.phase).toBe("awaiting-end-turn");
       expect(nextState.tiles[1].ownerId).toBe("p1");
       expect(nextState.players[0].cash).toBe(STARTING_CASH - 10_000);
@@ -485,7 +488,7 @@ describe("Game Engine", () => {
       state.phase = "awaiting-buy-decision";
 
       let nextState = applyAction(state, "p1", { type: "DECLINE_BUY" });
-      
+
       // p1 passes
       nextState = applyAction(nextState, "p1", { type: "PASS_BID" });
       // p2 passes
@@ -494,6 +497,63 @@ describe("Game Engine", () => {
       expect(nextState.phase).toBe("awaiting-end-turn");
       expect(nextState.tiles[1].ownerId).toBeNull();
       expect(nextState.auctionState).toBeNull();
+    });
+
+    it("rejects bids that are not one of the set increments", () => {
+      const state = createGame(["p1", "p2"]);
+      state.players[0].position = 1;
+      state.phase = "awaiting-buy-decision";
+      const auctionState = applyAction(state, "p1", { type: "DECLINE_BUY" });
+
+      // 15k is not a legal raise (allowed: 10k/20k/50k)
+      expect(() => applyAction(auctionState, "p1", { type: "BID", amount: 15_000 })).toThrow();
+    });
+
+    it("lets any non-folded player raise at any time (no strict turn order)", () => {
+      const state = createGame(["p1", "p2", "p3"]);
+      state.players[0].position = 1;
+      state.phase = "awaiting-buy-decision";
+      let s = applyAction(state, "p1", { type: "DECLINE_BUY" });
+
+      // p2 opens, then p3 jumps in, then p1 tops it — all out of any turn order
+      s = applyAction(s, "p2", { type: "BID", amount: 10_000 });
+      s = applyAction(s, "p3", { type: "BID", amount: 30_000 }); // +20k
+      s = applyAction(s, "p1", { type: "BID", amount: 50_000 }); // +20k
+      expect(s.auctionState?.highestBid).toBe(50_000);
+      expect(s.auctionState?.highestBidderId).toBe("p1");
+      expect(s.phase).toBe("auction");
+
+      // the standing top bidder cannot bid against themselves
+      expect(() => applyAction(s, "p1", { type: "BID", amount: 70_000 })).toThrow();
+      // ...nor pass on their own winning bid
+      expect(() => applyAction(s, "p1", { type: "PASS_BID" })).toThrow();
+    });
+
+    it("resolves to the top bidder when the timer expires", () => {
+      const state = createGame(["p1", "p2"]);
+      state.players[0].position = 1;
+      state.phase = "awaiting-buy-decision";
+      let s = applyAction(state, "p1", { type: "DECLINE_BUY" });
+      s = applyAction(s, "p2", { type: "BID", amount: 20_000 });
+
+      // Server fires RESOLVE_AUCTION when the countdown hits zero
+      s = applyAction(s, "__server__", { type: "RESOLVE_AUCTION" });
+      expect(s.phase).toBe("awaiting-end-turn");
+      expect(s.tiles[1].ownerId).toBe("p2");
+      expect(s.players[1].cash).toBe(STARTING_CASH - 20_000);
+      expect(s.auctionState).toBeNull();
+    });
+
+    it("closes with no sale if the timer expires before any bid", () => {
+      const state = createGame(["p1", "p2"]);
+      state.players[0].position = 1;
+      state.phase = "awaiting-buy-decision";
+      let s = applyAction(state, "p1", { type: "DECLINE_BUY" });
+
+      s = applyAction(s, "__server__", { type: "RESOLVE_AUCTION" });
+      expect(s.phase).toBe("awaiting-end-turn");
+      expect(s.tiles[1].ownerId).toBeNull();
+      expect(s.auctionState).toBeNull();
     });
 
     it("handles trade proposals and acceptances", () => {

@@ -5,7 +5,7 @@ function patchClientForV017(client: Client) {
   (client as any).consumeSeatReservation = function(response: any, rootSchema: any, reuseRoomInstance: any) {
     if (response && !response.room) {
       response.room = {
-        name: response.name || "richup",
+        name: response.name || "odogwu",
         roomId: response.roomId,
         processId: response.processId,
         publicAddress: response.publicAddress
@@ -16,7 +16,7 @@ function patchClientForV017(client: Client) {
 }
 
 async function runTestClient() {
-  console.log("Starting Colyseus Richup Test Client...");
+  console.log("Starting Colyseus Odogwu Empire Test Client...");
   
   const clientA = new Client("ws://localhost:2567");
   const clientB = new Client("ws://localhost:2567");
@@ -26,13 +26,13 @@ async function runTestClient() {
 
   try {
     // 1. Join room for Player A
-    console.log("Player A joining richup room...");
-    const roomA = await clientA.joinOrCreate("richup", { name: "Chidi" });
+    console.log("Player A joining game room...");
+    const roomA = await clientA.joinOrCreate("odogwu", { name: "Chidi" });
     console.log(`Player A joined room: ${roomA.roomId} with sessionId: ${roomA.sessionId}`);
 
     // 2. Join room for Player B
-    console.log("Player B joining richup room...");
-    const roomB = await clientB.join("richup", { name: "Funmi" });
+    console.log("Player B joining game room...");
+    const roomB = await clientB.join("odogwu", { name: "Funmi" });
     console.log(`Player B joined room with sessionId: ${roomB.sessionId}`);
 
     // Set up state listeners for Room A

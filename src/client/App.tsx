@@ -25,7 +25,7 @@ function patchClientForV017(client: Client) {
   ) {
     if (response && !response.room) {
       response.room = {
-        name: response.name || "richup",
+        name: response.name || "odogwu",
         roomId: response.roomId,
         processId: response.processId,
         publicAddress: response.publicAddress,
@@ -249,6 +249,10 @@ export default function App() {
 
     joinedRoom.onMessage("CHAT_MESSAGE", (chatMsg: any) => {
       setChatMessages((prev) => [...prev, chatMsg]);
+      // Nudge the recipient when a private message arrives from someone else.
+      if (chatMsg.toId && chatMsg.senderId !== mySessionIdRef.current) {
+        toast.info(`🔒 ${chatMsg.senderName} (private): ${chatMsg.text}`, { autoClose: 4000 });
+      }
     });
 
     // Store session ID for toast targeting
@@ -261,7 +265,7 @@ export default function App() {
 
   const createRoom = async (name: string) => {
     try {
-      const roomInstance = await colyseusClient.joinOrCreate("richup", { name });
+      const roomInstance = await colyseusClient.joinOrCreate("odogwu", { name });
       setPlayerName(name);
       handleRoomJoined(roomInstance);
     } catch (e: any) {
@@ -324,9 +328,9 @@ export default function App() {
     }
   };
 
-  const sendChatMessage = (text: string) => {
+  const sendChatMessage = (text: string, toId?: string) => {
     if (room && text.trim()) {
-      room.send("SEND_CHAT", { text: text.trim() });
+      room.send("SEND_CHAT", { text: text.trim(), toId });
     }
   };
 
@@ -598,7 +602,7 @@ export default function App() {
           transition={{ duration: 0.4, ease: "easeOut" }}
         >
           <div className="board-panel">
-            <GameBoard engineState={engineState} roomState={roomState} onTileClick={setSelectedTilePos} />
+            <GameBoard engineState={engineState} roomState={roomState} mySessionId={room.sessionId} onTileClick={setSelectedTilePos} />
           </div>
           <div className="side-panel">
             {/* Players status panel */}
@@ -643,7 +647,7 @@ export default function App() {
                           {ownedTiles.map((tile: any) => {
                             const ts = engineState.tiles[tile.pos];
                             const isProp = tile.type === "property";
-                            const devName = ts.houses === 5 ? "Banana Tower" : ts.houses === 4 ? "Mini-Estate" : ts.houses === 3 ? "Mansion" : ts.houses === 2 ? "Duplex" : ts.houses === 1 ? "Bungalow" : "";
+                            const devName = ts.houses === 5 ? "Hotel" : ts.houses === 4 ? "Mini-Estate" : ts.houses === 3 ? "Mansion" : ts.houses === 2 ? "Duplex" : ts.houses === 1 ? "Bungalow" : "";
                             
                             return (
                               <div key={tile.pos} className="popover-tile-item">
@@ -890,7 +894,7 @@ export default function App() {
                       <span>₦{tile.rent[4].toLocaleString()}</span>
                     </div>
                     <div className="deed-rent-row highlight">
-                      <span>🏢 With Banana Tower</span>
+                      <span>🏨 With Hotel</span>
                       <span>₦{tile.rent[5].toLocaleString()}</span>
                     </div>
                     
@@ -994,7 +998,7 @@ export default function App() {
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.25rem" }}>
                             <span>Improvements:</span>
                             <strong style={{ color: "var(--color-gold)" }}>
-                              {ts.houses === 5 ? "Banana Tower 🏢" : ts.houses === 4 ? "Mini-Estate 🏘️" : ts.houses === 3 ? "Mansion 🏰" : ts.houses === 2 ? "Duplex 🏠" : "Bungalow 🏡"}
+                              {ts.houses === 5 ? "Hotel 🏨" : ts.houses === 4 ? "Mini-Estate 🏘️" : ts.houses === 3 ? "Mansion 🏰" : ts.houses === 2 ? "Duplex 🏠" : "Bungalow 🏡"}
                             </strong>
                           </div>
                         )}

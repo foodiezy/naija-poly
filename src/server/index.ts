@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import { Server } from "colyseus";
 import { WebSocketTransport } from "@colyseus/ws-transport";
-import { RichupRoom } from "./RichupRoom";
+import { GameRoom } from "./GameRoom";
 
 const port = Number(process.env.PORT || 2567);
 
@@ -24,7 +24,7 @@ const gameServer = new Server({
 });
 
 // Register the game room
-gameServer.define("richup", RichupRoom);
+gameServer.define("odogwu", GameRoom);
 
 // Start listening
 gameServer.listen(port).then(() => {
