@@ -16,9 +16,6 @@ const __dirname = path.dirname(__filename);
 const clientBuildPath = path.resolve(__dirname, "../../dist");
 
 // Initialize Colyseus Game Server.
-// The `express` callback receives the transport's Express app BEFORE the
-// matchmaking routes are registered, so middleware added here (CORS, JSON)
-// applies to /matchmake/* as well.
 const gameServer = new Server({
   transport: new WebSocketTransport(),
   express: (app) => {
@@ -29,21 +26,26 @@ const gameServer = new Server({
     app.get("/health", (_req, res) => {
       res.send("Odogwu Empire Server is running!");
     });
-
-    // Serve the built Vite client as static files
-    app.use(express.static(clientBuildPath));
-
-    // SPA fallback: any non-API/non-WS route serves index.html
-    app.get("*", (_req, res) => {
-      res.sendFile(path.join(clientBuildPath, "index.html"));
-    });
   },
 });
 
 // Register the game room
 gameServer.define("odogwu", GameRoom);
 
-// Start listening
+// Start listening, THEN add static file serving after Colyseus routes are set up
 gameServer.listen(port).then(() => {
   console.log(`Odogwu Empire Server is listening on http://localhost:${port}`);
+
+  // Get the underlying Express app and add static serving AFTER Colyseus routes
+  const app = (gameServer.transport as any).app as express.Express;
+
+  // Serve the built Vite client as static files
+  app.use(express.static(clientBuildPath));
+
+  // SPA fallback — Express 5 uses {*path} instead of *
+  app.get("/{*path}", (_req, res) => {
+    res.sendFile(path.join(clientBuildPath, "index.html"));
+  });
+
+  console.log(`Serving client from ${clientBuildPath}`);
 });
