@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import { createServer } from "http";
 import { Server } from "colyseus";
 import { WebSocketTransport } from "@colyseus/ws-transport";
 import { GameRoom } from "./GameRoom";
@@ -15,37 +16,41 @@ const __dirname = path.dirname(__filename);
 // Path to the built client files
 const clientBuildPath = path.resolve(__dirname, "../../dist");
 
-// Initialize Colyseus Game Server.
-const gameServer = new Server({
-  transport: new WebSocketTransport(),
-  express: (app) => {
-    app.use(cors({ origin: "*" }));
-    app.use(express.json());
+// 1. Create the Express application
+const app = express();
 
-    // Health check endpoint
-    app.get("/health", (_req, res) => {
-      res.send("Odogwu Empire Server is running!");
-    });
-  },
+app.use(cors({ origin: "*" }));
+app.use(express.json());
+
+// Health check endpoint
+app.get("/health", (_req, res) => {
+  res.send("Odogwu Empire Server is running!");
+});
+
+// Serve the built Vite client as static files
+app.use(express.static(clientBuildPath));
+
+// SPA fallback — Express 5 uses {*path} instead of *
+app.get("/{*path}", (_req, res) => {
+  res.sendFile(path.join(clientBuildPath, "index.html"));
+});
+
+// 2. Create the HTTP server
+const httpServer = createServer(app);
+
+// 3. Initialize Colyseus Game Server using the HTTP server
+const gameServer = new Server({
+  transport: new WebSocketTransport({
+    server: httpServer,
+  }),
 });
 
 // Register the game room
 gameServer.define("odogwu", GameRoom);
 
-// Start listening, THEN add static file serving after Colyseus routes are set up
-gameServer.listen(port).then(() => {
+// Start listening
+httpServer.listen(port, () => {
   console.log(`Odogwu Empire Server is listening on http://localhost:${port}`);
-
-  // Get the underlying Express app and add static serving AFTER Colyseus routes
-  const app = (gameServer.transport as any).app as express.Express;
-
-  // Serve the built Vite client as static files
-  app.use(express.static(clientBuildPath));
-
-  // SPA fallback — Express 5 uses {*path} instead of *
-  app.get("/{*path}", (_req, res) => {
-    res.sendFile(path.join(clientBuildPath, "index.html"));
-  });
-
   console.log(`Serving client from ${clientBuildPath}`);
 });
+
