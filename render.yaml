@@ -3,7 +3,7 @@ services:
   - type: web
     name: odogwu-empire-server
     runtime: node
-    buildCommand: npm install --legacy-peer-deps
+    buildCommand: npm install --legacy-peer-deps && npm run build:client
     startCommand: npm run start
     healthCheckPath: /health
 
