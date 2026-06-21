@@ -13,25 +13,18 @@ interface ControlPanelProps {
 
 export default function ControlPanel({ room, engineState, onSendAction, chatMessages, onSendChatMessage }: ControlPanelProps) {
   const [now, setNow] = useState<number>(Date.now());
-  const [activeTab, setActiveTab] = useState<"logs" | "chat">("logs");
   // Chat channels: "general" (everyone) or a specific playerId (private/direct).
   const [chatChannel, setChatChannel] = useState<string>("general");
   const [channelUnread, setChannelUnread] = useState<Record<string, number>>({});
   const [lastMessageCount, setLastMessageCount] = useState(0);
 
-  const handleTabChange = (tab: "logs" | "chat") => {
-    setActiveTab(tab);
-  };
-
   // Keep the chat scrolled to the newest message in the active channel.
   useEffect(() => {
-    if (activeTab === "chat") {
-      const chatElement = document.getElementById("game-chat-box");
-      if (chatElement) {
-        chatElement.scrollTop = chatElement.scrollHeight;
-      }
+    const chatElement = document.getElementById("game-chat-box");
+    if (chatElement) {
+      chatElement.scrollTop = chatElement.scrollHeight;
     }
-  }, [chatMessages, activeTab, chatChannel]);
+  }, [chatMessages, chatChannel]);
   const [tradeTargetId, setTradeTargetId] = useState<string>("");
   const [tradeGiveCash, setTradeGiveCash] = useState<number>(0);
   const [tradeGetCash, setTradeGetCash] = useState<number>(0);
@@ -93,7 +86,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
         fresh.forEach((m: any) => {
           if (m.senderId === mySessionId) return;
           const ch = channelOf(m);
-          const viewing = activeTab === "chat" && chatChannel === ch;
+          const viewing = chatChannel === ch;
           if (!viewing) next[ch] = (next[ch] || 0) + 1;
         });
         return next;
@@ -103,14 +96,12 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
       setChannelUnread({});
       setLastMessageCount(0);
     }
-  }, [chatMessages.length, activeTab, chatChannel, lastMessageCount, mySessionId]);
+  }, [chatMessages.length, chatChannel, lastMessageCount, mySessionId]);
 
   // Clear the badge for whichever channel I'm currently viewing.
   useEffect(() => {
-    if (activeTab === "chat") {
-      setChannelUnread((prev) => (prev[chatChannel] ? { ...prev, [chatChannel]: 0 } : prev));
-    }
-  }, [activeTab, chatChannel, chatMessages.length]);
+    setChannelUnread((prev) => (prev[chatChannel] ? { ...prev, [chatChannel]: 0 } : prev));
+  }, [chatChannel, chatMessages.length]);
 
   // Reset trade builder when turn or phase changes
   useEffect(() => {
@@ -127,7 +118,6 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
   // Chat: everyone except me gets a private channel; messages filtered to the
   // active channel; tab badge sums unread across all channels.
   const otherPlayers = players.filter((p: any) => p.id !== mySessionId);
-  const totalUnread = Object.values(channelUnread).reduce((a: number, b: number) => a + b, 0);
   const visibleMessages = chatMessages.filter((m: any) => channelOf(m) === chatChannel);
   const activeChannelName =
     chatChannel === "general"
@@ -157,19 +147,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
     return posArray.map((pos) => BOARD[pos].name).join(", ");
   };
 
-  // Helper to categorize log styles
-  const getLogClass = (logLine: string) => {
-    if (logLine.includes("rolled") || logLine.includes("START") || logLine.includes("Prison") || logLine.includes("escaped")) {
-      return "log-entry log-entry-system";
-    }
-    if (logLine.includes("bought")) {
-      return "log-entry log-entry-buy";
-    }
-    if (logLine.includes("paid rent") || logLine.includes("paid ₦") || logLine.includes("tax")) {
-      return "log-entry log-entry-rent";
-    }
-    return "log-entry";
-  };
+
 
   // Build / mortgage details helpers
   const myProperties = BOARD.filter((tile: any) => {
@@ -379,154 +357,82 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
 
   return (
     <div className="console-panel glass-panel">
-      {/* Tabs Header */}
-      <div className="panel-tabs" style={{ display: "flex", gap: "0.5rem", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "0.5rem", marginBottom: "0.75rem" }}>
-        <button
-          className={`panel-tab-btn ${activeTab === "logs" ? "active" : ""}`}
-          onClick={() => handleTabChange("logs")}
-          style={{
-            background: activeTab === "logs" ? "rgba(255,255,255,0.05)" : "transparent",
-            border: "none",
-            color: activeTab === "logs" ? "var(--text-primary)" : "var(--text-muted)",
-            padding: "0.4rem 0.8rem",
-            borderRadius: "6px",
-            fontSize: "0.8rem",
-            fontWeight: 600,
-            cursor: "pointer",
-            transition: "all 0.2s"
-          }}
-        >
-          Game Feed
-        </button>
-        <button
-          className={`panel-tab-btn ${activeTab === "chat" ? "active" : ""}`}
-          onClick={() => handleTabChange("chat")}
-          style={{
-            background: activeTab === "chat" ? "rgba(255,255,255,0.05)" : "transparent",
-            border: "none",
-            color: activeTab === "chat" ? "var(--text-primary)" : "var(--text-muted)",
-            padding: "0.4rem 0.8rem",
-            borderRadius: "6px",
-            fontSize: "0.8rem",
-            fontWeight: 600,
-            cursor: "pointer",
-            position: "relative",
-            transition: "all 0.2s"
-          }}
-        >
-          Room Chat
-          {totalUnread > 0 && (
-            <span style={{
-              position: "absolute",
-              top: "-4px",
-              right: "-4px",
-              background: "var(--color-danger)",
-              color: "#fff",
-              fontSize: "0.65rem",
-              borderRadius: "50%",
-              minWidth: "16px",
-              height: "16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: "bold",
-              boxShadow: "0 0 5px rgba(239, 68, 68, 0.5)"
-            }}>
-              {totalUnread}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {activeTab === "logs" ? (
-        <div id="console-logs-box" className="console-logs">
-          <AnimatePresence initial={false}>
-            {engineState.log?.map((logLine: string, idx: number) => (
-              <motion.div
-                key={idx}
-                className={getLogClass(logLine)}
-                initial={{ opacity: 0, x: -18 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-              >
-                {logLine}
-              </motion.div>
-            ))}
-          </AnimatePresence>
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "150px" }}>
+        {/* Chat Header/Title */}
+        <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "0.5rem", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "0.5rem" }}>
+          💬 Room Chat
         </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "150px" }}>
-          {/* Channel switcher: General (everyone) + a private channel per player */}
-          <div className="chat-channel-bar">
+
+        {/* Channel switcher: General (everyone) + a private channel per player */}
+        <div className="chat-channel-bar">
+          <button
+            type="button"
+            className={`chat-channel-chip ${chatChannel === "general" ? "active" : ""}`}
+            onClick={() => setChatChannel("general")}
+          >
+            📢 General
+            {chatChannel !== "general" && channelUnread["general"] > 0 && (
+              <span className="chat-channel-dot">{channelUnread["general"]}</span>
+            )}
+          </button>
+          {otherPlayers.map((p: any) => (
             <button
+              key={p.id}
               type="button"
-              className={`chat-channel-chip ${chatChannel === "general" ? "active" : ""}`}
-              onClick={() => setChatChannel("general")}
+              className={`chat-channel-chip ${chatChannel === p.id ? "active" : ""}`}
+              onClick={() => setChatChannel(p.id)}
+              title={`Private chat with ${p.name}`}
             >
-              📢 General
-              {chatChannel !== "general" && channelUnread["general"] > 0 && (
-                <span className="chat-channel-dot">{channelUnread["general"]}</span>
+              🔒 {p.name}
+              {chatChannel !== p.id && channelUnread[p.id] > 0 && (
+                <span className="chat-channel-dot">{channelUnread[p.id]}</span>
               )}
             </button>
-            {otherPlayers.map((p: any) => (
-              <button
-                key={p.id}
-                type="button"
-                className={`chat-channel-chip ${chatChannel === p.id ? "active" : ""}`}
-                onClick={() => setChatChannel(p.id)}
-                title={`Private chat with ${p.name}`}
-              >
-                🔒 {p.name}
-                {chatChannel !== p.id && channelUnread[p.id] > 0 && (
-                  <span className="chat-channel-dot">{channelUnread[p.id]}</span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          <div id="game-chat-box" className="console-logs" style={{ flex: 1, minHeight: "100px" }}>
-            {visibleMessages.length === 0 ? (
-              <div className="chat-empty-msg" style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "1rem" }}>
-                {chatChannel === "general"
-                  ? "No messages yet. Chat with everyone!"
-                  : `No private messages with ${activeChannelName} yet.`}
-              </div>
-            ) : (
-              visibleMessages.map((msg: any, idx: number) => (
-                <div key={idx} className="chat-msg-row" style={{ fontSize: "0.8rem", margin: "2px 0", border: "none" }}>
-                  <strong style={{ color: msg.senderId === mySessionId ? "var(--color-naira)" : "var(--color-gold)" }}>
-                    {msg.toId && "🔒 "}
-                    {msg.tokenId === "danfo_bus" ? "🚌" : msg.tokenId === "okada" ? "🏍️" : msg.tokenId === "agbada" ? "🧥" : msg.tokenId === "eagle" ? "🦅" : "👤"} {msg.senderId === mySessionId ? "You" : msg.senderName}:
-                  </strong>{" "}
-                  <span style={{ color: "#fff" }}>{msg.text}</span>
-                </div>
-              ))
-            )}
-          </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const form = e.currentTarget;
-              const input = form.elements.namedItem("chatText") as HTMLInputElement;
-              if (input && input.value.trim()) {
-                onSendChatMessage(input.value, chatChannel === "general" ? undefined : chatChannel);
-                input.value = "";
-              }
-            }}
-            style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}
-          >
-            <input
-              type="text"
-              name="chatText"
-              placeholder={chatChannel === "general" ? "Message everyone…" : `Whisper to ${activeChannelName}…`}
-              className="input-field"
-              autoComplete="off"
-              style={{ flex: 1, padding: "0.4rem 0.6rem", fontSize: "0.8rem", background: "rgba(0,0,0,0.4)" }}
-            />
-            <button type="submit" className="button-primary" style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", width: "auto" }}>Send</button>
-          </form>
+          ))}
         </div>
-      )}
+
+        <div id="game-chat-box" className="console-logs" style={{ flex: 1, minHeight: "100px" }}>
+          {visibleMessages.length === 0 ? (
+            <div className="chat-empty-msg" style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "1rem" }}>
+              {chatChannel === "general"
+                ? "No messages yet. Chat with everyone!"
+                : `No private messages with ${activeChannelName} yet.`}
+            </div>
+          ) : (
+            visibleMessages.map((msg: any, idx: number) => (
+              <div key={idx} className="chat-msg-row" style={{ fontSize: "0.8rem", margin: "2px 0", border: "none" }}>
+                <strong style={{ color: msg.senderId === mySessionId ? "var(--color-naira)" : "var(--color-gold)" }}>
+                  {msg.toId && "🔒 "}
+                  {msg.tokenId === "danfo_bus" ? "🚌" : msg.tokenId === "okada" ? "🏍️" : msg.tokenId === "agbada" ? "🧥" : msg.tokenId === "eagle" ? "🦅" : "👤"} {msg.senderId === mySessionId ? "You" : msg.senderName}:
+                </strong>{" "}
+                <span style={{ color: "#fff" }}>{msg.text}</span>
+              </div>
+            ))
+          )}
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const input = form.elements.namedItem("chatText") as HTMLInputElement;
+            if (input && input.value.trim()) {
+              onSendChatMessage(input.value, chatChannel === "general" ? undefined : chatChannel);
+              input.value = "";
+            }
+          }}
+          style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}
+        >
+          <input
+            type="text"
+            name="chatText"
+            placeholder={chatChannel === "general" ? "Message everyone…" : `Whisper to ${activeChannelName}…`}
+            className="input-field"
+            autoComplete="off"
+            style={{ flex: 1, padding: "0.4rem 0.6rem", fontSize: "0.8rem", background: "rgba(0,0,0,0.4)" }}
+          />
+          <button type="submit" className="button-primary" style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", width: "auto" }}>Send</button>
+        </form>
+      </div>
 
       {/* Trade response overlay (modal style) */}
       <AnimatePresence>
@@ -910,8 +816,14 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
             )}
 
             {engineState.phase === "awaiting-end-turn" && (
-              <button className="button-primary full-width-btn" style={{ padding: "0.9rem" }} onClick={() => onSendAction({ type: "END_TURN" })}>
-                End Turn 🏁
+              <button
+                className="button-primary full-width-btn"
+                style={{ padding: "0.9rem" }}
+                disabled={me?.cash < 0}
+                onClick={() => onSendAction({ type: "END_TURN" })}
+                title={me?.cash < 0 ? "You must mortgage properties, sell houses, or declare bankruptcy before ending your turn." : "End Turn 🏁"}
+              >
+                {me?.cash < 0 ? "Resolve Debt to End Turn 🏁" : "End Turn 🏁"}
               </button>
             )}
 

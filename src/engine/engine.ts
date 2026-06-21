@@ -594,6 +594,10 @@ export function applyAction(
         throw new Error(`Cannot end turn in phase ${nextState.phase}`);
       }
 
+      if (currentPlayer.cash < 0) {
+        throw new Error("Cannot end turn with negative cash. You must mortgage properties, sell houses, or declare bankruptcy.");
+      }
+
       // If player rolled doubles and is not in jail, they get another turn
       if (nextState.doublesCount > 0 && !currentPlayer.inJail) {
         nextState.phase = "awaiting-roll";

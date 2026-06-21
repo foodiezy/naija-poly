@@ -609,6 +609,50 @@ describe("Game Engine", () => {
       expect(nextState.winnerId).toBe("p1");
       expect(nextState.phase).toBe("game-over");
     });
+
+    it("allows negative cash players to roll but blocks END_TURN", () => {
+      const state = createGame(["p1", "p2"]);
+      
+      // Let's set p1 to own Mushin (pos 3)
+      state.tiles[3] = { ownerId: "p1", houses: 0, mortgaged: false };
+      
+      // Set p1 cash to -50k, and start p1's turn at awaiting-roll
+      state.players[0].cash = -50_000;
+      state.currentPlayerIndex = 0;
+      state.phase = "awaiting-roll";
+
+      // 1. Verify player can roll while negative
+      const mockRng = MockRNG.makeRoll(1, 2); // rolls 3 -> land on Mushin (pos 3)
+      let nextState = applyAction(state, "p1", { type: "ROLL" }, mockRng.getRNG());
+      
+      expect(nextState.players[0].position).toBe(3);
+      // Since p1 owns Mushin, landing on it resolves and transitions directly to awaiting-end-turn
+      expect(nextState.phase).toBe("awaiting-end-turn");
+      expect(nextState.players[0].cash).toBe(-50_000);
+
+      // 2. Verify p1 cannot end turn with negative cash
+      expect(() => applyAction(nextState, "p1", { type: "END_TURN" })).toThrow(
+        "Cannot end turn with negative cash"
+      );
+
+      // 3. Mortgage property to raise cash
+      nextState = applyAction(nextState, "p1", { type: "MORTGAGE", pos: 3 });
+      // mortgage value is 30,000. New cash: -50,000 + 30,000 = -20,000. Still negative.
+      expect(nextState.players[0].cash).toBe(-20_000);
+
+      // 4. Verify cannot end turn yet
+      expect(() => applyAction(nextState, "p1", { type: "END_TURN" })).toThrow(
+        "Cannot end turn with negative cash"
+      );
+
+      // 5. Give some cash (e.g. from trade or gift) to make positive
+      nextState.players[0].cash = 10_000;
+
+      // 6. Verify p1 can now end turn
+      const finalState = applyAction(nextState, "p1", { type: "END_TURN" });
+      expect(finalState.currentPlayerIndex).toBe(1); // advances to p2
+      expect(finalState.phase).toBe("awaiting-roll");
+    });
   });
 
   describe("Lobby Settings & Retheming", () => {

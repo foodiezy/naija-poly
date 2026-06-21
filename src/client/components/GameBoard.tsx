@@ -1,3 +1,4 @@
+import { useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BOARD, Tile, PropertyTile } from "../../data/board";
 
@@ -91,6 +92,27 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   const activePlayerIndex = engineState.currentPlayerIndex ?? -1;
   const activePlayerId = activePlayerIndex >= 0 && players[activePlayerIndex] ? players[activePlayerIndex].id : null;
 
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [engineState.log?.length]);
+
+  const getLogClass = (logLine: string) => {
+    if (logLine.includes("rolled") || logLine.includes("START") || logLine.includes("Prison") || logLine.includes("escaped")) {
+      return "log-entry log-entry-system";
+    }
+    if (logLine.includes("bought")) {
+      return "log-entry log-entry-buy";
+    }
+    if (logLine.includes("paid rent") || logLine.includes("paid ₦") || logLine.includes("tax")) {
+      return "log-entry log-entry-rent";
+    }
+    return "log-entry";
+  };
+
   const getTokenEmoji = (playerId: string) => {
     const player = lobbyPlayers.get(playerId);
     const tokenId = player?.tokenId;
@@ -176,78 +198,99 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
       <div className="board-center">
         <div className="board-center-logo">ODOGWU EMPIRE</div>
         
-        {/* Dice */}
-        <AnimatePresence mode="wait">
-          {engineState.dice && (
+        {/* Top Row: Bukka Pot and Game Phase/Turn HUD */}
+        <div className="board-center-top-row">
+          {/* Bukka Pot Display */}
+          {engineState.settings?.freeParkingJackpot ? (
             <motion.div
-              key={`${engineState.dice[0]}-${engineState.dice[1]}-${engineState.currentTurn}`}
-              className="dice-container-center"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              {renderDie3D(engineState.dice[0], `die0-${engineState.dice[0]}-${engineState.currentTurn}`)}
-              {renderDie3D(engineState.dice[1], `die1-${engineState.dice[1]}-${engineState.currentTurn}`)}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Bukka Pot Display */}
-        {engineState.settings?.freeParkingJackpot && (
-          <motion.div
-            className="bukka-pot-display"
-            style={{ margin: "0.5rem 0", padding: "0.4rem 1rem", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "20px", display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", fontWeight: "bold", color: "var(--color-naira)", boxShadow: "0 0 10px rgba(16, 185, 129, 0.15)", zIndex: 5 }}
-            key={engineState.freeParkingPot}
-            animate={engineState.freeParkingPot > 0 ? {
-              boxShadow: ["0 0 10px rgba(16,185,129,0.15)", "0 0 22px rgba(16,185,129,0.45)", "0 0 10px rgba(16,185,129,0.15)"],
-            } : {}}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            <span>🍲 Bukka Pot:</span>
-            <motion.span
+              className="bukka-pot-display"
+              style={{ margin: 0, padding: "0.35rem 0.75rem", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "20px", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", color: "var(--color-naira)", boxShadow: "0 0 10px rgba(16, 185, 129, 0.15)", zIndex: 5 }}
               key={engineState.freeParkingPot}
-              initial={{ scale: 1.3, color: "#10b981" }}
-              animate={{ scale: 1, color: "var(--color-naira)" }}
-              transition={{ duration: 0.4 }}
+              animate={engineState.freeParkingPot > 0 ? {
+                boxShadow: ["0 0 10px rgba(16,185,129,0.15)", "0 0 22px rgba(16,185,129,0.45)", "0 0 10px rgba(16,185,129,0.15)"],
+              } : {}}
+              transition={{ duration: 1.5, repeat: Infinity }}
             >
-              ₦{(engineState.freeParkingPot ?? 0).toLocaleString()}
-            </motion.span>
-          </motion.div>
-        )}
-
-        {/* Drawn Card Overlay */}
-        <AnimatePresence>
-          {activeCardDraw && (
-            <motion.div
-              className={`card-draw-overlay ${activeCardDraw.type}`}
-              initial={{ opacity: 0, scale: 0.85, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: -10 }}
-              transition={{ type: "spring", stiffness: 300, damping: 24 }}
-            >
-              <div className="card-deck-title">{activeCardDraw.type} DRAWN BY {activeCardDraw.player.toUpperCase()}</div>
-              <div className="card-text">"{activeCardDraw.text}"</div>
+              <span>🍲 Bukka Pot:</span>
+              <motion.span
+                key={engineState.freeParkingPot}
+                initial={{ scale: 1.3, color: "#10b981" }}
+                animate={{ scale: 1, color: "var(--color-naira)" }}
+                transition={{ duration: 0.4 }}
+              >
+                ₦{(engineState.freeParkingPot ?? 0).toLocaleString()}
+              </motion.span>
             </motion.div>
+          ) : (
+            <div style={{ flex: 1 }} />
           )}
-        </AnimatePresence>
 
-        {/* Game Phase / Turn Indicator */}
-        <motion.div
-          key={engineState.phase}
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          style={{ marginTop: "1rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem" }}
-        >
-          <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            Phase: <span style={{ color: "var(--color-gold)", fontWeight: "bold" }}>{engineState.phase.replace("-", " ")}</span>
+          {/* Game Phase / Turn Indicator */}
+          <motion.div
+            key={engineState.phase}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "1px", zIndex: 5 }}
+          >
+            <div style={{ color: "var(--text-secondary)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+              Phase: <span style={{ color: "var(--color-gold)", fontWeight: "bold" }}>{engineState.phase.replace("-", " ")}</span>
+            </div>
+            <div style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>
+              Round: <span style={{ color: "#3b82f6", fontWeight: "bold" }}>{engineState.currentTurn ?? 1}</span>
+              {engineState.settings?.turnLimit > 0 && ` / ${engineState.settings.turnLimit}`}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Center: Game Feed scrollable logs box */}
+        <div className="board-center-feed">
+          <div className="board-center-feed-title">📢 Game Feed</div>
+          <div className="board-center-feed-logs">
+            {engineState.log?.map((logLine: string, idx: number) => (
+              <div key={idx} className={getLogClass(logLine)}>
+                {logLine}
+              </div>
+            ))}
+            <div ref={logsEndRef} />
           </div>
-          <div style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
-            Round: <span style={{ color: "#3b82f6", fontWeight: "bold" }}>{engineState.currentTurn ?? 1}</span>
-            {engineState.settings?.turnLimit > 0 && ` / ${engineState.settings.turnLimit}`}
-          </div>
-        </motion.div>
+        </div>
+
+        {/* Bottom Row: Dice and Card draws */}
+        <div className="board-center-bottom-row">
+          {/* Dice */}
+          <AnimatePresence mode="wait">
+            {engineState.dice && (
+              <motion.div
+                key={`${engineState.dice[0]}-${engineState.dice[1]}-${engineState.currentTurn}`}
+                className="dice-container-center"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {renderDie3D(engineState.dice[0], `die0-${engineState.dice[0]}-${engineState.currentTurn}`)}
+                {renderDie3D(engineState.dice[1], `die1-${engineState.dice[1]}-${engineState.currentTurn}`)}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Drawn Card Overlay */}
+          <AnimatePresence>
+            {activeCardDraw && (
+              <motion.div
+                className={`card-draw-overlay ${activeCardDraw.type}`}
+                initial={{ opacity: 0, scale: 0.85, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                transition={{ type: "spring", stiffness: 300, damping: 24 }}
+              >
+                <div className="card-deck-title">{activeCardDraw.type} DRAWN BY {activeCardDraw.player.toUpperCase()}</div>
+                <div className="card-text">"{activeCardDraw.text}"</div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Render 40 tiles */}
