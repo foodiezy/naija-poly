@@ -715,8 +715,14 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Corner Tiles are bigger */
 .tile-corner {
-  background: var(--surface-1);
+  background: radial-gradient(circle at 50% 40%, var(--surface-2), var(--surface-1) 70%);
   font-weight: 700;
+}
+
+/* Corner specials (START, Jail, Bukka, Go-to-Jail) get a larger icon */
+.tile-corner .tile-type-icon {
+  font-size: 1.5rem;
+  margin-bottom: 2px;
 }
 
 .tile-color-bar {
@@ -804,11 +810,11 @@ h1, h2, h3, h4, h5, h6 {
 
 /* House shape — small pentagon (house with roof) */
 .house-dot {
-  width: 7px;
-  height: 8px;
-  background: #22c55e;
-  clip-path: polygon(50% 0%, 100% 40%, 100% 100%, 0% 100%, 0% 40%);
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.5));
+  width: 8px;
+  height: 9px;
+  background: linear-gradient(to bottom, #34d399 0%, #10b981 100%);
+  clip-path: polygon(50% 0%, 100% 38%, 100% 100%, 0% 100%, 0% 38%);
+  filter: drop-shadow(0 1px 1.5px rgba(0,0,0,0.55));
 }
 
 /* Hotel shape — taller red building with flat roof accent */
