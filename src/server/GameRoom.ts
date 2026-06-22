@@ -2,6 +2,7 @@ import { Schema, type, MapSchema } from "@colyseus/schema";
 import { Room, Client } from "colyseus";
 import { createGame, applyAction } from "../engine/engine";
 import type { Action } from "../engine/types";
+import { TOKEN_IDS, MAX_PLAYERS } from "../data/tokens";
 
 export class LobbyPlayer extends Schema {
   @type("string") id: string = "";
@@ -20,6 +21,9 @@ export class GameRoomState extends Schema {
 }
 
 export class GameRoom extends Room<{ state: GameRoomState }> {
+  // One distinct token per player, so the room can't exceed the token roster.
+  maxClients = MAX_PLAYERS;
+
   // Server-owned countdown for the active auction (Colyseus clock timer).
   private auctionTimer: any = undefined;
 
@@ -78,23 +82,47 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
 
     // Message handler to select token
     this.onMessage("SELECT_TOKEN", (client, message: { tokenId: string }) => {
+      // Never throw out of a message handler: an uncaught throw escapes the ws
+      // receiver and crashes the whole server process. Report back to the
+      // offending client and bail instead.
       if (this.state.status !== "lobby") {
-        throw new Error("Cannot select token once game starts");
+        client.send("ERROR", { message: "Cannot select token once game starts" });
+        return;
       }
       const player = this.state.lobbyPlayers.get(client.sessionId);
-      if (player) {
-        player.tokenId = message.tokenId;
-        console.log(`Player ${player.name} selected token: ${message.tokenId}`);
+      if (!player) return;
+
+      if (!TOKEN_IDS.includes(message.tokenId)) {
+        client.send("ERROR", { message: "Unknown token" });
+        return;
       }
+
+      // No two players may hold the same token — pieces must be distinguishable
+      // on the board and in owner badges.
+      let takenByOther = false;
+      this.state.lobbyPlayers.forEach((p, id) => {
+        if (id !== client.sessionId && p.tokenId === message.tokenId) {
+          takenByOther = true;
+        }
+      });
+      if (takenByOther) {
+        client.send("ERROR", { message: "That token is already taken" });
+        return;
+      }
+
+      player.tokenId = message.tokenId;
+      console.log(`Player ${player.name} selected token: ${message.tokenId}`);
     });
 
     // Message handler to update lobby settings
     this.onMessage("UPDATE_SETTINGS", (client, message: { startingCash?: number; turnLimit?: number; freeParkingJackpot?: boolean }) => {
       if (this.state.status !== "lobby") {
-        throw new Error("Cannot change settings once game starts");
+        client.send("ERROR", { message: "Cannot change settings once game starts" });
+        return;
       }
       if (client.sessionId !== this.state.hostId) {
-        throw new Error("Only the host can modify settings");
+        client.send("ERROR", { message: "Only the host can modify settings" });
+        return;
       }
 
       if (message.startingCash !== undefined) {
@@ -112,15 +140,18 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     // Message handler to start game
     this.onMessage("START_GAME", (client, _message) => {
       if (this.state.status !== "lobby") {
-        throw new Error("Game is already in progress");
+        client.send("ERROR", { message: "Game is already in progress" });
+        return;
       }
       if (client.sessionId !== this.state.hostId) {
-        throw new Error("Only the host can start the game");
+        client.send("ERROR", { message: "Only the host can start the game" });
+        return;
       }
 
       const playerIds = Array.from(this.state.lobbyPlayers.keys()) as string[];
       if (playerIds.length < 2) {
-        throw new Error("Must have at least 2 players to start");
+        client.send("ERROR", { message: "Must have at least 2 players to start" });
+        return;
       }
 
       // Initialize the pure game engine state with lobby settings
@@ -147,7 +178,8 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     // Message handler for player actions
     this.onMessage("ACTION", (client, action: Action) => {
       if (this.state.status !== "in_progress") {
-        throw new Error("Game is not in progress");
+        client.send("ERROR", { message: "Game is not in progress" });
+        return;
       }
 
       // RESOLVE_AUCTION is a server-only timer event; clients must not fire it.
@@ -168,7 +200,8 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     // Message handler to reset game back to lobby
     this.onMessage("RESET_GAME", (client, _message) => {
       if (client.sessionId !== this.state.hostId) {
-        throw new Error("Only the host can reset the game");
+        client.send("ERROR", { message: "Only the host can reset the game" });
+        return;
       }
       this.clearAuctionTimer();
       this.state.status = "lobby";
@@ -217,8 +250,10 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     const player = new LobbyPlayer();
     player.id = client.sessionId;
     player.name = name;
-    // Default token to okada
-    player.tokenId = "okada";
+    // Default to the first token not already claimed, so joiners never collide.
+    const taken = new Set<string>();
+    this.state.lobbyPlayers.forEach((p) => taken.add(p.tokenId));
+    player.tokenId = TOKEN_IDS.find((id) => !taken.has(id)) ?? TOKEN_IDS[0];
 
     this.state.lobbyPlayers.set(client.sessionId, player);
 
@@ -251,8 +286,18 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
         await this.allowReconnection(client, 60);
         console.log(`Client ${client.sessionId} successfully reconnected!`);
       } catch (e) {
-        // Player failed to reconnect in 60s
+        // Player failed to reconnect in 60s (or left intentionally). Forfeit
+        // them through the engine so turns keep flowing and the game can't
+        // stall waiting on someone who is gone.
         console.log(`Client ${client.sessionId} permanently disconnected.`);
+        if (this.state.status === "in_progress") {
+          try {
+            this.runEngineAction(client.sessionId, { type: "FORFEIT" });
+            console.log(`Client ${client.sessionId} forfeited after disconnect.`);
+          } catch (err: any) {
+            console.error(`Error forfeiting disconnected player: ${err.message}`);
+          }
+        }
       }
     }
   }
