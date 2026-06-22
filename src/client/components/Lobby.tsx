@@ -225,7 +225,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.7 }}
       >
-        2–4 players · No download required · Play in browser
+        2–6 players · No download required · Play in browser
       </motion.p>
     </div>
   );

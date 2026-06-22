@@ -7,6 +7,7 @@ import Lobby from "./components/Lobby";
 import GameBoard from "./components/GameBoard";
 import ControlPanel from "./components/ControlPanel";
 import { BOARD } from "../data/board";
+import { TOKENS, tokenEmoji } from "../data/tokens";
 import * as sound from "./utils/sound";
 
 // Fallback logic for local vs deployed addresses
@@ -265,7 +266,9 @@ export default function App() {
 
   const createRoom = async (name: string) => {
     try {
-      const roomInstance = await colyseusClient.joinOrCreate("odogwu", { name });
+      // Always spin up a fresh room with its own code. joinOrCreate would drop
+      // the host into whatever existing room is still open for joining.
+      const roomInstance = await colyseusClient.create("odogwu", { name });
       setPlayerName(name);
       handleRoomJoined(roomInstance);
     } catch (e: any) {
@@ -317,14 +320,17 @@ export default function App() {
     }
   };
 
-  const leaveRoom = async () => {
+  const leaveRoom = () => {
     if (room) {
-      await room.leave();
+      // Fire-and-forget: don't await the server close handshake so the UI
+      // resets instantly. The server's onLeave handler still runs correctly.
+      room.leave().catch(() => {});
       setRoom(null);
       setRoomState(null);
       setEngineState(null);
       setChatMessages([]);
       setSelectedTilePos(null);
+      setLastLogLength(0);
     }
   };
 
@@ -440,22 +446,24 @@ export default function App() {
               <div className="form-group">
                 <label>Select Your Token Piece:</label>
                 <div className="token-grid">
-                  {[
-                    { id: "okada", emoji: "🏍️", name: "Okada" },
-                    { id: "danfo_bus", emoji: "🚌", name: "Danfo" },
-                    { id: "agbada", emoji: "🧥", name: "Agbada" },
-                    { id: "eagle", emoji: "🦅", name: "Eagle" },
-                  ].map((token) => {
+                  {TOKENS.map((token) => {
                     const lobbyPlayer = roomState.lobbyPlayers.get(room.sessionId);
                     const isSelected = lobbyPlayer?.tokenId === token.id;
+                    // Taken by someone else → can't be picked.
+                    const takenByOther = Array.from(roomState.lobbyPlayers.entries()).some(
+                      ([id, p]: any) => id !== room.sessionId && p.tokenId === token.id
+                    );
                     return (
                       <div
                         key={token.id}
-                        className={`token-option ${isSelected ? "selected" : ""}`}
-                        onClick={() => selectToken(token.id)}
+                        className={`token-option ${isSelected ? "selected" : ""} ${takenByOther ? "taken" : ""}`}
+                        onClick={() => !takenByOther && selectToken(token.id)}
+                        title={takenByOther ? "Already taken by another player" : token.name}
+                        style={takenByOther ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
                       >
                         <span className="token-emoji">{token.emoji}</span>
                         <span className="token-name">{token.name}</span>
+                        {takenByOther && <span className="token-taken-tag">Taken</span>}
                       </div>
                     );
                   })}
@@ -524,9 +532,7 @@ export default function App() {
                   {Array.from(roomState.lobbyPlayers.entries()).map(([id, player]: any) => (
                     <div key={id} className="lobby-player-row">
                       <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span>
-                          {player.tokenId === "danfo_bus" ? "🚌" : player.tokenId === "okada" ? "🏍️" : player.tokenId === "agbada" ? "🧥" : "🦅"}
-                        </span>
+                        <span>{tokenEmoji(player.tokenId)}</span>
                         <span style={{ fontWeight: 600 }}>{player.name} {id === room.sessionId && "(You)"}</span>
                       </span>
                       {roomState.hostId === id && <span className="host-tag">HOST</span>}
@@ -560,7 +566,7 @@ export default function App() {
                   chatMessages.map((msg, idx) => (
                     <div key={idx} className="chat-msg-row">
                       <span className="chat-msg-sender">
-                        {msg.tokenId === "danfo_bus" ? "🚌" : msg.tokenId === "okada" ? "🏍️" : msg.tokenId === "agbada" ? "🧥" : msg.tokenId === "eagle" ? "🦅" : "👤"} {msg.senderName}:
+                        {tokenEmoji(msg.tokenId)} {msg.senderName}:
                       </span>
                       <span className="chat-msg-text">{msg.text}</span>
                     </div>
@@ -611,7 +617,7 @@ export default function App() {
               {engineState?.players.map((p: any, idx: number) => {
                 const isCurrent = engineState.currentPlayerIndex === idx;
                 const lobbyPlayer = roomState?.lobbyPlayers?.get(p.id);
-                const tokenEmoji = lobbyPlayer?.tokenId === "danfo_bus" ? "🚌" : lobbyPlayer?.tokenId === "okada" ? "🏍️" : lobbyPlayer?.tokenId === "agbada" ? "🧥" : "🦅";
+                const playerToken = tokenEmoji(lobbyPlayer?.tokenId);
                 const ownedTiles = BOARD.filter((tile: any) => {
                   const ts = engineState.tiles[tile.pos];
                   return ts && ts.ownerId === p.id;
@@ -631,7 +637,7 @@ export default function App() {
                     layout
                   >
                     <div className="hud-player-name-wrapper">
-                      <span style={{ fontSize: "1.2rem" }}>{tokenEmoji}</span>
+                      <span style={{ fontSize: "1.2rem" }}>{playerToken}</span>
                       <span className="hud-player-name">{p.name} {p.id === room.sessionId && "(You)"}</span>
                       {p.inJail && <span style={{ background: "var(--color-danger)", color: "#000", fontSize: "0.65rem", padding: "1px 4px", borderRadius: "3px", fontWeight: "bold" }}>JAIL</span>}
                     </div>
@@ -755,7 +761,7 @@ export default function App() {
                 </div>
                 {getLeaderboard().map((p, index) => {
                   const lobbyPlayer = roomState?.lobbyPlayers?.get(p.id);
-                  const tokenEmoji = lobbyPlayer?.tokenId === "danfo_bus" ? "🚌" : lobbyPlayer?.tokenId === "okada" ? "🏍️" : lobbyPlayer?.tokenId === "agbada" ? "🧥" : "🦅";
+                  const playerToken = tokenEmoji(lobbyPlayer?.tokenId);
                   return (
                     <motion.div
                       key={p.id}
@@ -768,7 +774,7 @@ export default function App() {
                         {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `#${index + 1}`}
                       </span>
                       <span className="player-identity">
-                        <span>{tokenEmoji}</span>
+                        <span>{playerToken}</span>
                         <span style={{ fontWeight: 600 }}>{p.name} {p.id === room.sessionId && "(You)"}</span>
                       </span>
                       <span className={`player-status ${p.bankrupt ? "bankrupt" : "active"}`}>

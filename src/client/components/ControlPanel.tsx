@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BOARD, PropertyTile } from "../../data/board";
+import { tokenEmoji } from "../../data/tokens";
 import { TradeOffer } from "../../engine/types";
 
 interface ControlPanelProps {
@@ -403,7 +404,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
               <div key={idx} className="chat-msg-row" style={{ fontSize: "0.8rem", margin: "2px 0", border: "none" }}>
                 <strong style={{ color: msg.senderId === mySessionId ? "var(--color-naira)" : "var(--color-gold)" }}>
                   {msg.toId && "🔒 "}
-                  {msg.tokenId === "danfo_bus" ? "🚌" : msg.tokenId === "okada" ? "🏍️" : msg.tokenId === "agbada" ? "🧥" : msg.tokenId === "eagle" ? "🦅" : "👤"} {msg.senderId === mySessionId ? "You" : msg.senderName}:
+                  {tokenEmoji(msg.tokenId)} {msg.senderId === mySessionId ? "You" : msg.senderName}:
                 </strong>{" "}
                 <span style={{ color: "#fff" }}>{msg.text}</span>
               </div>

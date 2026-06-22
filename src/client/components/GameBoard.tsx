@@ -1,6 +1,7 @@
 import { useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BOARD, Tile, PropertyTile } from "../../data/board";
+import { tokenEmoji } from "../../data/tokens";
 
 interface GameBoardProps {
   engineState: any;
@@ -113,22 +114,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
     return "log-entry";
   };
 
-  const getTokenEmoji = (playerId: string) => {
-    const player = lobbyPlayers.get(playerId);
-    const tokenId = player?.tokenId;
-    switch (tokenId) {
-      case "okada":
-        return "🏍️";
-      case "danfo_bus":
-        return "🚌";
-      case "agbada":
-        return "🧥";
-      case "eagle":
-        return "🦅";
-      default:
-        return "👤";
-    }
-  };
+  const getTokenEmoji = (playerId: string) => tokenEmoji(lobbyPlayers.get(playerId)?.tokenId);
 
   const renderDie3D = (value: number, key: string) => {
     let rotation = "";
