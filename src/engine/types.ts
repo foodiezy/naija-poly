@@ -96,6 +96,7 @@ export type Action =
   | { type: "PAY_JAIL_FINE" }
   | { type: "USE_JAIL_CARD" }
   | { type: "DECLARE_BANKRUPT" }
+  | { type: "FORFEIT" } // a player permanently left (disconnect): eliminate them
   | { type: "END_TURN" };
 
 export interface TradeOffer {

@@ -21,6 +21,24 @@ import {
 } from "../data/board";
 import type { Action, GameState, PlayerId, TileState, Player, GameSettings } from "./types";
 
+// Move the turn to the next non-bankrupt player and reset per-turn state.
+// Used when the active player can no longer act (e.g. forfeited a turn by
+// leaving). Does not handle round/turn-limit accounting — that lives in
+// END_TURN, which is the normal path for completing a turn.
+function advanceTurnSkippingBankrupt(state: GameState): void {
+  let nextIndex = (state.currentPlayerIndex + 1) % state.players.length;
+  let guard = 0;
+  while (state.players[nextIndex].bankrupt && guard < state.players.length) {
+    nextIndex = (nextIndex + 1) % state.players.length;
+    guard++;
+  }
+  state.currentPlayerIndex = nextIndex;
+  state.doublesCount = 0;
+  state.dice = null;
+  state.phase = "awaiting-roll";
+  state.log.push(`It is now ${state.players[nextIndex].name}'s turn.`);
+}
+
 // Award the auctioned tile to the standing high bidder (or close with no sale),
 // then hand the turn back. Shared by BID / PASS_BID / RESOLVE_AUCTION.
 function finalizeAuction(state: GameState): void {
@@ -39,6 +57,11 @@ function finalizeAuction(state: GameState): void {
   }
   state.auctionState = null;
   state.phase = "awaiting-end-turn";
+  // The decliner who triggered the auction may have left mid-auction; never
+  // strand the turn on a bankrupt player.
+  if (state.players[state.currentPlayerIndex].bankrupt) {
+    advanceTurnSkippingBankrupt(state);
+  }
 }
 
 // Helper: Shuffles an array using Fisher-Yates and the injected rng
@@ -200,8 +223,10 @@ export function applyAction(
   const isAuctionAction =
     action.type === "BID" || action.type === "PASS_BID" || action.type === "RESOLVE_AUCTION";
   const isTradeResponse = action.type === "RESPOND_TRADE";
+  // A disconnect can land on any player at any time, not just the active one.
+  const isForfeit = action.type === "FORFEIT";
 
-  if (playerId !== currentPlayer.id && !isAuctionAction && !isTradeResponse) {
+  if (playerId !== currentPlayer.id && !isAuctionAction && !isTradeResponse && !isForfeit) {
     const playerObj = nextState.players.find(p => p.id === playerId);
     const isDeclaringBankruptInDebt = action.type === "DECLARE_BANKRUPT" && playerObj && playerObj.cash < 0;
     if (!isDeclaringBankruptInDebt) {
@@ -866,6 +891,77 @@ export function applyAction(
       }
 
       nextState.activeTrade = null;
+      break;
+    }
+
+    case "FORFEIT": {
+      // A player permanently left (disconnect/quit). Eliminate them like a
+      // bankruptcy to the bank, regardless of cash or whose turn it is, and
+      // keep the game in a consistent, playable state.
+      const player = nextState.players.find((p) => p.id === playerId);
+      // Idempotent / safe no-ops: unknown player, already out, or finished game.
+      if (!player || player.bankrupt || nextState.phase === "game-over") {
+        break;
+      }
+
+      player.bankrupt = true;
+      nextState.log.push(`${player.name} left the game and forfeited.`);
+
+      // Return all their holdings to the bank (demolish, clear ownership).
+      Object.keys(nextState.tiles).forEach((posStr) => {
+        const pos = parseInt(posStr, 10);
+        if (nextState.tiles[pos].ownerId === playerId) {
+          nextState.tiles[pos] = { ownerId: null, houses: 0, mortgaged: false };
+        }
+      });
+
+      // Cancel any pending trade they were part of.
+      if (
+        nextState.activeTrade &&
+        (nextState.activeTrade.fromId === playerId || nextState.activeTrade.toId === playerId)
+      ) {
+        nextState.activeTrade = null;
+        nextState.log.push(`A pending trade was cancelled because a player left.`);
+      }
+
+      // Pull them out of a live auction; resolve it if no contest remains.
+      if (nextState.phase === "auction" && nextState.auctionState) {
+        const a = nextState.auctionState;
+        a.participantIds = a.participantIds.filter((id) => id !== playerId);
+        a.passedIds = a.passedIds.filter((id) => id !== playerId);
+        if (a.highestBidderId === playerId) {
+          // Their leading bid is void; the tile is open again with no standing bid.
+          a.highestBidderId = null;
+          a.highestBid = 0;
+        }
+        a.deadline = null; // server re-arms the clock on the next broadcast
+        const stillIn = a.participantIds.filter((id) => !a.passedIds.includes(id));
+        const challengers =
+          a.highestBidderId !== null ? stillIn.filter((id) => id !== a.highestBidderId) : stillIn;
+        if (challengers.length === 0) {
+          finalizeAuction(nextState); // also advances turn if the decliner left
+        }
+      }
+
+      // Win condition: last player standing.
+      const remaining = nextState.players.filter((p) => !p.bankrupt);
+      if (remaining.length <= 1) {
+        nextState.winnerId = remaining.length === 1 ? remaining[0].id : null;
+        nextState.phase = "game-over";
+        if (remaining.length === 1) {
+          nextState.log.push(`${remaining[0].name} has won the game!`);
+        }
+        break;
+      }
+
+      // If it was their turn (and an auction didn't already hand it off),
+      // advance so play doesn't stall waiting on a player who is gone.
+      if (
+        nextState.phase !== "auction" &&
+        nextState.players[nextState.currentPlayerIndex].bankrupt
+      ) {
+        advanceTurnSkippingBankrupt(nextState);
+      }
       break;
     }
 
