@@ -16,21 +16,66 @@
   --color-gold-hover: #d97706;
   --color-naira: #10b981;
   --color-danger: #ef4444;
-  
-  /* Rethemed Group Colors */
-  --color-brown: #8B4513;
-  --color-lightblue: #87CEEB;
-  --color-pink: #FF69B4;
-  --color-orange: #FF8C00;
-  --color-red: #FF0000;
-  --color-yellow: #FFD700;
-  --color-green: #008000;
-  --color-darkblue: #000080;
-  
+
+  /* Rethemed property-group colors — retuned to read clearly on the dark UI:
+     the old raw web colors (#FF0000, #008000, #000080…) were either neon or
+     near-invisible. These keep the classic group identities but harmonized. */
+  --color-brown: #A56C3F;
+  --color-lightblue: #7FC4E8;
+  --color-pink: #E86AA6;
+  --color-orange: #F2933C;
+  --color-red: #E5544B;
+  --color-yellow: #EAC54F;
+  --color-green: #43B581;
+  --color-darkblue: #4C6EF5;
+
   /* Text Colors */
   --text-primary: #f9fafb;
   --text-secondary: #9ca3af;
   --text-muted: #6b7280;
+
+  /* ── Design tokens ─────────────────────────────────────────────────────
+     One source of truth for spacing, radius, elevation, type, and surface
+     tints. Components should reference these instead of hardcoding values,
+     so the look stays consistent and is tunable from one place. */
+
+  /* Spacing scale (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-8: 3rem;
+
+  /* Radius scale */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 18px;
+  --radius-full: 999px;
+
+  /* Elevation / shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 18px rgba(99, 102, 241, 0.35);
+
+  /* Surface tints (white overlays) + borders — replaces scattered rgba()s */
+  --surface-1: rgba(255, 255, 255, 0.03);
+  --surface-2: rgba(255, 255, 255, 0.05);
+  --surface-3: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  /* Type scale */
+  --text-xs: 0.7rem;
+  --text-sm: 0.8rem;
+  --text-base: 0.9rem;
+  --text-lg: 1.1rem;
+  --text-xl: 1.4rem;
+  --text-2xl: 1.85rem;
+  --text-3xl: 2.6rem;
 
   /* Layout Size */
   --board-size: 720px;
@@ -64,6 +109,19 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
+}
+
+/* Honor the OS "reduce motion" preference: kill the infinite CSS pulses/glows
+   and collapse transitions. Pairs with <MotionConfig reducedMotion="user">. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Glassmorphism utility */
@@ -304,7 +362,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .token-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
 }
 
@@ -331,6 +389,24 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(59, 130, 246, 0.15);
   border-color: #3b82f6;
   box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
+}
+
+.token-option.taken {
+  position: relative;
+  filter: grayscale(0.6);
+}
+
+.token-option.taken:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.token-taken-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-danger);
 }
 
 .token-emoji {
@@ -438,10 +514,12 @@ h1, h2, h3, h4, h5, h6 {
   display: grid;
   grid-template-columns: repeat(11, var(--tile-size));
   grid-template-rows: repeat(11, var(--tile-size));
-  background: #0f1624;
-  border: 4px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-  border-radius: 16px;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(16, 185, 129, 0.05) 0%, transparent 62%),
+    #0f1624;
+  border: 4px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 0 70px rgba(0, 0, 0, 0.55);
+  border-radius: var(--radius-xl);
   position: relative;
 }
 
@@ -475,14 +553,14 @@ h1, h2, h3, h4, h5, h6 {
   max-width: 480px;
   background: rgba(8, 10, 20, 0.55);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: var(--space-2);
   z-index: 5;
-  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5), 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5), var(--shadow-md);
 }
 
 .board-center-feed-title {
@@ -610,7 +688,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Individual Board Tiles */
 .tile {
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -618,22 +696,26 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   padding: 4px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .tile:hover {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
 /* Corner Tiles are bigger */
 .tile-corner {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface-1);
   font-weight: 700;
 }
 
 .tile-color-bar {
-  /* position/size set via inline style per edge; only visual props here */
+  /* position/size set via inline style per edge; only visual props here.
+     The overlay gives the flat group colour a painted, slightly raised sheen. */
   flex-shrink: 0;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.22), rgba(0, 0, 0, 0.18));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.22);
 }
 
 .tile-type-icon {
@@ -647,7 +729,9 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.65rem;
   font-weight: 700;
   text-align: center;
-  line-height: 1.1;
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
   word-break: break-word;
   max-width: 100%;
 }
@@ -664,10 +748,10 @@ h1, h2, h3, h4, h5, h6 {
   bottom: 2px;
   right: 2px;
   font-size: 0.5rem;
-  background: rgba(255,255,255,0.1);
+  background: var(--surface-3);
   padding: 0px 3px;
-  border-radius: 3px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
 }
 
 .tile-houses {
@@ -919,24 +1003,30 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .log-entry {
-  color: var(--text-primary);
-  border-left: 2px solid rgba(255, 255, 255, 0.15);
-  padding-left: 0.4rem;
+  color: var(--text-secondary);
+  border-left: 2px solid var(--border-strong);
+  padding: 2px 0 2px 0.5rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: var(--text-sm);
+  line-height: 1.35;
 }
 
 .log-entry-system {
   color: var(--color-gold);
   border-left-color: var(--color-gold);
+  background: rgba(245, 158, 11, 0.06);
 }
 
 .log-entry-buy {
   color: var(--color-naira);
   border-left-color: var(--color-naira);
+  background: rgba(16, 185, 129, 0.06);
 }
 
 .log-entry-rent {
   color: var(--color-danger);
   border-left-color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.06);
 }
 
 /* Action Controls Panel */
