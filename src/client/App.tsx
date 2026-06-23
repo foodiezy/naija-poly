@@ -326,6 +326,9 @@ export default function App() {
         startingCash: state.startingCash,
         turnLimit: state.turnLimit,
         freeParkingJackpot: state.freeParkingJackpot,
+        turnTimerEnabled: state.turnTimerEnabled,
+        turnTimeoutSecs: state.turnTimeoutSecs,
+        turnDeadline: state.turnDeadline,
       });
 
       if (state.gameStateJson) {
@@ -432,7 +435,7 @@ export default function App() {
     }
   };
 
-  const updateSettings = (settings: { startingCash?: number; turnLimit?: number; freeParkingJackpot?: boolean }) => {
+  const updateSettings = (settings: { startingCash?: number; turnLimit?: number; freeParkingJackpot?: boolean; turnTimerEnabled?: boolean; turnTimeoutSecs?: number }) => {
     if (room) {
       room.send("UPDATE_SETTINGS", settings);
     }
@@ -665,12 +668,41 @@ export default function App() {
                         Enable Bukka Jackpot (Free Parking Pot)
                       </label>
                     </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
+                      <input
+                        id="turntimer-toggle"
+                        type="checkbox"
+                        checked={roomState.turnTimerEnabled ?? false}
+                        onChange={(e) => updateSettings({ turnTimerEnabled: e.target.checked })}
+                        style={{ cursor: "pointer" }}
+                      />
+                      <label htmlFor="turntimer-toggle" style={{ fontSize: "0.85rem", color: "var(--text-secondary)", cursor: "pointer", fontWeight: "normal", margin: 0 }}>
+                        Enable Turn Timer (auto-play AFK turns)
+                      </label>
+                    </div>
+                    {roomState.turnTimerEnabled && (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Seconds per turn:</span>
+                        <select
+                          className="input-field"
+                          style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem", background: "rgba(0,0,0,0.4)" }}
+                          value={roomState.turnTimeoutSecs ?? 120}
+                          onChange={(e) => updateSettings({ turnTimeoutSecs: Number(e.target.value) })}
+                        >
+                          <option value={30}>30s</option>
+                          <option value={60}>60s</option>
+                          <option value={120}>120s</option>
+                          <option value={180}>180s</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", background: "rgba(255,255,255,0.02)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--surface-2)", fontSize: "0.85rem" }}>
                     <div>💰 Starting Capital: <strong style={{ color: "var(--color-naira)" }}>₦{(roomState.startingCash ?? 1500000).toLocaleString()}</strong></div>
                     <div>⏳ Turn Limit: <strong>{(roomState.turnLimit ?? 0) === 0 ? "Unlimited" : `${roomState.turnLimit} Rounds`}</strong></div>
                     <div>🍲 Bukka Jackpot: <strong style={{ color: roomState.freeParkingJackpot ? "var(--color-naira)" : "var(--text-muted)" }}>{roomState.freeParkingJackpot ? "Enabled" : "Disabled"}</strong></div>
+                    <div>⏱️ Turn Timer: <strong style={{ color: roomState.turnTimerEnabled ? "var(--color-naira)" : "var(--text-muted)" }}>{roomState.turnTimerEnabled ? `${roomState.turnTimeoutSecs ?? 120}s per turn` : "Off"}</strong></div>
                   </div>
                 )}
               </div>
@@ -850,6 +882,8 @@ export default function App() {
               onSendChatMessage={sendChatMessage}
               autoEndTurn={autoEndTurn}
               onToggleAutoEndTurn={() => setAutoEndTurn(v => !v)}
+              turnDeadline={roomState?.turnDeadline}
+              turnTimeoutSecs={roomState?.turnTimeoutSecs}
             />
           </div>
         </motion.div>

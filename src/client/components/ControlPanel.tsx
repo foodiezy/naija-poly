@@ -12,9 +12,11 @@ interface ControlPanelProps {
   onSendChatMessage: (text: string, toId?: string) => void;
   autoEndTurn?: boolean;
   onToggleAutoEndTurn?: () => void;
+  turnDeadline?: number;
+  turnTimeoutSecs?: number;
 }
 
-export default function ControlPanel({ room, engineState, onSendAction, chatMessages, onSendChatMessage, autoEndTurn, onToggleAutoEndTurn }: ControlPanelProps) {
+export default function ControlPanel({ room, engineState, onSendAction, chatMessages, onSendChatMessage, autoEndTurn, onToggleAutoEndTurn, turnDeadline, turnTimeoutSecs }: ControlPanelProps) {
   const [now, setNow] = useState<number>(Date.now());
   // Chat channels: "general" (everyone) or a specific playerId (private/direct).
   const [chatChannel, setChatChannel] = useState<string>("general");
@@ -70,6 +72,18 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
   const secsLeft = Math.ceil(msLeft / 1000);
   const timerPct = isAuctionActive && auction?.deadline
     ? Math.max(0, Math.min(100, (msLeft / (auction.bidDurationMs || 12000)) * 100))
+    : 0;
+
+  // Per-turn AFK timer (server-driven). Ticks independently of the auction clock.
+  useEffect(() => {
+    if (!turnDeadline || turnDeadline <= 0) return;
+    const t = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, [turnDeadline]);
+  const turnMsLeft = turnDeadline && turnDeadline > 0 ? Math.max(0, turnDeadline - now) : 0;
+  const turnSecsLeft = Math.ceil(turnMsLeft / 1000);
+  const turnPct = turnDeadline && turnDeadline > 0 && turnTimeoutSecs
+    ? Math.max(0, Math.min(100, (turnMsLeft / (turnTimeoutSecs * 1000)) * 100))
     : 0;
 
   // Which channel a message belongs to from MY perspective: "general" for
@@ -633,6 +647,19 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
 
       {/* Main HUD actions container */}
       <div className="action-controls">
+        {/* Turn timer countdown (when the host enabled it and it's my turn) */}
+        {isMyTurn && !isBankrupt && !isAuctionActive && turnDeadline && turnDeadline > 0 && (
+          <div style={{ background: "var(--surface-1)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-md)", padding: "0.4rem 0.6rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>
+              <span>⏱️ Turn time left</span>
+              <span style={{ fontWeight: "bold", color: turnPct < 20 ? "var(--color-danger)" : turnPct < 50 ? "var(--color-gold)" : "var(--color-naira)" }}>{turnSecsLeft}s</span>
+            </div>
+            <div style={{ height: "5px", background: "rgba(0,0,0,0.4)", borderRadius: "999px", overflow: "hidden" }}>
+              <div style={{ width: `${turnPct}%`, height: "100%", background: turnPct < 20 ? "var(--color-danger)" : turnPct < 50 ? "var(--color-gold)" : "var(--color-naira)", transition: "width 0.25s linear" }} />
+            </div>
+          </div>
+        )}
+
         {/* Bankruptcy handling */}
         {me && me.cash < 0 && !isBankrupt && (
           <div className="auction-panel" style={{ borderColor: "var(--color-danger)", background: "rgba(239, 68, 68, 0.05)" }}>

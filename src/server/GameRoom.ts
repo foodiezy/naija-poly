@@ -24,6 +24,9 @@ export class GameRoomState extends Schema {
   @type("number") startingCash: number = 1500000;
   @type("number") turnLimit: number = 0; // 0 = unlimited
   @type("boolean") freeParkingJackpot: boolean = false;
+  @type("boolean") turnTimerEnabled: boolean = false;
+  @type("number") turnTimeoutSecs: number = 120;
+  @type("number") turnDeadline: number = 0; // epoch ms; 0 = no active timer
 }
 
 export class GameRoom extends Room<{ state: GameRoomState }> {
@@ -34,6 +37,8 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
   private auctionTimer: any = undefined;
   // Pending scheduled move for a computer player.
   private aiTimer: any = undefined;
+  // Per-turn AFK timeout (optional, host-configured).
+  private turnTimer: any = undefined;
 
   // Single path for mutating game state: apply the action through the pure
   // engine, (re)arm the auction timer if an auction is live, then persist.
@@ -47,8 +52,60 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
       this.state.status = "finished";
     }
 
+    // (Re)arm the AFK turn timer for the new turn/phase.
+    this.armTurnTimer(nextEngineState);
     // Hand control to a computer player if one is up next (or owes an auction bid).
     this.scheduleAIIfNeeded();
+  }
+
+  private clearTurnTimer() {
+    if (this.turnTimer) {
+      this.turnTimer.clear();
+      this.turnTimer = undefined;
+    }
+  }
+
+  // Arm a per-turn countdown for a human's turn (if the host enabled it). Not
+  // armed during auctions (those self-resolve) or for AI players (self-paced).
+  private armTurnTimer(state: any) {
+    this.clearTurnTimer();
+    this.state.turnDeadline = 0;
+    if (!this.state.turnTimerEnabled) return;
+    if (state.phase === "auction" || state.phase === "game-over") return;
+    const current = state.players[state.currentPlayerIndex];
+    if (!current || current.bankrupt || isAIPlayer(current.id)) return;
+
+    const secs = this.state.turnTimeoutSecs || 120;
+    this.state.turnDeadline = Date.now() + secs * 1000;
+    this.turnTimer = this.clock.setTimeout(() => this.onTurnTimeout(), secs * 1000);
+  }
+
+  // The active human ran out of time: make a safe, neutral move so play continues.
+  private onTurnTimeout() {
+    this.turnTimer = undefined;
+    if (this.state.status !== "in_progress") return;
+    let s: any;
+    try {
+      s = JSON.parse(this.state.gameStateJson);
+    } catch {
+      return;
+    }
+    if (s.phase === "auction" || s.phase === "game-over") return;
+    const current = s.players[s.currentPlayerIndex];
+    if (!current || current.bankrupt || isAIPlayer(current.id)) return;
+
+    let action: Action | null = null;
+    if (s.phase === "awaiting-roll") action = { type: "ROLL" };
+    else if (s.phase === "awaiting-buy-decision") action = { type: "DECLINE_BUY" };
+    else if (s.phase === "awaiting-end-turn") action = current.cash < 0 ? { type: "DECLARE_BANKRUPT" } : { type: "END_TURN" };
+    if (!action) return;
+
+    try {
+      this.runEngineAction(current.id, action);
+      this.broadcast("ERROR", { message: `${current.name} ran out of time — auto-played their turn.` });
+    } catch (err: any) {
+      console.error(`Turn timeout auto-move failed: ${err.message}`);
+    }
   }
 
   private clearAITimer() {
@@ -146,6 +203,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
       if (nextEngineState.phase === "game-over") {
         this.state.status = "finished";
       }
+      this.armTurnTimer(nextEngineState);
       this.scheduleAIIfNeeded();
     } catch (err: any) {
       console.error(`Error resolving auction on timeout: ${err.message}`);
@@ -190,7 +248,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     });
 
     // Message handler to update lobby settings
-    this.onMessage("UPDATE_SETTINGS", (client, message: { startingCash?: number; turnLimit?: number; freeParkingJackpot?: boolean }) => {
+    this.onMessage("UPDATE_SETTINGS", (client, message: { startingCash?: number; turnLimit?: number; freeParkingJackpot?: boolean; turnTimerEnabled?: boolean; turnTimeoutSecs?: number }) => {
       if (this.state.status !== "lobby") {
         client.send("ERROR", { message: "Cannot change settings once game starts" });
         return;
@@ -209,7 +267,13 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
       if (message.freeParkingJackpot !== undefined) {
         this.state.freeParkingJackpot = message.freeParkingJackpot;
       }
-      console.log(`Lobby settings updated: startingCash=${this.state.startingCash}, turnLimit=${this.state.turnLimit}, jackpot=${this.state.freeParkingJackpot}`);
+      if (message.turnTimerEnabled !== undefined) {
+        this.state.turnTimerEnabled = message.turnTimerEnabled;
+      }
+      if (message.turnTimeoutSecs !== undefined) {
+        this.state.turnTimeoutSecs = message.turnTimeoutSecs;
+      }
+      console.log(`Lobby settings updated: startingCash=${this.state.startingCash}, turnLimit=${this.state.turnLimit}, jackpot=${this.state.freeParkingJackpot}, turnTimer=${this.state.turnTimerEnabled}/${this.state.turnTimeoutSecs}s`);
     });
 
     // Message handler to add a computer player (host only, lobby only).
@@ -279,7 +343,8 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
       this.state.status = "in_progress";
 
       console.log(`Game started with players: ${playerIds.join(", ")}`);
-      // The first player up could be a computer.
+      // The first player up could be a computer; also start their turn clock.
+      this.armTurnTimer(initialEngineState);
       this.scheduleAIIfNeeded();
     });
 
@@ -312,6 +377,9 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
         return;
       }
       this.clearAuctionTimer();
+      this.clearTurnTimer();
+      this.clearAITimer();
+      this.state.turnDeadline = 0;
       this.state.status = "lobby";
       this.state.gameStateJson = "";
       console.log(`Game reset back to lobby by host ${client.sessionId}`);
@@ -413,6 +481,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
   onDispose() {
     this.clearAuctionTimer();
     this.clearAITimer();
+    this.clearTurnTimer();
     console.log(`Room ${this.roomId} disposed.`);
   }
 }
