@@ -376,8 +376,9 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             {/* Tile Name */}
             <span className="tile-name">{tile.name}</span>
 
-            {/* Tile Price/Amount or Mortgaged */}
-            {priceLabel && (
+            {/* Price shows only until purchased; once owned the badge signals
+                ownership (but a mortgaged tile still flags "Mortgaged"). */}
+            {priceLabel && (!tileState?.ownerId || isMortgaged) && (
               <span
                 className="tile-price"
                 style={isMortgaged ? { color: "var(--color-danger)", textDecoration: "line-through" } : {}}
