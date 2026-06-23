@@ -683,6 +683,7 @@ export default function App() {
                       <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         <span>{tokenEmoji(player.tokenId)}</span>
                         <span style={{ fontWeight: 600 }}>{player.name} {id === room.sessionId && "(You)"}</span>
+                        {String(id).startsWith("ai_") && <span style={{ fontSize: "0.65rem", background: "rgba(139,92,246,0.2)", color: "#a78bfa", padding: "1px 5px", borderRadius: "4px", fontWeight: "bold" }}>🤖 CPU</span>}
                       </span>
                       {roomState.hostId === id && <span className="host-tag">HOST</span>}
                     </div>
@@ -691,13 +692,23 @@ export default function App() {
               </div>
 
               {room.sessionId === roomState.hostId ? (
-                <button
-                  className="button-primary"
-                  disabled={roomState.lobbyPlayers.size < 2}
-                  onClick={startGame}
-                >
-                  {roomState.lobbyPlayers.size < 2 ? "Need at least 2 players" : "Start Game "}
-                </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <button
+                    className="button-secondary"
+                    disabled={roomState.lobbyPlayers.size >= 6}
+                    onClick={() => room.send("ADD_AI")}
+                    style={{ fontSize: "0.85rem" }}
+                  >
+                    {roomState.lobbyPlayers.size >= 6 ? "Room Full" : "🤖 Add CPU Player"}
+                  </button>
+                  <button
+                    className="button-primary"
+                    disabled={roomState.lobbyPlayers.size < 2}
+                    onClick={startGame}
+                  >
+                    {roomState.lobbyPlayers.size < 2 ? "Need at least 2 players" : "Start Game "}
+                  </button>
+                </div>
               ) : (
                 <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem", fontStyle: "italic" }}>
                   Waiting for host to start the game...

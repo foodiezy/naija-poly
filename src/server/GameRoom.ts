@@ -1,8 +1,14 @@
 import { Schema, type, MapSchema } from "@colyseus/schema";
 import { Room, Client } from "colyseus";
 import { createGame, applyAction } from "../engine/engine";
+import { getAIAction } from "../engine/ai";
 import type { Action } from "../engine/types";
 import { TOKEN_IDS, MAX_PLAYERS } from "../data/tokens";
+
+// AI (computer) players use reserved session ids that no real client can have.
+function isAIPlayer(id: string): boolean {
+  return id.startsWith("ai_");
+}
 
 export class LobbyPlayer extends Schema {
   @type("string") id: string = "";
@@ -26,6 +32,8 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
 
   // Server-owned countdown for the active auction (Colyseus clock timer).
   private auctionTimer: any = undefined;
+  // Pending scheduled move for a computer player.
+  private aiTimer: any = undefined;
 
   // Single path for mutating game state: apply the action through the pure
   // engine, (re)arm the auction timer if an auction is live, then persist.
@@ -37,6 +45,72 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
 
     if (nextEngineState.phase === "game-over") {
       this.state.status = "finished";
+    }
+
+    // Hand control to a computer player if one is up next (or owes an auction bid).
+    this.scheduleAIIfNeeded();
+  }
+
+  private clearAITimer() {
+    if (this.aiTimer) {
+      this.aiTimer.clear();
+      this.aiTimer = undefined;
+    }
+  }
+
+  // If a computer player should act now, schedule its move after a short,
+  // human-like delay. No-op when it's a human's turn or the game is over.
+  private scheduleAIIfNeeded() {
+    this.clearAITimer();
+    if (this.state.status !== "in_progress") return;
+
+    let engineState: any;
+    try {
+      engineState = JSON.parse(this.state.gameStateJson);
+    } catch {
+      return;
+    }
+    if (engineState.phase === "game-over") return;
+
+    let actorId: string | null = null;
+    if (engineState.phase === "auction" && engineState.auctionState) {
+      const a = engineState.auctionState;
+      actorId =
+        a.participantIds.find(
+          (id: string) => isAIPlayer(id) && !a.passedIds.includes(id) && a.highestBidderId !== id,
+        ) ?? null;
+    } else {
+      const current = engineState.players[engineState.currentPlayerIndex];
+      if (current && isAIPlayer(current.id) && !current.bankrupt) actorId = current.id;
+    }
+    if (!actorId) return;
+
+    const delay = 800 + Math.floor(Math.random() * 900); // 0.8–1.7s, feels natural
+    const id = actorId;
+    this.aiTimer = this.clock.setTimeout(() => this.runAIAction(id), delay);
+  }
+
+  private runAIAction(actorId: string) {
+    this.aiTimer = undefined;
+    if (this.state.status !== "in_progress") return;
+
+    let engineState: any;
+    try {
+      engineState = JSON.parse(this.state.gameStateJson);
+    } catch {
+      return;
+    }
+
+    const action = getAIAction(engineState, actorId);
+    if (!action) {
+      this.scheduleAIIfNeeded();
+      return;
+    }
+    try {
+      this.runEngineAction(actorId, action); // persists + reschedules the next AI move
+    } catch (err: any) {
+      console.error(`AI ${actorId} action failed: ${err.message}`);
+      this.scheduleAIIfNeeded();
     }
   }
 
@@ -72,6 +146,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
       if (nextEngineState.phase === "game-over") {
         this.state.status = "finished";
       }
+      this.scheduleAIIfNeeded();
     } catch (err: any) {
       console.error(`Error resolving auction on timeout: ${err.message}`);
     }
@@ -137,6 +212,37 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
       console.log(`Lobby settings updated: startingCash=${this.state.startingCash}, turnLimit=${this.state.turnLimit}, jackpot=${this.state.freeParkingJackpot}`);
     });
 
+    // Message handler to add a computer player (host only, lobby only).
+    this.onMessage("ADD_AI", (client) => {
+      if (this.state.status !== "lobby") {
+        client.send("ERROR", { message: "Can only add AI players in the lobby" });
+        return;
+      }
+      if (client.sessionId !== this.state.hostId) {
+        client.send("ERROR", { message: "Only the host can add AI players" });
+        return;
+      }
+      if (this.state.lobbyPlayers.size >= MAX_PLAYERS) {
+        client.send("ERROR", { message: "Room is full" });
+        return;
+      }
+
+      const taken = new Set<string>();
+      this.state.lobbyPlayers.forEach((p) => taken.add(p.tokenId));
+      const token = TOKEN_IDS.find((id) => !taken.has(id)) ?? TOKEN_IDS[0];
+
+      let n = 1;
+      while (this.state.lobbyPlayers.has(`ai_${n}`)) n++;
+      const aiId = `ai_${n}`;
+
+      const ai = new LobbyPlayer();
+      ai.id = aiId;
+      ai.name = `CPU ${n}`;
+      ai.tokenId = token;
+      this.state.lobbyPlayers.set(aiId, ai);
+      console.log(`Host added computer player ${aiId} (${ai.name})`);
+    });
+
     // Message handler to start game
     this.onMessage("START_GAME", (client, _message) => {
       if (this.state.status !== "lobby") {
@@ -173,6 +279,8 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
       this.state.status = "in_progress";
 
       console.log(`Game started with players: ${playerIds.join(", ")}`);
+      // The first player up could be a computer.
+      this.scheduleAIIfNeeded();
     });
 
     // Message handler for player actions
@@ -304,6 +412,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
 
   onDispose() {
     this.clearAuctionTimer();
+    this.clearAITimer();
     console.log(`Room ${this.roomId} disposed.`);
   }
 }
