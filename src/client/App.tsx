@@ -987,6 +987,35 @@ export default function App() {
               </div>
             </div>
 
+            {/* Post-game summary (Feature 12) */}
+            <div className="leaderboard-container" style={{ marginTop: "1.25rem" }}>
+              <h3 style={{ margin: "0 0 1rem 0", color: "var(--color-gold)", textTransform: "uppercase", fontSize: "1rem", letterSpacing: "1px" }}>Game Summary</h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1rem" }}>
+                {[
+                  { label: "Rounds Played", value: engineState.currentTurn ?? 1 },
+                  { label: "Properties Owned", value: BOARD.filter((t: any) => engineState.tiles[t.pos]?.ownerId).length },
+                  { label: "Players", value: engineState.players.length },
+                ].map((s) => (
+                  <div key={s.label} style={{ background: "var(--surface-1)", borderRadius: "var(--radius-md)", padding: "0.75rem", textAlign: "center" }}>
+                    <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: "var(--color-naira)" }}>{s.value}</div>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase" }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+              {(() => {
+                const events = (engineState.log || []).filter((l: string) => /bankrupt|forfeited/i.test(l));
+                if (events.length === 0) return null;
+                return (
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "0.4rem" }}>Eliminations</div>
+                    {events.map((e: string, i: number) => (
+                      <div key={i} style={{ fontSize: "0.8rem", color: "var(--text-secondary)", borderLeft: "2px solid var(--color-danger)", paddingLeft: "0.5rem", marginBottom: "0.25rem" }}>💀 {e}</div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
             <div className="game-over-actions">
               <button className="button-secondary" onClick={() => setShowGameOverModal(false)}>
                 👀 Inspect Board

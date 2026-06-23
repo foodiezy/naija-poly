@@ -422,6 +422,34 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
                 ))}
               </div>
             )}
+
+            {/* Hover tooltip — mini deed summary; click opens the full inspector */}
+            {(tile.type === "property" || tile.type === "airport" || tile.type === "utility") && (
+              <div className="tile-tooltip">
+                <div className="tile-tooltip-name">{tile.name}</div>
+                <div className="tile-tooltip-row">
+                  {tileState?.ownerId
+                    ? `Owned by ${players.find((p: any) => p.id === tileState.ownerId)?.name ?? "—"}`
+                    : "Unowned"}
+                </div>
+                {tile.type === "property" && (
+                  <div className="tile-tooltip-row">
+                    Rent: ₦{((tileState?.houses ?? 0) > 0
+                      ? (tile as PropertyTile).rent[tileState.houses]
+                      : (tile as PropertyTile).rent[0]
+                    ).toLocaleString()}
+                    {(tileState?.houses ?? 0) > 0 && ` · ${tileState.houses === 5 ? "Hotel" : tileState.houses === 4 ? "Mini-Estate" : tileState.houses === 3 ? "Mansion" : tileState.houses === 2 ? "Duplex" : "Bungalow"}`}
+                  </div>
+                )}
+                {"price" in tile && (
+                  <div className="tile-tooltip-row tile-tooltip-muted">Price ₦{tile.price.toLocaleString()}</div>
+                )}
+                {tileState?.mortgaged && (
+                  <div className="tile-tooltip-row" style={{ color: "var(--color-danger)" }}>🔒 Mortgaged</div>
+                )}
+                <div className="tile-tooltip-row tile-tooltip-muted">Click for full deed</div>
+              </div>
+            )}
           </div>
         );
       })}
