@@ -1,0 +1,82 @@
+{
+  "_comment": "This is the authoritative shape of a single game room's state. The SERVER owns and mutates this. Clients only ever receive broadcasts of (a full or partial) version of this and render it. Never trust client-submitted state.",
+
+  "roomId": "string (short code, e.g. 'NE-7F3K')",
+  "status": "lobby | in_progress | finished",
+  "createdAt": "ISO timestamp",
+
+  "players": [
+    {
+      "id": "string (uuid)",
+      "name": "string",
+      "tokenId": "string (which board piece, e.g. 'okada', 'danfo_bus', 'agbada')",
+      "cash": "number (Naira)",
+      "position": "number (0-39, tile index)",
+      "properties": ["array of tileId strings owned by this player"],
+      "inJail": "boolean",
+      "jailTurnsRemaining": "number (0-3)",
+      "getOutOfJailCards": "number",
+      "isBankrupt": "boolean",
+      "isConnected": "boolean",
+      "lastSeenAt": "ISO timestamp (for reconnect/timeout handling)"
+    }
+  ],
+
+  "turn": {
+    "currentPlayerId": "string (uuid)",
+    "turnOrder": ["array of player ids, fixed order"],
+    "phase": "awaiting_roll | moving | resolving_tile | awaiting_buy_decision | in_auction | awaiting_trade_response | awaiting_jail_decision | turn_end",
+    "diceValues": [0, 0],
+    "doublesRolledInARow": "number (3 doubles = go to jail)",
+    "hasRolledThisTurn": "boolean"
+  },
+
+  "board": {
+    "_comment": "Static reference data, loaded once, not part of mutable game state, but every tile's CURRENT ownership lives in tiles below",
+    "tiles": [
+      {
+        "id": "string (e.g. 'lagos_island')",
+        "index": "number (0-39)",
+        "type": "property | transport_hub | utility | chance | community_chest | tax | go | jail | free_parking | go_to_jail",
+        "name": "string (display name, e.g. 'Lagos Island')",
+        "group": "string (color group id, e.g. 'blue', 'red', for monopoly-set bonus rent)",
+        "price": "number | null",
+        "rentLevels": ["array: [base, 1house, 2house, 3house, 4house, hotel]", "null if not a property"],
+        "houseCost": "number | null",
+        "mortgageValue": "number | null",
+        "ownerId": "string (player uuid) | null",
+        "houseCount": "number (0-4)",
+        "hasHotel": "boolean",
+        "isMortgaged": "boolean"
+      }
+    ]
+  },
+
+  "pendingAction": {
+    "_comment": "Whatever the engine is currently waiting on. Only one of these is active at a time. This is the key field that drives whose turn/decision it is, beyond just whose turn it is.",
+    "type": "null | buy_decision | auction | trade_offer | jail_decision | bankruptcy_resolution",
+    "data": {
+      "_comment_buy_decision": "{ tileId, playerId }",
+      "_comment_auction": "{ tileId, currentBid, currentBidderId, activeBidderIds[], passedPlayerIds[] }",
+      "_comment_trade_offer": "{ fromPlayerId, toPlayerId, offer: { cash, propertyIds[], getOutOfJailCards }, request: { cash, propertyIds[], getOutOfJailCards }, status: pending|accepted|rejected }",
+      "_comment_jail_decision": "{ playerId, optionsAvailable: [pay, use_card, roll] }",
+      "_comment_bankruptcy_resolution": "{ playerId, owedToPlayerId or owedToBank, assetsBeingLiquidated[] }"
+    }
+  },
+
+  "log": [
+    {
+      "timestamp": "ISO timestamp",
+      "type": "roll | move | buy | rent_paid | auction_won | trade_completed | mortgage | bankruptcy | jail | game_end",
+      "message": "string (human-readable, e.g. 'Chidi rolled a 7 and moved to Abuja')",
+      "playerIds": ["relevant player ids"]
+    }
+  ],
+
+  "settings": {
+    "maxPlayers": 6,
+    "startingCash": 150000,
+    "freeParkingJackpot": "boolean (house rule toggle, off by default)",
+    "auctionEnabled": true
+  }
+}

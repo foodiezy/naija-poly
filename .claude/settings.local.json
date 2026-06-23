@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"C:\\\\Users\\\\Administrator\\\\Desktop\\\\NAIJAPOLY\\\\odogwu-empire\\\\.claude\")",
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell(git -C C:\\\\Users\\\\Administrator\\\\Desktop\\\\NAIJAPOLY\\\\odogwu-empire push)",
+      "PowerShell(Get-Process node,tsx -ErrorAction SilentlyContinue)",
+      "Bash(npm run *)",
+      "PowerShell($conn = Get-NetTCPConnection -LocalPort 2567 -ErrorAction SilentlyContinue; if \\($conn\\) { \"Port 2567 in use by PID\\(s\\): \" + \\($conn.OwningProcess -join ','\\) } else { \"Port 2567 free\" })",
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget",
+      "Bash(gh pr create --base main --head session/multiplayer-robustness-and-polish --title 'Multiplayer robustness, 6-player support, and a design polish pass' --body ' *)"
+    ]
+  }
+}
