@@ -266,10 +266,10 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             {activeCardDraw && (
               <motion.div
                 className={`card-draw-overlay ${activeCardDraw.type}`}
-                initial={{ opacity: 0, scale: 0.85, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                transition={{ type: "spring", stiffness: 300, damping: 24 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
               >
                 <div className="card-deck-title">{activeCardDraw.type} DRAWN BY {activeCardDraw.player.toUpperCase()}</div>
                 <div className="card-text">"{activeCardDraw.text}"</div>
