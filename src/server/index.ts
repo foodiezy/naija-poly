@@ -35,8 +35,8 @@ const gameServer = new Server({
           if (isAllowed) {
             callback(null, true);
           } else {
-            console.warn(`CORS: Request from untrusted origin ${origin}`);
-            callback(null, true);
+            console.warn(`CORS: Blocked request from untrusted origin ${origin}`);
+            callback(new Error(`Origin ${origin} not allowed by CORS`));
           }
         },
         credentials: true,

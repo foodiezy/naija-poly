@@ -145,18 +145,9 @@ export function createGame(
     throw new Error("A game must have at least 2 players");
   }
 
-  // Handle case where custom rng is passed as second argument if any old tests/code do so:
-  let finalSettings: Partial<GameSettings> = {};
-  let finalRng = rng;
-  if (typeof settings === "function") {
-    finalRng = settings as any;
-  } else if (settings) {
-    finalSettings = settings;
-  }
-
   const mergedSettings: GameSettings = {
     ...DEFAULT_SETTINGS,
-    ...finalSettings,
+    ...(settings ?? {}),
   };
 
   const players: Player[] = playerIds.map((id, index) => ({
@@ -182,8 +173,8 @@ export function createGame(
     }
   });
 
-  const chanceOrder = shuffle(CHANCE_CARDS.map((c) => c.id), finalRng);
-  const esusuOrder = shuffle(ESUSU_CARDS.map((c) => c.id), finalRng);
+  const chanceOrder = shuffle(CHANCE_CARDS.map((c) => c.id), rng);
+  const esusuOrder = shuffle(ESUSU_CARDS.map((c) => c.id), rng);
 
   return {
     players,
@@ -211,7 +202,7 @@ export function applyAction(
   rng: () => number = Math.random,
 ): GameState {
   // Deep copy state to maintain purity
-  const nextState: GameState = JSON.parse(JSON.stringify(state));
+  const nextState: GameState = structuredClone(state);
 
   const currentPlayer = nextState.players[nextState.currentPlayerIndex];
   if (!currentPlayer) {
@@ -1255,7 +1246,7 @@ function applyCardAction(
       state.players.forEach((p) => {
         if (p.id !== player.id && !p.bankrupt) {
           p.cash -= action.amount;
-          if (p.cash < 0 && !state.owedToId) {
+          if (p.cash < 0) {
             state.owedToId = player.id;
           }
           totalCollected += action.amount;
@@ -1272,7 +1263,7 @@ function applyCardAction(
         if (p.id !== player.id && !p.bankrupt) {
           p.cash += action.amount;
           player.cash -= action.amount;
-          if (player.cash < 0 && !state.owedToId) {
+          if (player.cash < 0) {
             state.owedToId = p.id;
           }
           state.log.push(`${player.name} paid ₦${action.amount.toLocaleString("en-NG")} to ${p.name}.`);

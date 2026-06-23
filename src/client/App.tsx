@@ -8,6 +8,7 @@ import GameBoard from "./components/GameBoard";
 import ControlPanel from "./components/ControlPanel";
 import TileInspector from "./components/TileInspector";
 import { BOARD } from "../data/board";
+import { getDevelopmentName } from "../engine/engine";
 import { TOKENS, tokenEmoji } from "../data/tokens";
 import * as sound from "./utils/sound";
 import { recordGameResult } from "./utils/stats";
@@ -845,7 +846,7 @@ export default function App() {
                           {ownedTiles.map((tile: any) => {
                             const ts = engineState.tiles[tile.pos];
                             const isProp = tile.type === "property";
-                            const devName = ts.houses === 5 ? "Hotel" : ts.houses === 4 ? "Mini-Estate" : ts.houses === 3 ? "Mansion" : ts.houses === 2 ? "Duplex" : ts.houses === 1 ? "Bungalow" : "";
+                            const devName = ts.houses > 0 ? getDevelopmentName(ts.houses) : "";
                             
                             return (
                               <div key={tile.pos} className="popover-tile-item">

@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BOARD, Tile, PropertyTile } from "../../data/board";
+import { getDevelopmentName } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
@@ -346,7 +347,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             if (tileState.mortgaged) {
               t += " (Mortgaged)";
             } else if (tileState.houses > 0) {
-              const devName = tileState.houses === 5 ? "Hotel" : tileState.houses === 4 ? "Mini-Estate" : tileState.houses === 3 ? "Mansion" : tileState.houses === 2 ? "Duplex" : "Bungalow";
+              const devName = tileState.houses > 0 ? getDevelopmentName(tileState.houses) : "";
               t += ` (${devName})`;
             }
           }
@@ -359,7 +360,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             return `Owned by ${ownerName} (Mortgaged)`;
           }
           if (tileState.houses > 0) {
-            const devName = tileState.houses === 5 ? "Hotel" : tileState.houses === 4 ? "Mini-Estate" : tileState.houses === 3 ? "Mansion" : tileState.houses === 2 ? "Duplex" : "Bungalow";
+            const devName = getDevelopmentName(tileState.houses);
             return `Owned by ${ownerName} - ${devName}`;
           }
           return `Owned by ${ownerName}`;
@@ -462,7 +463,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
                       ? (tile as PropertyTile).rent[tileState.houses]
                       : (tile as PropertyTile).rent[0]
                     ).toLocaleString()}
-                    {(tileState?.houses ?? 0) > 0 && ` · ${tileState.houses === 5 ? "Hotel" : tileState.houses === 4 ? "Mini-Estate" : tileState.houses === 3 ? "Mansion" : tileState.houses === 2 ? "Duplex" : "Bungalow"}`}
+                    {(tileState?.houses ?? 0) > 0 && ` · ${getDevelopmentName(tileState.houses)}`}
                   </div>
                 )}
                 {"price" in tile && (

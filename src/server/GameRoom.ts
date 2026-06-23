@@ -259,19 +259,34 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
       }
 
       if (message.startingCash !== undefined) {
-        this.state.startingCash = message.startingCash;
+        const cash = Number(message.startingCash);
+        if (!Number.isFinite(cash) || cash < 100_000 || cash > 10_000_000) {
+          client.send("ERROR", { message: "Starting cash must be between ₦100,000 and ₦10,000,000" });
+          return;
+        }
+        this.state.startingCash = cash;
       }
       if (message.turnLimit !== undefined) {
-        this.state.turnLimit = message.turnLimit;
+        const limit = Number(message.turnLimit);
+        if (!Number.isFinite(limit) || limit < 0 || limit > 999) {
+          client.send("ERROR", { message: "Turn limit must be between 0 and 999" });
+          return;
+        }
+        this.state.turnLimit = Math.floor(limit);
       }
       if (message.freeParkingJackpot !== undefined) {
-        this.state.freeParkingJackpot = message.freeParkingJackpot;
+        this.state.freeParkingJackpot = !!message.freeParkingJackpot;
       }
       if (message.turnTimerEnabled !== undefined) {
-        this.state.turnTimerEnabled = message.turnTimerEnabled;
+        this.state.turnTimerEnabled = !!message.turnTimerEnabled;
       }
       if (message.turnTimeoutSecs !== undefined) {
-        this.state.turnTimeoutSecs = message.turnTimeoutSecs;
+        const secs = Number(message.turnTimeoutSecs);
+        if (!Number.isFinite(secs) || secs < 10 || secs > 600) {
+          client.send("ERROR", { message: "Turn timeout must be between 10 and 600 seconds" });
+          return;
+        }
+        this.state.turnTimeoutSecs = Math.floor(secs);
       }
       console.log(`Lobby settings updated: startingCash=${this.state.startingCash}, turnLimit=${this.state.turnLimit}, jackpot=${this.state.freeParkingJackpot}, turnTimer=${this.state.turnTimerEnabled}/${this.state.turnTimeoutSecs}s`);
     });
@@ -389,7 +404,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     // private/direct message delivered only to the sender and that recipient;
     // otherwise it is broadcast to everyone (the general channel).
     this.onMessage("SEND_CHAT", (client, message: { text: string; toId?: string }) => {
-      const text = (message.text || "").trim();
+      const text = (message.text || "").trim().substring(0, 500);
       if (!text) return;
 
       const sender = this.state.lobbyPlayers.get(client.sessionId);
@@ -421,7 +436,8 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
   }
 
   onJoin(client: Client, options: { name?: string }) {
-    const name = options.name || `Player_${client.sessionId.substring(0, 4)}`;
+    const rawName = (options.name || "").trim().substring(0, 20);
+    const name = rawName || `Player_${client.sessionId.substring(0, 4)}`;
 
     const player = new LobbyPlayer();
     player.id = client.sessionId;

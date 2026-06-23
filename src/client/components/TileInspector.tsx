@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { BOARD, PropertyTile, AirportTile, UtilityTile, TaxTile } from "../../data/board";
+import { getDevelopmentName } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
 
 interface TileInspectorProps {
@@ -22,17 +23,7 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
 
   const playersOnTile = players.filter((p: any) => p.position === tilePos && !p.bankrupt);
 
-  const getDevelopmentName = (houses: number) => {
-    switch (houses) {
-      case 0: return "Vacant Land";
-      case 1: return "Bungalow";
-      case 2: return "Duplex";
-      case 3: return "Mansion";
-      case 4: return "Mini-Estate";
-      case 5: return "Hotel";
-      default: return "Unknown";
-    }
-  };
+
 
   // Color map for property groups
   const groupColorMap: Record<string, string> = {

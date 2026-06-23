@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BOARD, PropertyTile } from "../../data/board";
+import { getDevelopmentName } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
 import { TradeOffer } from "../../engine/types";
 
@@ -141,16 +142,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
       ? "Everyone"
       : players.find((p: any) => p.id === chatChannel)?.name || "Player";
 
-  const getDevelopmentText = (houses: number) => {
-    switch (houses) {
-      case 5: return "🏨 Hotel";
-      case 4: return "🏘️ Mini-Estate";
-      case 3: return "🏰 Mansion";
-      case 2: return "🏠 Duplex";
-      case 1: return "🏡 Bungalow";
-      default: return "";
-    }
-  };
+
 
   // Get recipient player object if trading is in progress
   const activeTrade = engineState.activeTrade;
@@ -309,7 +301,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
                 </span>
                 {ts?.houses > 0 && (
                   <span style={{ fontSize: "0.75rem", background: "rgba(245, 158, 11, 0.15)", color: "var(--color-gold)", padding: "2px 6px", borderRadius: "4px", fontWeight: "bold" }}>
-                    {getDevelopmentText(ts.houses)}
+                    {getDevelopmentName(ts.houses)}
                   </span>
                 )}
                 {ts?.mortgaged && (
@@ -334,7 +326,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
                       style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(239, 68, 68, 0.15)", color: "var(--color-danger)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "3px", cursor: "pointer" }}
                       disabled={!canManage || !canSellHouse(tile.pos)}
                       onClick={() => onSendAction({ type: "SELL_HOUSE", pos: tile.pos })}
-                      title={`Sell ${getDevelopmentText(ts.houses)}`}
+                      title={`Sell ${getDevelopmentName(ts.houses)}`}
                     >
                       Sell
                     </button>
