@@ -258,7 +258,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
   // players can review what they own at any time, but the action buttons are
   // disabled until it is their turn (gated by `canManage`).
   const myPropertyManager = (
-    <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "0.75rem", marginTop: "0.25rem" }}>
+    <div style={{ borderTop: "1px solid var(--surface-2)", paddingTop: "0.75rem", marginTop: "0.25rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
         <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "var(--text-secondary)", textTransform: "uppercase" }}>My Properties ({myProperties.length})</span>
         <button
@@ -283,7 +283,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
           const ts = tilesState[tile.pos];
           const isProp = tile.type === "property";
           return (
-            <div key={tile.pos} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.02)", padding: "0.35rem 0.5rem", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.03)" }}>
+            <div key={tile.pos} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.02)", padding: "0.35rem 0.5rem", borderRadius: "4px", border: "1px solid var(--surface-1)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                 {isProp && (
                   <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: `var(--color-${(tile as PropertyTile).group})` }} />

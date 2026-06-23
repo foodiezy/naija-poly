@@ -357,7 +357,7 @@ export default function App() {
             }}
             title={muted ? "Unmute sounds" : "Mute sounds"}
             style={{
-              background: "rgba(255, 255, 255, 0.05)",
+              background: "var(--surface-2)",
               border: "1px solid rgba(255, 255, 255, 0.1)",
               borderRadius: "50%",
               width: "36px",
@@ -474,7 +474,7 @@ export default function App() {
               <div className="form-group">
                 <label>Game Rules & Settings:</label>
                 {room.sessionId === roomState.hostId ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", background: "rgba(255,255,255,0.02)", padding: "1rem", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", background: "rgba(255,255,255,0.02)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--surface-2)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Starting Capital:</span>
                       <select
@@ -518,7 +518,7 @@ export default function App() {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", background: "rgba(255,255,255,0.02)", padding: "1rem", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.05)", fontSize: "0.85rem" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", background: "rgba(255,255,255,0.02)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--surface-2)", fontSize: "0.85rem" }}>
                     <div>💰 Starting Capital: <strong style={{ color: "var(--color-naira)" }}>₦{(roomState.startingCash ?? 1500000).toLocaleString()}</strong></div>
                     <div>⏳ Turn Limit: <strong>{(roomState.turnLimit ?? 0) === 0 ? "Unlimited" : `${roomState.turnLimit} Rounds`}</strong></div>
                     <div>🍲 Bukka Jackpot: <strong style={{ color: roomState.freeParkingJackpot ? "var(--color-naira)" : "var(--text-muted)" }}>{roomState.freeParkingJackpot ? "Enabled" : "Disabled"}</strong></div>
@@ -985,7 +985,7 @@ export default function App() {
                 )}
                 
                 {ts && (
-                  <div className="deed-status-box" style={{ background: "rgba(255,255,255,0.03)", padding: "0.5rem", borderRadius: "6px", fontSize: "0.8rem", marginTop: "0.75rem", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div className="deed-status-box" style={{ background: "var(--surface-1)", padding: "0.5rem", borderRadius: "6px", fontSize: "0.8rem", marginTop: "0.75rem", border: "1px solid var(--surface-2)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span>Owner Status:</span>
                       <strong style={{ color: ts.ownerId ? "var(--color-gold)" : "var(--text-muted)" }}>
