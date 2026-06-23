@@ -1,7 +1,16 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BOARD, Tile, PropertyTile } from "../../data/board";
 import { tokenEmoji } from "../../data/tokens";
+
+// Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
+// type, so drop the redundant "Airport"/"Corporation" suffix; the full name
+// still shows in the deed inspector.
+function boardLabel(tile: Tile): string {
+  if (tile.type === "airport") return tile.name.replace(/\s*Airport$/i, "");
+  if (tile.type === "utility") return tile.name.replace(/\s*Corporation$/i, "");
+  return tile.name;
+}
 
 interface GameBoardProps {
   engineState: any;
@@ -94,6 +103,8 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   const activePlayerId = activePlayerIndex >= 0 && players[activePlayerIndex] ? players[activePlayerIndex].id : null;
 
   const logsEndRef = useRef<HTMLDivElement>(null);
+  // Whether the drawn-card banner is currently shown (auto-dismisses).
+  const [cardVisible, setCardVisible] = useState(false);
 
   useEffect(() => {
     if (logsEndRef.current) {
@@ -177,6 +188,18 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
     type: cardDrawMatch[2].toLowerCase(),
     text: cardDrawMatch[3]
   } : null;
+
+  // Show the drawn-card banner briefly, then auto-dismiss so it stops covering
+  // the game feed and doesn't linger until the next log line.
+  useEffect(() => {
+    if (!cardDrawMatch) {
+      setCardVisible(false);
+      return;
+    }
+    setCardVisible(true);
+    const t = setTimeout(() => setCardVisible(false), 4000);
+    return () => clearTimeout(t);
+  }, [lastLog]);
 
   return (
     <div className="monopoly-board">
@@ -263,7 +286,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
 
           {/* Drawn Card Overlay */}
           <AnimatePresence>
-            {activeCardDraw && (
+            {activeCardDraw && cardVisible && (
               <motion.div
                 className={`card-draw-overlay ${activeCardDraw.type}`}
                 initial={{ opacity: 0 }}
@@ -374,7 +397,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             {tileIcon && <span className="tile-type-icon">{tileIcon}</span>}
 
             {/* Tile Name */}
-            <span className="tile-name">{tile.name}</span>
+            <span className="tile-name">{boardLabel(tile)}</span>
 
             {/* Price shows only until purchased; once owned the badge signals
                 ownership (but a mortgaged tile still flags "Mortgaged"). */}
