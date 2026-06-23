@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BOARD, Tile, PropertyTile } from "../../data/board";
 import { getDevelopmentName } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
+import { GameState, Player } from "../../engine/types";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
 // type, so drop the redundant "Airport"/"Corporation" suffix; the full name
@@ -14,7 +15,7 @@ function boardLabel(tile: Tile): string {
 }
 
 interface GameBoardProps {
-  engineState: any;
+  engineState: GameState;
   roomState: any;
   mySessionId?: string;
   onTileClick?: (pos: number) => void;
@@ -98,7 +99,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   const lobbyPlayers = roomState?.lobbyPlayers || new Map();
 
   // Identify the local player's position and the active turn player
-  const myPlayer = mySessionId ? players.find((p: any) => p.id === mySessionId) : null;
+  const myPlayer = mySessionId ? players.find((p: Player) => p.id === mySessionId) : null;
   const myPosition = myPlayer ? myPlayer.position : -1;
   const activePlayerIndex = engineState.currentPlayerIndex ?? -1;
   const activePlayerId = activePlayerIndex >= 0 && players[activePlayerIndex] ? players[activePlayerIndex].id : null;
@@ -310,9 +311,9 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
         const isCorner = tile.pos % 10 === 0;
 
         // Find players on this tile
-        const playersOnTile = players.filter((p: any) => p.position === tile.pos && !p.bankrupt);
+        const playersOnTile = players.filter((p: Player) => p.position === tile.pos && !p.bankrupt);
         const hasMyToken = myPosition === tile.pos;
-        const hasActivePlayer = playersOnTile.some((p: any) => p.id === activePlayerId);
+        const hasActivePlayer = playersOnTile.some((p: Player) => p.id === activePlayerId);
 
         // Render color bar for property tiles
         const hasColorBar = tile.type === "property";
@@ -355,7 +356,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
         };
 
         const getOwnerTitle = () => {
-          const ownerName = players.find((p: any) => p.id === tileState.ownerId)?.name || "Unknown";
+          const ownerName = players.find((p: Player) => p.id === tileState.ownerId)?.name || "Unknown";
           if (isMortgaged) {
             return `Owned by ${ownerName} (Mortgaged)`;
           }
@@ -425,7 +426,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             {/* Player tokens — each animates with layoutId so it slides across board */}
             {playersOnTile.length > 0 && (
               <div className="tile-tokens-container">
-                {playersOnTile.map((p: any) => (
+                {playersOnTile.map((p: Player) => (
                   <motion.div
                     key={p.id}
                     layoutId={`player-token-${p.id}`}
@@ -454,7 +455,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
                 <div className="tile-tooltip-name">{tile.name}</div>
                 <div className="tile-tooltip-row">
                   {tileState?.ownerId
-                    ? `Owned by ${players.find((p: any) => p.id === tileState.ownerId)?.name ?? "—"}`
+                    ? `Owned by ${players.find((p: Player) => p.id === tileState.ownerId)?.name ?? "—"}`
                     : "Unowned"}
                 </div>
                 {tile.type === "property" && (

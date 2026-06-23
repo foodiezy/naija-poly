@@ -2,10 +2,11 @@ import { motion } from "framer-motion";
 import { BOARD, PropertyTile, AirportTile, UtilityTile, TaxTile } from "../../data/board";
 import { getDevelopmentName } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
+import { GameState, Player } from "../../engine/types";
 
 interface TileInspectorProps {
   tilePos: number;
-  engineState: any;
+  engineState: GameState;
   roomState: any;
   onClose: () => void;
 }
@@ -18,10 +19,10 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
   const players = engineState?.players || [];
   const lobbyPlayers = roomState?.lobbyPlayers || new Map();
 
-  const owner = tileState?.ownerId ? players.find((p: any) => p.id === tileState.ownerId) : null;
+  const owner = tileState?.ownerId ? players.find((p: Player) => p.id === tileState.ownerId) : null;
   const ownerToken = owner ? tokenEmoji(lobbyPlayers.get(owner.id)?.tokenId) : null;
 
-  const playersOnTile = players.filter((p: any) => p.position === tilePos && !p.bankrupt);
+  const playersOnTile = players.filter((p: Player) => p.position === tilePos && !p.bankrupt);
 
 
 
@@ -283,7 +284,7 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
           <div style={{ padding: "0 1.25rem 1rem", fontSize: "0.8rem" }}>
             <div style={{ color: "var(--text-secondary)", marginBottom: "0.35rem" }}>Players here:</div>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              {playersOnTile.map((p: any) => (
+              {playersOnTile.map((p: Player) => (
                 <span key={p.id} style={{
                   display: "flex", alignItems: "center", gap: "0.3rem",
                   padding: "2px 8px", background: "rgba(255,255,255,0.04)",

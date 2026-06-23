@@ -41,7 +41,7 @@ const engineState = {
   players,
   currentPlayerIndex: 0,
   tiles,
-  phase: "awaiting-roll",
+  phase: "awaiting-roll" as const,
   dice: [4, 3] as [number, number],
   doublesCount: 0,
   chanceOrder: [],

@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BOARD, PropertyTile } from "../../data/board";
+import { BOARD, PropertyTile, Tile } from "../../data/board";
 import { getDevelopmentName } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
-import { TradeOffer } from "../../engine/types";
+import { GameState, Player, Action, TradeOffer } from "../../engine/types";
 
 interface ControlPanelProps {
   room: any;
-  engineState: any;
-  onSendAction: (action: any) => void;
+  engineState: GameState;
+  onSendAction: (action: Action) => void;
   chatMessages: any[];
   onSendChatMessage: (text: string, toId?: string) => void;
   autoEndTurn?: boolean;
@@ -42,7 +42,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
   const mySessionId = room.sessionId;
   const players = engineState?.players || [];
   const tilesState = engineState?.tiles || {};
-  const me = players.find((p: any) => p.id === mySessionId);
+  const me = players.find((p: Player) => p.id === mySessionId);
   const isMyTurn = players[engineState?.currentPlayerIndex]?.id === mySessionId;
   const isBankrupt = me?.bankrupt;
   // Property management (build/sell/mortgage/trade) is only legal on your own
@@ -135,12 +135,12 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
 
   // Chat: everyone except me gets a private channel; messages filtered to the
   // active channel; tab badge sums unread across all channels.
-  const otherPlayers = players.filter((p: any) => p.id !== mySessionId);
+  const otherPlayers = players.filter((p: Player) => p.id !== mySessionId);
   const visibleMessages = chatMessages.filter((m: any) => channelOf(m) === chatChannel);
   const activeChannelName =
     chatChannel === "general"
       ? "Everyone"
-      : players.find((p: any) => p.id === chatChannel)?.name || "Player";
+      : players.find((p: Player) => p.id === chatChannel)?.name || "Player";
 
 
 
@@ -148,7 +148,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
   const activeTrade = engineState.activeTrade;
 
   // Find recipient/proposer names for active trade
-  const tradeProposer = activeTrade ? players.find((p: any) => p.id === activeTrade.fromId) : null;
+  const tradeProposer = activeTrade ? players.find((p: Player) => p.id === activeTrade.fromId) : null;
 
   // Retrieve tile names for trade listings
   const getTileNamesStr = (posArray: number[]) => {
@@ -159,13 +159,13 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
 
 
   // Build / mortgage details helpers
-  const myProperties = BOARD.filter((tile: any) => {
+  const myProperties = BOARD.filter((tile: Tile) => {
     const ts = tilesState[tile.pos];
     return ts && ts.ownerId === mySessionId;
   });
 
   const targetProperties = tradeTargetId
-    ? BOARD.filter((tile: any) => {
+    ? BOARD.filter((tile: Tile) => {
         const ts = tilesState[tile.pos];
         return ts && ts.ownerId === tradeTargetId;
       })
@@ -205,17 +205,19 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
     if (!ts || ts.ownerId !== mySessionId || ts.mortgaged || ts.houses >= 5) return false;
 
     // Must own full color group
-    const groupTiles = BOARD.filter((t: any): t is PropertyTile => t.type === "property" && t.group === tile.group);
-    const ownsAll = groupTiles.every((t: any) => tilesState[t.pos]?.ownerId === mySessionId);
+    const groupTiles = BOARD.filter((t: Tile): t is PropertyTile => t.type === "property" && t.group === tile.group);
+    const ownsAll = groupTiles.every((t: PropertyTile) => tilesState[t.pos]?.ownerId === mySessionId);
+    
+    // Condition 1: Must own all in group
     if (!ownsAll) return false;
 
-    // None in group can be mortgaged
-    const anyMortgaged = groupTiles.some((t: any) => tilesState[t.pos]?.mortgaged);
+    // Condition 2: No property in group can be mortgaged
+    const anyMortgaged = groupTiles.some((t: PropertyTile) => tilesState[t.pos]?.mortgaged);
     if (anyMortgaged) return false;
 
-    // Even build constraint
-    const targetHouses = ts.houses;
-    const violatesEven = groupTiles.some((t: any) => (tilesState[t.pos]?.houses ?? 0) < targetHouses);
+    // Condition 3: "Even building" rule — you can't have a 2nd house until everywhere else has a 1st
+    const targetHouses = Math.min((tilesState[tile.pos]?.houses ?? 0) + 1, 5);
+    const violatesEven = groupTiles.some((t: PropertyTile) => (tilesState[t.pos]?.houses ?? 0) < targetHouses - 1);
     if (violatesEven) return false;
 
     // Cash check
@@ -231,9 +233,9 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
     if (!ts || ts.ownerId !== mySessionId || ts.houses === 0) return false;
 
     // Even sell constraint
-    const groupTiles = BOARD.filter((t: any): t is PropertyTile => t.type === "property" && t.group === tile.group);
-    const targetHouses = ts.houses;
-    const violatesEven = groupTiles.some((t: any) => (tilesState[t.pos]?.houses ?? 0) > targetHouses);
+    const groupTiles = BOARD.filter((t: Tile): t is PropertyTile => t.type === "property" && t.group === tile.group);
+    const targetHouses = Math.max((tilesState[tile.pos]?.houses ?? 0) - 1, 0);
+    const violatesEven = groupTiles.some((t: PropertyTile) => (tilesState[t.pos]?.houses ?? 0) > targetHouses + 1);
     if (violatesEven) return false;
 
     return true;
@@ -246,8 +248,8 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
     // If property, must have no houses on any property in color group
     const tile = BOARD[pos];
     if (tile.type === "property") {
-      const groupTiles = BOARD.filter((t: any): t is PropertyTile => t.type === "property" && t.group === tile.group);
-      const hasBuildings = groupTiles.some((t: any) => (tilesState[t.pos]?.houses ?? 0) > 0);
+      const groupTiles = BOARD.filter((t: Tile): t is PropertyTile => t.type === "property" && t.group === tile.group);
+      const hasBuildings = groupTiles.some((t: PropertyTile) => (tilesState[t.pos]?.houses ?? 0) > 0);
       if (hasBuildings) return false;
     }
     return true;
@@ -287,7 +289,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
       )}
 
       <div style={{ maxHeight: "150px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-        {myProperties.map((tile: any) => {
+        {myProperties.map((tile: Tile) => {
           const ts = tilesState[tile.pos];
           const isProp = tile.type === "property";
           return (
@@ -384,7 +386,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
               <span className="chat-channel-dot">{channelUnread["general"]}</span>
             )}
           </button>
-          {otherPlayers.map((p: any) => (
+          {otherPlayers.map((p: Player) => (
             <button
               key={p.id}
               type="button"
@@ -530,8 +532,8 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
               >
                 <option value="">-- Choose Player --</option>
                 {players
-                  .filter((p: any) => p.id !== mySessionId && !p.bankrupt)
-                  .map((p: any) => (
+                  .filter((p: Player) => p.id !== mySessionId && !p.bankrupt)
+                  .map((p: Player) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
               </select>
@@ -562,12 +564,12 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
                       type="number"
                       className="input-field"
                       min={0}
-                      max={players.find((p: any) => p.id === tradeTargetId)?.cash || 0}
+                      max={players.find((p: Player) => p.id === tradeTargetId)?.cash || 0}
                       step={10000}
                       value={tradeGetCash}
                       onChange={(e) => setTradeGetCash(Math.max(0, Number(e.target.value)))}
                     />
-                    <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Max: ₦{players.find((p: any) => p.id === tradeTargetId)?.cash.toLocaleString()}</span>
+                    <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Max: ₦{players.find((p: Player) => p.id === tradeTargetId)?.cash.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -576,7 +578,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
                   <div>
                     <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-secondary)" }}>Give Properties:</label>
                     <div style={{ maxHeight: "120px", overflowY: "auto", background: "rgba(0,0,0,0.3)", padding: "0.5rem", borderRadius: "6px", marginTop: "0.25rem" }}>
-                      {myProperties.filter((t: any) => (tilesState[t.pos]?.houses ?? 0) === 0).map((t: any) => (
+                      {myProperties.filter((t: Tile) => (tilesState[t.pos]?.houses ?? 0) === 0).map((t: Tile) => (
                         <label key={t.pos} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", margin: "4px 0", cursor: "pointer" }}>
                           <input
                             type="checkbox"
@@ -586,7 +588,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
                           <span>{t.name}</span>
                         </label>
                       ))}
-                      {myProperties.filter((t: any) => (tilesState[t.pos]?.houses ?? 0) === 0).length === 0 && (
+                      {myProperties.filter((t: Tile) => (tilesState[t.pos]?.houses ?? 0) === 0).length === 0 && (
                         <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontStyle: "italic" }}>No unimproved properties</div>
                       )}
                     </div>
@@ -596,7 +598,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
                   <div>
                     <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-secondary)" }}>Request Properties:</label>
                     <div style={{ maxHeight: "120px", overflowY: "auto", background: "rgba(0,0,0,0.3)", padding: "0.5rem", borderRadius: "6px", marginTop: "0.25rem" }}>
-                      {targetProperties.filter((t: any) => (tilesState[t.pos]?.houses ?? 0) === 0).map((t: any) => (
+                      {targetProperties.filter((t: Tile) => (tilesState[t.pos]?.houses ?? 0) === 0).map((t: Tile) => (
                         <label key={t.pos} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", margin: "4px 0", cursor: "pointer" }}>
                           <input
                             type="checkbox"
@@ -606,7 +608,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
                           <span>{t.name}</span>
                         </label>
                       ))}
-                      {targetProperties.filter((t: any) => (tilesState[t.pos]?.houses ?? 0) === 0).length === 0 && (
+                      {targetProperties.filter((t: Tile) => (tilesState[t.pos]?.houses ?? 0) === 0).length === 0 && (
                         <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontStyle: "italic" }}>No unimproved properties</div>
                       )}
                     </div>
@@ -684,7 +686,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
         {/* Passive trade status */}
         {activeTrade && activeTrade.fromId !== mySessionId && activeTrade.toId !== mySessionId && (
           <div className="action-status-indicator" style={{ border: "1px solid rgba(255, 255, 255, 0.1)", background: "rgba(255, 255, 255, 0.02)", borderRadius: "6px" }}>
-            🤝 {players.find((p: any) => p.id === activeTrade.fromId)?.name || "Host"} is negotiating a trade deal with {players.find((p: any) => p.id === activeTrade.toId)?.name || "Player"}...
+            🤝 {players.find((p: Player) => p.id === activeTrade.fromId)?.name || "Host"} is negotiating a trade deal with {players.find((p: Player) => p.id === activeTrade.toId)?.name || "Player"}...
           </div>
         )}
 
@@ -705,7 +707,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
               </div>
               {/* Mini leaderboard */}
               <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                {players.filter((p: any) => !p.bankrupt).sort((a: any, b: any) => b.cash - a.cash).map((p: any, i: number) => (
+                {players.filter((p: Player) => !p.bankrupt).sort((a: Player, b: Player) => b.cash - a.cash).map((p: Player, i: number) => (
                   <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.2rem 0", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                     <span>{i + 1}. {p.name}</span>
                     <span style={{ color: "var(--color-naira)" }}>₦{p.cash.toLocaleString()}</span>
@@ -739,7 +741,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
 
             <div className="auction-bid-hud">
               <span>Top Bid: <strong style={{ color: "var(--color-naira)" }}>₦{auction.highestBid.toLocaleString()}</strong></span>
-              <span>By: <strong>{auction.highestBidderId ? players.find((p: any) => p.id === auction.highestBidderId)?.name : "No bids yet"}</strong></span>
+              <span>By: <strong>{auction.highestBidderId ? players.find((p: Player) => p.id === auction.highestBidderId)?.name : "No bids yet"}</strong></span>
             </div>
 
             {canBid ? (
@@ -839,7 +841,7 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
             {engineState.phase === "awaiting-buy-decision" && (
               <div className="auction-panel" style={{ borderColor: "var(--color-gold)", background: "rgba(245, 158, 11, 0.03)" }}>
                 {(() => {
-                  const tile = BOARD[me?.position];
+                  const tile = me ? BOARD[me.position] : undefined;
                   const price = tile && "price" in tile ? tile.price : 0;
                   return (
                     <>
@@ -872,13 +874,13 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
                 <button
                   className="button-primary full-width-btn"
                   style={{ padding: "0.9rem" }}
-                  disabled={me?.cash < 0}
+                  disabled={(me?.cash ?? 0) < 0}
                   onClick={() => onSendAction({ type: "END_TURN" })}
-                  title={me?.cash < 0 ? "You must mortgage properties, sell houses, or declare bankruptcy before ending your turn." : "End Turn 🏁"}
+                  title={(me?.cash ?? 0) < 0 ? "You must mortgage properties, sell houses, or declare bankruptcy before ending your turn." : "End Turn 🏁"}
                 >
-                  {me?.cash < 0 ? "Resolve Debt to End Turn 🏁" : "End Turn 🏁"}
+                  {(me?.cash ?? 0) < 0 ? "Resolve Debt to End Turn 🏁" : "End Turn 🏁"}
                 </button>
-                {autoEndTurn && me?.cash >= 0 && (
+                {autoEndTurn && (me?.cash ?? 0) >= 0 && (
                   <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textAlign: "center", fontStyle: "italic" }}>
                     ⏳ Auto-ending turn in ~2s...
                   </div>

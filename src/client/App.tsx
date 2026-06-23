@@ -1,69 +1,58 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Client } from "colyseus.js";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
+// Components
 import Lobby from "./components/Lobby";
+import RoomLobbyView from "./components/RoomLobbyView";
 import GameBoard from "./components/GameBoard";
 import ControlPanel from "./components/ControlPanel";
 import TileInspector from "./components/TileInspector";
-import { BOARD } from "../data/board";
-import { getDevelopmentName } from "../engine/engine";
-import { TOKENS, tokenEmoji } from "../data/tokens";
+import GameOverModal from "./components/GameOverModal";
+
+// Hooks & Utilities
+import { useGameRoom } from "./hooks/useGameRoom";
+import { useSoundEffects } from "./hooks/useSoundEffects";
+import { useAutoEndTurn } from "./hooks/useAutoEndTurn";
 import * as sound from "./utils/sound";
 import { recordGameResult } from "./utils/stats";
-
-// Fallback logic for local vs deployed addresses
-const isDev = (import.meta as any).env.DEV;
-const endpoint = isDev
-  ? "ws://localhost:2567"
-  : ((import.meta as any).env.VITE_SERVER_URL ?? window.location.origin.replace(/^http/, "ws"));
-
-// Compatibility patch for Colyseus 0.17 matchmaking response in 0.16.22 client
-function patchClientForV017(client: Client) {
-  const originalConsume = (client as any).consumeSeatReservation.bind(client);
-  (client as any).consumeSeatReservation = function (
-    response: any,
-    rootSchema: any,
-    reuseRoomInstance: any
-  ) {
-    if (response && !response.room) {
-      response.room = {
-        name: response.name || "odogwu",
-        roomId: response.roomId,
-        processId: response.processId,
-        publicAddress: response.publicAddress,
-      };
-    }
-    return originalConsume(response, rootSchema, reuseRoomInstance);
-  };
-}
-
-const colyseusClient = new Client(endpoint);
-patchClientForV017(colyseusClient);
+import { BOARD } from "../data/board";
+import { Player } from "../engine/types";
 
 export default function App() {
-  const [playerName, setPlayerName] = useState("");
-  const [room, setRoom] = useState<any>(null);
-  const [roomState, setRoomState] = useState<any>(null);
-  const [engineState, setEngineState] = useState<any>(null);
+  const {
+    playerName,
+    room,
+    roomState,
+    engineState,
+    chatMessages,
+    errorMsg,
+    reconnecting,
+    mySessionId,
+    createRoom,
+    joinRoom,
+    quickMatch,
+    leaveRoom,
+    sendAction,
+    selectToken,
+    updateSettings,
+    startGame,
+    sendChatMessage,
+    resetGame,
+  } = useGameRoom();
+
   const [muted, setMuted] = useState(sound.getMuted());
   const [showGameOverModal, setShowGameOverModal] = useState(true);
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [selectedTilePos, setSelectedTilePos] = useState<number | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [autoEndTurn, setAutoEndTurn] = useState(true);
-  const [reconnecting, setReconnecting] = useState(false);
   const [gameResultRecorded, setGameResultRecorded] = useState(false);
-  const autoEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mySessionIdRef = useRef<string | null>(null);
-  const roomRef = useRef<any>(null);
-  // True while the user is deliberately leaving, so onLeave doesn't trigger a
-  // reconnect attempt for an intentional exit.
-  const intentionalLeaveRef = useRef(false);
 
-  // Keep roomRef in sync for reconnection
-  useEffect(() => { roomRef.current = room; }, [room]);
+  // Initialize sound effects
+  useSoundEffects(engineState, mySessionId);
+
+  // Initialize auto end turn
+  useAutoEndTurn(engineState, room, mySessionId, autoEndTurn);
 
   // Reset showGameOverModal when phase changes to game-over
   useEffect(() => {
@@ -72,67 +61,44 @@ export default function App() {
     }
   }, [engineState?.phase]);
 
-  // Auto-scrolling helper for the lobby chat
+  // Record stats on game-over (once)
   useEffect(() => {
-    const chatElement = document.getElementById("lobby-chat-box");
-    if (chatElement) {
-      chatElement.scrollTop = chatElement.scrollHeight;
-    }
-  }, [chatMessages]);
-
-  const calculatePlayerNetWorth = (p: any, tiles: any) => {
-    if (p.bankrupt) return 0;
-    let netWorth = p.cash;
-    Object.keys(tiles || {}).forEach((posStr) => {
-      const pos = parseInt(posStr, 10);
-      const ts = tiles[pos];
-      if (ts.ownerId === p.id) {
-        const tile = BOARD[pos];
-        if ("price" in tile) {
-          if (ts.mortgaged) {
-            netWorth += tile.mortgage;
-          } else {
-            netWorth += tile.price;
-            if (tile.type === "property" && ts.houses > 0) {
-              netWorth += ts.houses * tile.houseCost;
+    if (engineState?.phase === "game-over" && !gameResultRecorded && mySessionId) {
+      const me = engineState.players?.find((p: Player) => p.id === mySessionId);
+      if (me) {
+        // Compute net worth
+        let myNetWorth = me.cash;
+        Object.keys(engineState.tiles || {}).forEach((posStr) => {
+          const pos = parseInt(posStr, 10);
+          const ts = engineState.tiles[pos];
+          if (ts.ownerId === me.id) {
+            const tile = BOARD[pos];
+            if ("price" in tile) {
+              if (ts.mortgaged) {
+                myNetWorth += tile.mortgage;
+              } else {
+                myNetWorth += tile.price;
+                if (tile.type === "property" && ts.houses > 0) {
+                  myNetWorth += ts.houses * (tile as any).houseCost;
+                }
+              }
             }
           }
-        }
+        });
+        const won = engineState.winnerId === mySessionId;
+        recordGameResult(won, myNetWorth);
+        setGameResultRecorded(true);
+        if (won) sound.playGameOver();
       }
-    });
-    return netWorth;
-  };
-
-  const getLeaderboard = () => {
-    if (!engineState) return [];
-    return [...engineState.players]
-      .map((p) => {
-        const netWorth = calculatePlayerNetWorth(p, engineState.tiles);
-        const ownedTiles = BOARD.filter((t) => engineState.tiles[t.pos]?.ownerId === p.id);
-        return {
-          ...p,
-          netWorth,
-          assetsCount: ownedTiles.length,
-        };
-      })
-      .sort((a, b) => b.netWorth - a.netWorth);
-  };
-
-  const resetGame = () => {
-    if (room) {
-      room.send("RESET_GAME");
-      setGameResultRecorded(false);
     }
-  };
+  }, [engineState?.phase, gameResultRecorded, mySessionId, engineState]);
 
-  // Copy room code to clipboard
   const copyRoomCode = useCallback(async () => {
     if (!room) return;
     try {
       await navigator.clipboard.writeText(room.roomId);
       toast.success("📋 Room code copied!", { autoClose: 1500, toastId: "copy" });
     } catch {
-      // Fallback for older browsers
       const el = document.createElement("textarea");
       el.value = room.roomId;
       document.body.appendChild(el);
@@ -142,344 +108,6 @@ export default function App() {
       toast.success("📋 Room code copied!", { autoClose: 1500, toastId: "copy" });
     }
   }, [room]);
-
-  // Record stats on game-over (once)
-  useEffect(() => {
-    if (engineState?.phase === "game-over" && !gameResultRecorded && mySessionIdRef.current) {
-      const me = engineState.players?.find((p: any) => p.id === mySessionIdRef.current);
-      if (me) {
-        const myNetWorth = calculatePlayerNetWorth(me, engineState.tiles);
-        const won = engineState.winnerId === mySessionIdRef.current;
-        recordGameResult(won, myNetWorth);
-        setGameResultRecorded(true);
-        if (won) sound.playGameOver();
-      }
-    }
-  }, [engineState?.phase, gameResultRecorded]);
-
-  // Auto end turn timer
-  useEffect(() => {
-    if (autoEndTimerRef.current) {
-      clearTimeout(autoEndTimerRef.current);
-      autoEndTimerRef.current = null;
-    }
-
-    if (
-      autoEndTurn &&
-      engineState?.phase === "awaiting-end-turn" &&
-      room &&
-      mySessionIdRef.current
-    ) {
-      const me = engineState.players?.find((p: any) => p.id === mySessionIdRef.current);
-      const isMyTurn = engineState.players?.[engineState.currentPlayerIndex]?.id === mySessionIdRef.current;
-      if (isMyTurn && me && me.cash >= 0 && !me.bankrupt && !engineState.activeTrade) {
-        autoEndTimerRef.current = setTimeout(() => {
-          room.send("ACTION", { type: "END_TURN" });
-        }, 2500);
-      }
-    }
-
-    return () => {
-      if (autoEndTimerRef.current) {
-        clearTimeout(autoEndTimerRef.current);
-        autoEndTimerRef.current = null;
-      }
-    };
-  }, [autoEndTurn, engineState?.phase, engineState?.currentPlayerIndex, engineState?.activeTrade, room]);
-
-  // Auto-scrolling helper for the log
-  useEffect(() => {
-    if (engineState) {
-      const logsElement = document.getElementById("console-logs-box");
-      if (logsElement) {
-        logsElement.scrollTop = logsElement.scrollHeight;
-      }
-    }
-  }, [engineState]);
-
-  // Trigger sound effects + toast notifications based on new game log entries
-  const [lastLogLength, setLastLogLength] = useState(0);
-  useEffect(() => {
-    if (engineState?.log && engineState.log.length > lastLogLength) {
-      const newLogs = engineState.log.slice(lastLogLength);
-      const mySessionId = mySessionIdRef.current;
-
-      newLogs.forEach((logLine: string) => {
-        if (logLine === "Game started.") {
-          toast.success(" Game started! Let the hustle begin!", { toastId: "game-start", autoClose: 3000 });
-          return;
-        }
-
-        // Sounds
-        if (logLine.includes("rolled")) {
-          sound.playRoll();
-        } else if (logLine.includes("bought") || logLine.includes("passed START") || logLine.includes("collected the Bukka Pot")) {
-          sound.playCash();
-        } else if (logLine.includes("paid ₦") || logLine.includes("lost ₦") || logLine.includes("tax")) {
-          sound.playRentPay();
-        } else if (logLine.includes("drew Chance") || logLine.includes("drew Esusu")) {
-          sound.playDraw();
-        } else if (logLine.includes("Kirikiri Prison")) {
-          sound.playJail();
-        } else if (logLine.includes("built a")) {
-          sound.playBuild();
-        }
-
-        // "Your turn" notification: play chime + browser Notification
-        if (mySessionId) {
-          const myName = engineState.players?.find((p: any) => p.id === mySessionId)?.name;
-          if (myName && logLine.includes(`It is now ${myName}'s turn`)) {
-            sound.playYourTurn();
-            // Browser notification for tabbed-away players
-            if (document.hidden && "Notification" in window && Notification.permission === "granted") {
-              new Notification("Odogwu Empire", { body: "It's your turn! 🎲", icon: "🎲" });
-            }
-          }
-        }
-
-        // Toasts — only for events involving this player specifically
-        if (mySessionId) {
-          const myName = engineState.players?.find((p: any) => p.id === mySessionId)?.name;
-
-          if (myName) {
-            if (logLine.startsWith(myName)) {
-              // My action toasts
-              if (logLine.includes("bought")) {
-                const propMatch = logLine.match(/bought (.+) for ₦([\.\d,]+)/);
-                if (propMatch) {
-                  toast.success(`🏘️ You bought ${propMatch[1]} for ₦${propMatch[2]}!`, { autoClose: 3500 });
-                }
-              } else if (logLine.includes("passed START")) {
-                toast.info("✅ Passed GO — collected ₦200,000!", { autoClose: 3000 });
-              } else if (logLine.includes("rolled doubles") || logLine.includes("gets another roll")) {
-                toast.info("🎲 Doubles! Roll again!", { autoClose: 2000, toastId: "doubles" });
-              } else if (logLine.includes("Kirikiri Prison")) {
-                toast.warning("🚔 You've been sent to Kirikiri Prison!", { autoClose: 4000 });
-              } else if (logLine.includes("drew Chance") || logLine.includes("drew Esusu")) {
-                const cardMatch = logLine.match(/drew (?:Chance|Esusu): "(.+)"/);
-                if (cardMatch) {
-                  toast(` Card: "${cardMatch[1]}"`, { autoClose: 4500 });
-                }
-              } else if (logLine.includes("built a")) {
-                toast.success("🏗️ Property upgraded!", { autoClose: 2500 });
-              } else if (logLine.includes("collected the Bukka Pot")) {
-                toast.success("🍲 You landed on the Bukka! Jackpot collected!", { autoClose: 4000 });
-              } else if (logLine.includes("bankrupt")) {
-                toast.error("💀 You've gone bankrupt. Game over for you.", { autoClose: 6000 });
-              }
-            } else {
-              // Events caused by others that affect me
-              if (logLine.includes(`to ${myName}`)) {
-                if (logLine.includes("paid")) {
-                  const rentMatch = logLine.match(/paid ₦([\.\d,]+) rent to/);
-                  if (rentMatch) {
-                    toast.success(`💸 You collected ₦${rentMatch[1]} rent!`, { autoClose: 3000 });
-                  }
-                }
-              }
-              // Notify when others go bankrupt
-              if (logLine.includes("bankrupt")) {
-                const nameMatch = logLine.match(/^(.+?) (?:has gone|is now) bankrupt/);
-                if (nameMatch) {
-                  toast(`💀 ${nameMatch[1]} has gone bankrupt!`, { autoClose: 4000 });
-                }
-              }
-              // Game over
-              if (logLine.includes("wins the game")) {
-                const winnerMatch = logLine.match(/^(.+?) wins the game/);
-                if (winnerMatch) {
-                  if (winnerMatch[1] === myName) {
-                    toast.success("🏆 YOU WIN! E no easy, but you rule Naija!", { autoClose: false, closeOnClick: false });
-                  } else {
-                    toast(`🏆 ${winnerMatch[1]} wins the game!`, { autoClose: 5000 });
-                  }
-                }
-              }
-            }
-          }
-        }
-      });
-      setLastLogLength(engineState.log.length);
-    } else if (!engineState?.log) {
-      setLastLogLength(0);
-    }
-  }, [engineState?.log, lastLogLength]);
-
-  const handleRoomJoined = (joinedRoom: any) => {
-    setRoom(joinedRoom);
-    setErrorMsg(null);
-    setReconnecting(false);
-    intentionalLeaveRef.current = false;
-
-    // Ask once for notification permission so "your turn" alerts can fire when
-    // the player is on another tab.
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission().catch(() => {});
-    }
-
-    // Listen for state changes
-    joinedRoom.onStateChange((state: any) => {
-      setRoomState({
-        status: state.status,
-        lobbyPlayers: new Map(state.lobbyPlayers),
-        hostId: state.hostId,
-        gameStateJson: state.gameStateJson,
-        startingCash: state.startingCash,
-        turnLimit: state.turnLimit,
-        freeParkingJackpot: state.freeParkingJackpot,
-        turnTimerEnabled: state.turnTimerEnabled,
-        turnTimeoutSecs: state.turnTimeoutSecs,
-        turnDeadline: state.turnDeadline,
-      });
-
-      if (state.gameStateJson) {
-        try {
-          const parsed = JSON.parse(state.gameStateJson);
-          setEngineState(parsed);
-        } catch (e) {
-          console.error("Failed to parse GameState JSON", e);
-        }
-      } else {
-        setEngineState(null);
-      }
-    });
-
-    joinedRoom.onMessage("ERROR", (message: { message: string }) => {
-      toast.error(`❌ ${message.message}`, { autoClose: 4000 });
-    });
-
-    joinedRoom.onMessage("CHAT_MESSAGE", (chatMsg: any) => {
-      setChatMessages((prev) => [...prev, chatMsg]);
-      // Nudge the recipient when a private message arrives from someone else.
-      if (chatMsg.toId && chatMsg.senderId !== mySessionIdRef.current) {
-        toast.info(`🔒 ${chatMsg.senderName} (private): ${chatMsg.text}`, { autoClose: 4000 });
-      }
-    });
-
-    // If the socket drops unexpectedly, try to rejoin the same seat. The server
-    // holds the seat open for 60s (allowReconnection). Codes 1000/4000 are
-    // normal/consented closes — don't reconnect for those.
-    joinedRoom.onLeave(async (code: number) => {
-      if (intentionalLeaveRef.current || code === 1000 || code === 4000) return;
-      const token = joinedRoom.reconnectionToken;
-      if (!token) return;
-      setReconnecting(true);
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          await new Promise((r) => setTimeout(r, attempt === 0 ? 600 : 1200 * attempt));
-          const rejoined = await colyseusClient.reconnect(token);
-          handleRoomJoined(rejoined);
-          toast.success("✅ Reconnected!", { autoClose: 2000, toastId: "reconnected" });
-          return;
-        } catch {
-          // keep trying until attempts run out
-        }
-      }
-      setReconnecting(false);
-      toast.error("❌ Lost connection to the game. Please rejoin.", { autoClose: 6000 });
-      setRoom(null);
-      setRoomState(null);
-      setEngineState(null);
-    });
-
-    // Store session ID for toast targeting
-    mySessionIdRef.current = joinedRoom.sessionId;
-  };
-
-  const showError = (msg: string) => {
-    toast.error(`❌ ${msg}`, { autoClose: 4000 });
-  };
-
-  const createRoom = async (name: string) => {
-    try {
-      // Always spin up a fresh room with its own code. joinOrCreate would drop
-      // the host into whatever existing room is still open for joining.
-      const roomInstance = await colyseusClient.create("odogwu", { name });
-      setPlayerName(name);
-      handleRoomJoined(roomInstance);
-    } catch (e: any) {
-      console.error(e);
-      showError(e.message || "Failed to create game room");
-    }
-  };
-
-  const joinRoom = async (name: string, roomId: string) => {
-    if (!roomId.trim()) {
-      showError("Please enter a room code");
-      return;
-    }
-    try {
-      const roomInstance = await colyseusClient.joinById(roomId.trim(), { name });
-      setPlayerName(name);
-      handleRoomJoined(roomInstance);
-    } catch (e: any) {
-      console.error(e);
-      showError(e.message || `Failed to join room "${roomId}"`);
-    }
-  };
-
-  // Quick Match: drop into any open room, or create one if none are available.
-  const quickMatch = async (name: string) => {
-    try {
-      const roomInstance = await colyseusClient.joinOrCreate("odogwu", { name });
-      setPlayerName(name);
-      handleRoomJoined(roomInstance);
-    } catch (e: any) {
-      console.error(e);
-      showError(e.message || "Couldn't find a game — try creating a room");
-    }
-  };
-
-  const selectToken = (tokenId: string) => {
-    if (room) {
-      room.send("SELECT_TOKEN", { tokenId });
-    }
-  };
-
-  const updateSettings = (settings: { startingCash?: number; turnLimit?: number; freeParkingJackpot?: boolean; turnTimerEnabled?: boolean; turnTimeoutSecs?: number }) => {
-    if (room) {
-      room.send("UPDATE_SETTINGS", settings);
-    }
-  };
-
-  const startGame = () => {
-    if (room) {
-      try {
-        room.send("START_GAME");
-      } catch (e: any) {
-        showError(e.message);
-      }
-    }
-  };
-
-  const sendAction = (action: any) => {
-    if (room) {
-      room.send("ACTION", action);
-    }
-  };
-
-  const leaveRoom = () => {
-    if (room) {
-      // Mark this as a deliberate exit so the onLeave handler doesn't try to
-      // reconnect us.
-      intentionalLeaveRef.current = true;
-      // Fire-and-forget: don't await the server close handshake so the UI
-      // resets instantly. The server's onLeave handler still runs correctly.
-      room.leave().catch(() => {});
-      setRoom(null);
-      setRoomState(null);
-      setEngineState(null);
-      setChatMessages([]);
-      setSelectedTilePos(null);
-      setLastLogLength(0);
-    }
-  };
-
-  const sendChatMessage = (text: string, toId?: string) => {
-    if (room && text.trim()) {
-      room.send("SEND_CHAT", { text: text.trim(), toId });
-    }
-  };
 
   return (
     <div className="app-container">
@@ -581,300 +209,36 @@ export default function App() {
           exit={{ opacity: 0, x: -40 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
         >
-          <div className="lobby-columns-container">
-            <div className="lobby-card glass-panel">
-              <h2 className="lobby-title">Room Lobby</h2>
-              <p style={{ textAlign: "center", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-                Share code{" "}
-                <strong
-                  style={{ color: "#3b82f6", cursor: "pointer" }}
-                  onClick={copyRoomCode}
-                  title="Click to copy"
-                >
-                  {room.roomId} 📋
-                </strong>{" "}
-                with friends to join.
-              </p>
-              
-              <div className="form-group">
-                <label>Select Your Token Piece:</label>
-                <div className="token-grid">
-                  {TOKENS.map((token) => {
-                    const lobbyPlayer = roomState.lobbyPlayers.get(room.sessionId);
-                    const isSelected = lobbyPlayer?.tokenId === token.id;
-                    // Taken by someone else → can't be picked.
-                    const takenByOther = Array.from(roomState.lobbyPlayers.entries()).some(
-                      ([id, p]: any) => id !== room.sessionId && p.tokenId === token.id
-                    );
-                    return (
-                      <div
-                        key={token.id}
-                        className={`token-option ${isSelected ? "selected" : ""} ${takenByOther ? "taken" : ""}`}
-                        onClick={() => !takenByOther && selectToken(token.id)}
-                        title={takenByOther ? "Already taken by another player" : token.name}
-                        style={takenByOther ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
-                      >
-                        <span className="token-emoji">{token.emoji}</span>
-                        <span className="token-name">{token.name}</span>
-                        {takenByOther && <span className="token-taken-tag">Taken</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Game Settings Customization */}
-              <div className="form-group">
-                <label>Game Rules & Settings:</label>
-                {room.sessionId === roomState.hostId ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", background: "rgba(255,255,255,0.02)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--surface-2)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Starting Capital:</span>
-                      <select
-                        className="input-field"
-                        style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem", background: "rgba(0,0,0,0.4)" }}
-                        value={roomState.startingCash ?? 1500000}
-                        onChange={(e) => updateSettings({ startingCash: Number(e.target.value) })}
-                      >
-                        <option value={1000000}>₦1,000,000</option>
-                        <option value={1500000}>₦1,500,000</option>
-                        <option value={2000000}>₦2,000,000</option>
-                      </select>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Turn Limit:</span>
-                      <select
-                        className="input-field"
-                        style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem", background: "rgba(0,0,0,0.4)" }}
-                        value={roomState.turnLimit ?? 0}
-                        onChange={(e) => updateSettings({ turnLimit: Number(e.target.value) })}
-                      >
-                        <option value={0}>Unlimited (Play to Bankruptcy)</option>
-                        <option value={1}>1 Round (Lightning Match)</option>
-                        <option value={5}>5 Rounds (Short Match)</option>
-                        <option value={20}>20 Rounds</option>
-                        <option value={30}>30 Rounds</option>
-                        <option value={50}>50 Rounds</option>
-                      </select>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
-                      <input
-                        id="jackpot-toggle"
-                        type="checkbox"
-                        checked={roomState.freeParkingJackpot ?? false}
-                        onChange={(e) => updateSettings({ freeParkingJackpot: e.target.checked })}
-                        style={{ cursor: "pointer" }}
-                      />
-                      <label htmlFor="jackpot-toggle" style={{ fontSize: "0.85rem", color: "var(--text-secondary)", cursor: "pointer", fontWeight: "normal", margin: 0 }}>
-                        Enable Bukka Jackpot (Free Parking Pot)
-                      </label>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
-                      <input
-                        id="turntimer-toggle"
-                        type="checkbox"
-                        checked={roomState.turnTimerEnabled ?? false}
-                        onChange={(e) => updateSettings({ turnTimerEnabled: e.target.checked })}
-                        style={{ cursor: "pointer" }}
-                      />
-                      <label htmlFor="turntimer-toggle" style={{ fontSize: "0.85rem", color: "var(--text-secondary)", cursor: "pointer", fontWeight: "normal", margin: 0 }}>
-                        Enable Turn Timer (auto-play AFK turns)
-                      </label>
-                    </div>
-                    {roomState.turnTimerEnabled && (
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Seconds per turn:</span>
-                        <select
-                          className="input-field"
-                          style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem", background: "rgba(0,0,0,0.4)" }}
-                          value={roomState.turnTimeoutSecs ?? 120}
-                          onChange={(e) => updateSettings({ turnTimeoutSecs: Number(e.target.value) })}
-                        >
-                          <option value={30}>30s</option>
-                          <option value={60}>60s</option>
-                          <option value={120}>120s</option>
-                          <option value={180}>180s</option>
-                        </select>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", background: "rgba(255,255,255,0.02)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--surface-2)", fontSize: "0.85rem" }}>
-                    <div>💰 Starting Capital: <strong style={{ color: "var(--color-naira)" }}>₦{(roomState.startingCash ?? 1500000).toLocaleString()}</strong></div>
-                    <div>⏳ Turn Limit: <strong>{(roomState.turnLimit ?? 0) === 0 ? "Unlimited" : `${roomState.turnLimit} Rounds`}</strong></div>
-                    <div>🍲 Bukka Jackpot: <strong style={{ color: roomState.freeParkingJackpot ? "var(--color-naira)" : "var(--text-muted)" }}>{roomState.freeParkingJackpot ? "Enabled" : "Disabled"}</strong></div>
-                    <div>⏱️ Turn Timer: <strong style={{ color: roomState.turnTimerEnabled ? "var(--color-naira)" : "var(--text-muted)" }}>{roomState.turnTimerEnabled ? `${roomState.turnTimeoutSecs ?? 120}s per turn` : "Off"}</strong></div>
-                  </div>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label>Players in Lobby ({roomState.lobbyPlayers.size}):</label>
-                <div className="lobby-players-list">
-                  {Array.from(roomState.lobbyPlayers.entries()).map(([id, player]: any) => (
-                    <div key={id} className="lobby-player-row">
-                      <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span>{tokenEmoji(player.tokenId)}</span>
-                        <span style={{ fontWeight: 600 }}>{player.name} {id === room.sessionId && "(You)"}</span>
-                        {String(id).startsWith("ai_") && <span style={{ fontSize: "0.65rem", background: "rgba(139,92,246,0.2)", color: "#a78bfa", padding: "1px 5px", borderRadius: "4px", fontWeight: "bold" }}>🤖 CPU</span>}
-                      </span>
-                      {roomState.hostId === id && <span className="host-tag">HOST</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {room.sessionId === roomState.hostId ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <button
-                    className="button-secondary"
-                    disabled={roomState.lobbyPlayers.size >= 6}
-                    onClick={() => room.send("ADD_AI")}
-                    style={{ fontSize: "0.85rem" }}
-                  >
-                    {roomState.lobbyPlayers.size >= 6 ? "Room Full" : "🤖 Add CPU Player"}
-                  </button>
-                  <button
-                    className="button-primary"
-                    disabled={roomState.lobbyPlayers.size < 2}
-                    onClick={startGame}
-                  >
-                    {roomState.lobbyPlayers.size < 2 ? "Need at least 2 players" : "Start Game "}
-                  </button>
-                </div>
-              ) : (
-                <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem", fontStyle: "italic" }}>
-                  Waiting for host to start the game...
-                </p>
-              )}
-            </div>
-
-            {/* Lobby Chat Panel */}
-            <div className="lobby-chat-panel glass-panel">
-              <h3 className="lobby-chat-title">Room Chat</h3>
-              <div className="lobby-chat-history" id="lobby-chat-box">
-                {chatMessages.length === 0 ? (
-                  <div className="chat-empty-msg">No messages yet. Say hello in the chat!</div>
-                ) : (
-                  chatMessages.map((msg, idx) => (
-                    <div key={idx} className="chat-msg-row">
-                      <span className="chat-msg-sender">
-                        {tokenEmoji(msg.tokenId)} {msg.senderName}:
-                      </span>
-                      <span className="chat-msg-text">{msg.text}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-              <form 
-                className="lobby-chat-input-row"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const form = e.currentTarget;
-                  const input = form.elements.namedItem("chatText") as HTMLInputElement;
-                  if (input && input.value.trim()) {
-                    sendChatMessage(input.value);
-                    input.value = "";
-                  }
-                }}
-              >
-                <input 
-                  type="text" 
-                  name="chatText" 
-                  placeholder="Type message here..." 
-                  className="input-field chat-input-box"
-                  autoComplete="off"
-                />
-                <button type="submit" className="button-primary chat-send-btn">Send</button>
-              </form>
-            </div>
-          </div>
+          <RoomLobbyView
+            room={room}
+            roomState={roomState}
+            onCopyRoomCode={copyRoomCode}
+            onSelectToken={selectToken}
+            onUpdateSettings={updateSettings}
+            onStartGame={startGame}
+            chatMessages={chatMessages}
+            onSendChatMessage={sendChatMessage}
+          />
         </motion.div>
-      ) : (
-        /* Active game dashboard */
+      ) : engineState ? (
         <motion.div
           key="game"
-          className="dashboard-view"
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.97 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="game-view"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          <div className="board-panel">
-            <GameBoard engineState={engineState} roomState={roomState} mySessionId={room.sessionId} onTileClick={setSelectedTilePos} />
-          </div>
-          <div className="side-panel">
-            {/* Players status panel */}
-            <div className="players-hud glass-panel">
-              <h3 className="players-hud-title">Players status</h3>
-              {engineState?.players.map((p: any, idx: number) => {
-                const isCurrent = engineState.currentPlayerIndex === idx;
-                const lobbyPlayer = roomState?.lobbyPlayers?.get(p.id);
-                const playerToken = tokenEmoji(lobbyPlayer?.tokenId);
-                const ownedTiles = BOARD.filter((tile: any) => {
-                  const ts = engineState.tiles[tile.pos];
-                  return ts && ts.ownerId === p.id;
-                });
-                return (
-                  <motion.div
-                    key={p.id}
-                    className={`hud-player-card ${isCurrent ? "active" : ""} ${p.bankrupt ? "bankrupt" : ""}`}
-                    animate={isCurrent ? {
-                      boxShadow: [
-                        "0 0 0px rgba(16,185,129,0)",
-                        "0 0 18px rgba(16,185,129,0.55)",
-                        "0 0 0px rgba(16,185,129,0)"
-                      ],
-                    } : { boxShadow: "none" }}
-                    transition={isCurrent ? { duration: 1.8, repeat: Infinity, ease: "easeInOut" } : {}}
-                    layout
-                  >
-                    <div className="hud-player-name-wrapper">
-                      <span style={{ fontSize: "1.2rem" }}>{playerToken}</span>
-                      <span className="hud-player-name">{p.name} {p.id === room.sessionId && "(You)"}</span>
-                      {p.inJail && <span style={{ background: "var(--color-danger)", color: "#000", fontSize: "0.65rem", padding: "1px 4px", borderRadius: "3px", fontWeight: "bold" }}>JAIL</span>}
-                    </div>
-                    <span className="hud-player-cash">
-                      {p.bankrupt ? "Bankrupt" : `₦${p.cash.toLocaleString()}`}
-                    </span>
-
-                    {/* Hover Popover Asset Inspector */}
-                    <div className="hud-player-popover glass-panel">
-                      <div className="popover-title">Assets owned by {p.name}</div>
-                      {ownedTiles.length > 0 ? (
-                        <div className="popover-tiles-list">
-                          {ownedTiles.map((tile: any) => {
-                            const ts = engineState.tiles[tile.pos];
-                            const isProp = tile.type === "property";
-                            const devName = ts.houses > 0 ? getDevelopmentName(ts.houses) : "";
-                            
-                            return (
-                              <div key={tile.pos} className="popover-tile-item">
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                                  {isProp && (
-                                    <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: `var(--color-${tile.group})`, display: "inline-block" }} />
-                                  )}
-                                  <span className="popover-tile-name">{tile.name}</span>
-                                </div>
-                                <div style={{ display: "flex", gap: "4px", fontSize: "0.7rem", alignItems: "center" }}>
-                                  {ts.houses > 0 && <span style={{ color: "var(--color-gold)", fontWeight: "bold" }}>{devName}</span>}
-                                  {ts.mortgaged && <span style={{ color: "var(--color-danger)", fontWeight: "bold" }}>🔒 Mortgaged</span>}
-                                  {!ts.mortgaged && ts.houses === 0 && <span style={{ color: "var(--text-muted)" }}>Unimproved</span>}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="popover-no-assets">No properties owned yet.</div>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
+          {reconnecting && (
+            <div className="reconnect-overlay">
+              <div className="reconnect-spinner"></div>
+              <h2>Connection Lost</h2>
+              <p>Attempting to reconnect...</p>
             </div>
+          )}
 
-            {/* Action panel & Game Log console */}
+          {/* Side panel for Game Log and Controls */}
+          <div className="side-panel left-panel">
             <ControlPanel
               room={room}
               engineState={engineState}
@@ -882,208 +246,48 @@ export default function App() {
               chatMessages={chatMessages}
               onSendChatMessage={sendChatMessage}
               autoEndTurn={autoEndTurn}
-              onToggleAutoEndTurn={() => setAutoEndTurn(v => !v)}
+              onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
               turnDeadline={roomState?.turnDeadline}
               turnTimeoutSecs={roomState?.turnTimeoutSecs}
             />
           </div>
+
+          {/* Main Board view */}
+          <div className="board-panel">
+            <GameBoard
+              engineState={engineState}
+              roomState={roomState}
+              mySessionId={mySessionId || undefined}
+              onTileClick={(pos) => setSelectedTilePos(pos)}
+            />
+          </div>
+
+          <AnimatePresence>
+            {selectedTilePos !== null && (
+              <TileInspector
+                tilePos={selectedTilePos}
+                engineState={engineState}
+                roomState={roomState}
+                onClose={() => setSelectedTilePos(null)}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {engineState.phase === "game-over" && showGameOverModal && (
+              <GameOverModal
+                engineState={engineState}
+                roomState={roomState}
+                mySessionId={mySessionId}
+                onResetGame={() => {
+                  setShowGameOverModal(false);
+                  resetGame();
+                }}
+              />
+            )}
+          </AnimatePresence>
         </motion.div>
-      )}
-      </AnimatePresence>
-
-      {/* Game Over Leaderboard Overlay */}
-      <AnimatePresence>
-      {engineState?.phase === "game-over" && showGameOverModal && (
-        <motion.div
-          className="game-over-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <motion.div
-            className="game-over-modal glass-panel"
-            initial={{ scale: 0.85, opacity: 0, y: 40 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            transition={{ type: "spring", stiffness: 260, damping: 22, delay: 0.1 }}
-          >
-            <motion.h2
-              className="game-over-title"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.4 }}
-            >🏆 GAME OVER 🏆</motion.h2>
-            <motion.div
-              className="winner-announcement"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 18, delay: 0.45 }}
-            >
-              {(() => {
-                const winner = engineState.players.find((p: any) => p.id === engineState.winnerId);
-                return winner ? (
-                  <>
-                    <motion.span
-                      className="winner-emoji"
-                      animate={{ rotate: [0, -15, 15, -10, 10, 0], y: [0, -10, 0] }}
-                      transition={{ delay: 0.7, duration: 1.0, ease: "easeInOut" }}
-                    >👑</motion.span>
-                    <div>
-                      <span className="winner-name">{winner.name}</span>
-                      {winner.id === room.sessionId ? " — You don hammer! " : " is the Odogwu! "}
-                    </div>
-                    <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", fontStyle: "italic", marginTop: "0.25rem" }}>
-                      {winner.id === room.sessionId
-                        ? "You buy the land. You become the Odogwu. E no easy!"
-                        : `${winner.name} chop all your money. Better luck next time!`}
-                    </div>
-                  </>
-                ) : (
-                  "The game has ended!"
-                );
-              })()}
-            </motion.div>
-            
-            <div className="leaderboard-container">
-              <h3 style={{ margin: "0 0 1rem 0", color: "var(--color-gold)", textTransform: "uppercase", fontSize: "1rem", letterSpacing: "1px" }}>Final Leaderboard</h3>
-              <div className="leaderboard-table">
-                <div className="leaderboard-header">
-                  <span>Rank</span>
-                  <span>Player</span>
-                  <span>Status</span>
-                  <span>Cash</span>
-                  <span>Assets</span>
-                  <span>Net Worth</span>
-                </div>
-                {getLeaderboard().map((p, index) => {
-                  const lobbyPlayer = roomState?.lobbyPlayers?.get(p.id);
-                  const playerToken = tokenEmoji(lobbyPlayer?.tokenId);
-                  return (
-                    <motion.div
-                      key={p.id}
-                      className={`leaderboard-row ${p.id === engineState.winnerId ? "winner-row" : ""}`}
-                      initial={{ opacity: 0, x: -30 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.6 + index * 0.1, duration: 0.35, ease: "easeOut" }}
-                    >
-                      <span className="player-rank">
-                        {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `#${index + 1}`}
-                      </span>
-                      <span className="player-identity">
-                        <span>{playerToken}</span>
-                        <span style={{ fontWeight: 600 }}>{p.name} {p.id === room.sessionId && "(You)"}</span>
-                      </span>
-                      <span className={`player-status ${p.bankrupt ? "bankrupt" : "active"}`}>
-                        {p.bankrupt ? "Bankrupt 💀" : "Solvent"}
-                      </span>
-                      <span className="player-cash">₦{p.cash.toLocaleString()}</span>
-                      <span className="player-assets">{p.assetsCount} properties</span>
-                      <span className="player-networth" style={{ color: index === 0 ? "var(--color-gold)" : "var(--color-naira)" }}>
-                        ₦{p.netWorth.toLocaleString()}
-                      </span>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Post-game summary (Feature 12) */}
-            <div className="leaderboard-container" style={{ marginTop: "1.25rem" }}>
-              <h3 style={{ margin: "0 0 1rem 0", color: "var(--color-gold)", textTransform: "uppercase", fontSize: "1rem", letterSpacing: "1px" }}>Game Summary</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1rem" }}>
-                {[
-                  { label: "Rounds Played", value: engineState.currentTurn ?? 1 },
-                  { label: "Properties Owned", value: BOARD.filter((t: any) => engineState.tiles[t.pos]?.ownerId).length },
-                  { label: "Players", value: engineState.players.length },
-                ].map((s) => (
-                  <div key={s.label} style={{ background: "var(--surface-1)", borderRadius: "var(--radius-md)", padding: "0.75rem", textAlign: "center" }}>
-                    <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: "var(--color-naira)" }}>{s.value}</div>
-                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase" }}>{s.label}</div>
-                  </div>
-                ))}
-              </div>
-              {(() => {
-                const events = (engineState.log || []).filter((l: string) => /bankrupt|forfeited/i.test(l));
-                if (events.length === 0) return null;
-                return (
-                  <div style={{ textAlign: "left" }}>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "0.4rem" }}>Eliminations</div>
-                    {events.map((e: string, i: number) => (
-                      <div key={i} style={{ fontSize: "0.8rem", color: "var(--text-secondary)", borderLeft: "2px solid var(--color-danger)", paddingLeft: "0.5rem", marginBottom: "0.25rem" }}>💀 {e}</div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div className="game-over-actions">
-              <button className="button-secondary" onClick={() => setShowGameOverModal(false)}>
-                👀 Inspect Board
-              </button>
-              
-              {room?.sessionId === roomState?.hostId ? (
-                <button className="button-primary" onClick={resetGame}>
-                  🔄 Play Again (Lobby)
-                </button>
-              ) : (
-                <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-muted)", fontStyle: "italic" }}>
-                  Waiting for host to return to lobby...
-                </p>
-              )}
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-      </AnimatePresence>
-
-      {/* Quick toggle to show leaderboard modal again when inspecting */}
-      {engineState?.phase === "game-over" && !showGameOverModal && (
-        <button 
-          className="button-primary show-leaderboard-btn animate-pulse"
-          onClick={() => setShowGameOverModal(true)}
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            right: "20px",
-            zIndex: 1000,
-            boxShadow: "0 0 15px var(--color-gold)",
-          }}
-        >
-          🏆 Show Leaderboard
-        </button>
-      )}
-      {/* Tile Inspector Modal (Phase 2) */}
-      <AnimatePresence>
-        {selectedTilePos !== null && (
-          <TileInspector
-            tilePos={selectedTilePos}
-            engineState={engineState}
-            roomState={roomState}
-            onClose={() => setSelectedTilePos(null)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Reconnection Overlay */}
-      <AnimatePresence>
-        {reconnecting && (
-          <motion.div
-            className="game-over-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{ zIndex: 9999 }}
-          >
-            <div className="glass-panel" style={{ padding: "2rem 3rem", textAlign: "center", maxWidth: "360px" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>🔄</div>
-              <h3 style={{ margin: "0 0 0.5rem 0" }}>Reconnecting...</h3>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", margin: 0 }}>
-                Lost connection to the server. Attempting to reconnect...
-              </p>
-            </div>
-          </motion.div>
-        )}
+      ) : null}
       </AnimatePresence>
     </div>
   );
