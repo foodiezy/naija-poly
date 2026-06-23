@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { getStats } from "../utils/stats";
 
 interface LobbyProps {
   onCreateRoom: (name: string) => Promise<void>;
   onJoinRoom: (name: string, roomId: string) => Promise<void>;
+  onQuickMatch?: (name: string) => Promise<void>;
 }
 
 const HOW_TO_PLAY = [
@@ -45,11 +47,12 @@ const HOW_TO_PLAY = [
   },
 ];
 
-export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
+export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch }: LobbyProps) {
   const [name, setName] = useState("");
   const [roomId, setRoomId] = useState("");
   const [loading, setLoading] = useState(false);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
+  const stats = getStats();
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,6 +138,25 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
             {loading ? "Connecting..." : "Create New Room 🏠"}
           </motion.button>
 
+          {onQuickMatch && (
+            <motion.button
+              type="button"
+              className="button-primary"
+              style={{ background: "linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)", boxShadow: "0 2px 10px rgba(139, 92, 246, 0.25)" }}
+              onClick={async () => {
+                if (!name.trim()) return;
+                setLoading(true);
+                try { await onQuickMatch(name.trim()); } finally { setLoading(false); }
+              }}
+              disabled={loading || !name.trim()}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            >
+              {loading ? "Searching..." : "Quick Match 🎲"}
+            </motion.button>
+          )}
+
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <hr style={{ flex: 1, border: "0.5px solid rgba(255, 255, 255, 0.1)" }} />
             <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "700", letterSpacing: "0.08em" }}>OR JOIN EXISTING</span>
@@ -218,9 +240,43 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
         )}
       </AnimatePresence>
 
+      {/* Player Stats */}
+      {stats.gamesPlayed > 0 && (
+        <motion.div
+          style={{ marginTop: "1.5rem", width: "100%" }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <div className="glass-panel" style={{ padding: "1rem 1.5rem", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "0.5rem", textAlign: "center" }}>
+              📊 Your Stats
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.5rem", textAlign: "center" }}>
+              <div>
+                <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--color-gold)" }}>{stats.gamesPlayed}</div>
+                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Games</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--color-naira)" }}>{stats.wins}</div>
+                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Wins</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#3b82f6" }}>{stats.gamesPlayed > 0 ? Math.round((stats.wins / stats.gamesPlayed) * 100) : 0}%</div>
+                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Win Rate</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--color-gold)" }}>₦{(stats.bestNetWorth / 1000).toFixed(0)}k</div>
+                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Best Net Worth</div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Footer */}
       <motion.p
-        style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.75rem", marginTop: "3rem", paddingBottom: "2rem" }}
+        style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.75rem", marginTop: "2rem", paddingBottom: "2rem" }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.7 }}

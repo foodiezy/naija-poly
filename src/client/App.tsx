@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Client } from "colyseus.js";
 import { toast, ToastContainer } from "react-toastify";
@@ -6,9 +6,11 @@ import "react-toastify/dist/ReactToastify.css";
 import Lobby from "./components/Lobby";
 import GameBoard from "./components/GameBoard";
 import ControlPanel from "./components/ControlPanel";
+import TileInspector from "./components/TileInspector";
 import { BOARD } from "../data/board";
 import { TOKENS, tokenEmoji } from "../data/tokens";
 import * as sound from "./utils/sound";
+import { recordGameResult } from "./utils/stats";
 
 // Fallback logic for local vs deployed addresses
 const isDev = (import.meta as any).env.DEV;
@@ -49,7 +51,18 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [selectedTilePos, setSelectedTilePos] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [autoEndTurn, setAutoEndTurn] = useState(true);
+  const [reconnecting, setReconnecting] = useState(false);
+  const [gameResultRecorded, setGameResultRecorded] = useState(false);
+  const autoEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mySessionIdRef = useRef<string | null>(null);
+  const roomRef = useRef<any>(null);
+  // True while the user is deliberately leaving, so onLeave doesn't trigger a
+  // reconnect attempt for an intentional exit.
+  const intentionalLeaveRef = useRef(false);
+
+  // Keep roomRef in sync for reconnection
+  useEffect(() => { roomRef.current = room; }, [room]);
 
   // Reset showGameOverModal when phase changes to game-over
   useEffect(() => {
@@ -107,8 +120,71 @@ export default function App() {
   const resetGame = () => {
     if (room) {
       room.send("RESET_GAME");
+      setGameResultRecorded(false);
     }
   };
+
+  // Copy room code to clipboard
+  const copyRoomCode = useCallback(async () => {
+    if (!room) return;
+    try {
+      await navigator.clipboard.writeText(room.roomId);
+      toast.success("📋 Room code copied!", { autoClose: 1500, toastId: "copy" });
+    } catch {
+      // Fallback for older browsers
+      const el = document.createElement("textarea");
+      el.value = room.roomId;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      toast.success("📋 Room code copied!", { autoClose: 1500, toastId: "copy" });
+    }
+  }, [room]);
+
+  // Record stats on game-over (once)
+  useEffect(() => {
+    if (engineState?.phase === "game-over" && !gameResultRecorded && mySessionIdRef.current) {
+      const me = engineState.players?.find((p: any) => p.id === mySessionIdRef.current);
+      if (me) {
+        const myNetWorth = calculatePlayerNetWorth(me, engineState.tiles);
+        const won = engineState.winnerId === mySessionIdRef.current;
+        recordGameResult(won, myNetWorth);
+        setGameResultRecorded(true);
+        if (won) sound.playGameOver();
+      }
+    }
+  }, [engineState?.phase, gameResultRecorded]);
+
+  // Auto end turn timer
+  useEffect(() => {
+    if (autoEndTimerRef.current) {
+      clearTimeout(autoEndTimerRef.current);
+      autoEndTimerRef.current = null;
+    }
+
+    if (
+      autoEndTurn &&
+      engineState?.phase === "awaiting-end-turn" &&
+      room &&
+      mySessionIdRef.current
+    ) {
+      const me = engineState.players?.find((p: any) => p.id === mySessionIdRef.current);
+      const isMyTurn = engineState.players?.[engineState.currentPlayerIndex]?.id === mySessionIdRef.current;
+      if (isMyTurn && me && me.cash >= 0 && !me.bankrupt && !engineState.activeTrade) {
+        autoEndTimerRef.current = setTimeout(() => {
+          room.send("ACTION", { type: "END_TURN" });
+        }, 2500);
+      }
+    }
+
+    return () => {
+      if (autoEndTimerRef.current) {
+        clearTimeout(autoEndTimerRef.current);
+        autoEndTimerRef.current = null;
+      }
+    };
+  }, [autoEndTurn, engineState?.phase, engineState?.currentPlayerIndex, engineState?.activeTrade, room]);
 
   // Auto-scrolling helper for the log
   useEffect(() => {
@@ -146,6 +222,18 @@ export default function App() {
           sound.playJail();
         } else if (logLine.includes("built a")) {
           sound.playBuild();
+        }
+
+        // "Your turn" notification: play chime + browser Notification
+        if (mySessionId) {
+          const myName = engineState.players?.find((p: any) => p.id === mySessionId)?.name;
+          if (myName && logLine.includes(`It is now ${myName}'s turn`)) {
+            sound.playYourTurn();
+            // Browser notification for tabbed-away players
+            if (document.hidden && "Notification" in window && Notification.permission === "granted") {
+              new Notification("Odogwu Empire", { body: "It's your turn! 🎲", icon: "🎲" });
+            }
+          }
         }
 
         // Toasts — only for events involving this player specifically
@@ -219,6 +307,14 @@ export default function App() {
   const handleRoomJoined = (joinedRoom: any) => {
     setRoom(joinedRoom);
     setErrorMsg(null);
+    setReconnecting(false);
+    intentionalLeaveRef.current = false;
+
+    // Ask once for notification permission so "your turn" alerts can fire when
+    // the player is on another tab.
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
 
     // Listen for state changes
     joinedRoom.onStateChange((state: any) => {
@@ -254,6 +350,32 @@ export default function App() {
       if (chatMsg.toId && chatMsg.senderId !== mySessionIdRef.current) {
         toast.info(`🔒 ${chatMsg.senderName} (private): ${chatMsg.text}`, { autoClose: 4000 });
       }
+    });
+
+    // If the socket drops unexpectedly, try to rejoin the same seat. The server
+    // holds the seat open for 60s (allowReconnection). Codes 1000/4000 are
+    // normal/consented closes — don't reconnect for those.
+    joinedRoom.onLeave(async (code: number) => {
+      if (intentionalLeaveRef.current || code === 1000 || code === 4000) return;
+      const token = joinedRoom.reconnectionToken;
+      if (!token) return;
+      setReconnecting(true);
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await new Promise((r) => setTimeout(r, attempt === 0 ? 600 : 1200 * attempt));
+          const rejoined = await colyseusClient.reconnect(token);
+          handleRoomJoined(rejoined);
+          toast.success("✅ Reconnected!", { autoClose: 2000, toastId: "reconnected" });
+          return;
+        } catch {
+          // keep trying until attempts run out
+        }
+      }
+      setReconnecting(false);
+      toast.error("❌ Lost connection to the game. Please rejoin.", { autoClose: 6000 });
+      setRoom(null);
+      setRoomState(null);
+      setEngineState(null);
     });
 
     // Store session ID for toast targeting
@@ -292,6 +414,18 @@ export default function App() {
     }
   };
 
+  // Quick Match: drop into any open room, or create one if none are available.
+  const quickMatch = async (name: string) => {
+    try {
+      const roomInstance = await colyseusClient.joinOrCreate("odogwu", { name });
+      setPlayerName(name);
+      handleRoomJoined(roomInstance);
+    } catch (e: any) {
+      console.error(e);
+      showError(e.message || "Couldn't find a game — try creating a room");
+    }
+  };
+
   const selectToken = (tokenId: string) => {
     if (room) {
       room.send("SELECT_TOKEN", { tokenId });
@@ -322,6 +456,9 @@ export default function App() {
 
   const leaveRoom = () => {
     if (room) {
+      // Mark this as a deliberate exit so the onLeave handler doesn't try to
+      // reconnect us.
+      intentionalLeaveRef.current = true;
       // Fire-and-forget: don't await the server close handshake so the UI
       // resets instantly. The server's onLeave handler still runs correctly.
       room.leave().catch(() => {});
@@ -375,7 +512,10 @@ export default function App() {
           {room && (
             <>
               <span style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>Player: <strong style={{ color: "var(--color-naira)" }}>{playerName}</strong></span>
-              <span className="room-badge">Room Code: {room.roomId}</span>
+              <span className="room-badge" style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "0.4rem" }} onClick={copyRoomCode} title="Click to copy room code">
+                Room: {room.roomId}
+                <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>📋</span>
+              </span>
               <button className="button-secondary" style={{ padding: "0.3rem 0.75rem", fontSize: "0.8rem" }} onClick={leaveRoom}>
                 Exit Room
               </button>
@@ -425,6 +565,7 @@ export default function App() {
           <Lobby
             onCreateRoom={createRoom}
             onJoinRoom={joinRoom}
+            onQuickMatch={quickMatch}
           />
         </motion.div>
       ) : roomState?.status === "lobby" ? (
@@ -440,7 +581,15 @@ export default function App() {
             <div className="lobby-card glass-panel">
               <h2 className="lobby-title">Room Lobby</h2>
               <p style={{ textAlign: "center", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-                Share code <strong style={{ color: "#3b82f6" }}>{room.roomId}</strong> with friends to join.
+                Share code{" "}
+                <strong
+                  style={{ color: "#3b82f6", cursor: "pointer" }}
+                  onClick={copyRoomCode}
+                  title="Click to copy"
+                >
+                  {room.roomId} 📋
+                </strong>{" "}
+                with friends to join.
               </p>
               
               <div className="form-group">
@@ -688,6 +837,8 @@ export default function App() {
               onSendAction={sendAction}
               chatMessages={chatMessages}
               onSendChatMessage={sendChatMessage}
+              autoEndTurn={autoEndTurn}
+              onToggleAutoEndTurn={() => setAutoEndTurn(v => !v)}
             />
           </div>
         </motion.div>
@@ -827,202 +978,37 @@ export default function App() {
           🏆 Show Leaderboard
         </button>
       )}
-      {/* Title Deed Inspector Modal */}
+      {/* Tile Inspector Modal (Phase 2) */}
       <AnimatePresence>
-      {selectedTilePos !== null && (() => {
-        const tile = BOARD[selectedTilePos];
-        const ts = engineState?.tiles[selectedTilePos];
-        const isProp = tile.type === "property";
-        const isAirport = tile.type === "airport";
-        const isUtility = tile.type === "utility";
-        const isTax = tile.type === "tax";
-        
-        let ownerName = "Unowned";
-        if (ts?.ownerId) {
-          ownerName = engineState.players.find((p: any) => p.id === ts.ownerId)?.name || "Unknown";
-        }
-        
-        return (
+        {selectedTilePos !== null && (
+          <TileInspector
+            tilePos={selectedTilePos}
+            engineState={engineState}
+            roomState={roomState}
+            onClose={() => setSelectedTilePos(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Reconnection Overlay */}
+      <AnimatePresence>
+        {reconnecting && (
           <motion.div
             className="game-over-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => setSelectedTilePos(null)}
+            style={{ zIndex: 9999 }}
           >
-            <motion.div
-              className="deed-card glass-panel"
-              initial={{ scale: 0.88, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 10 }}
-              transition={{ type: "spring", stiffness: 320, damping: 26 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {isProp && (
-                <div className="deed-header" style={{ backgroundColor: `var(--color-${tile.group})` }}>
-                  <div className="deed-title">TITLE DEED</div>
-                  <div className="deed-name">{tile.name}</div>
-                </div>
-              )}
-              {!isProp && (
-                <div className="deed-header generic">
-                  <div className="deed-title">{tile.type.toUpperCase()}</div>
-                  <div className="deed-name">{tile.name}</div>
-                </div>
-              )}
-              
-              <div className="deed-body">
-                {isProp && (
-                  <div className="deed-rent-list">
-                    <div className="deed-rent-row base-rent">
-                      <span>Rent (Vacant Land)</span>
-                      <span>₦{tile.rent[0].toLocaleString()}</span>
-                    </div>
-                    <div className="deed-rent-row set-rent" style={{ color: "var(--text-secondary)", fontSize: "0.75rem", fontStyle: "italic", marginBottom: "0.25rem", border: "none" }}>
-                      <span>If full color set is owned</span>
-                      <span>₦{(tile.rent[0] * 2).toLocaleString()}</span>
-                    </div>
-                    <div className="deed-rent-row">
-                      <span>🏡 With Bungalow</span>
-                      <span>₦{tile.rent[1].toLocaleString()}</span>
-                    </div>
-                    <div className="deed-rent-row">
-                      <span>🏠 With Duplex</span>
-                      <span>₦{tile.rent[2].toLocaleString()}</span>
-                    </div>
-                    <div className="deed-rent-row">
-                      <span>🏰 With Mansion</span>
-                      <span>₦{tile.rent[3].toLocaleString()}</span>
-                    </div>
-                    <div className="deed-rent-row">
-                      <span>🏘️ With Mini-Estate</span>
-                      <span>₦{tile.rent[4].toLocaleString()}</span>
-                    </div>
-                    <div className="deed-rent-row highlight">
-                      <span>🏨 With Hotel</span>
-                      <span>₦{tile.rent[5].toLocaleString()}</span>
-                    </div>
-                    
-                    <div className="deed-divider" />
-                    
-                    <div className="deed-cost-info">
-                      <div>Cost of Bungalow: <strong>₦{tile.houseCost.toLocaleString()}</strong></div>
-                      <div>Mortgage Value: <strong>₦{tile.mortgage.toLocaleString()}</strong></div>
-                      <div>Unmortgage Cost: <strong>₦{Math.round(tile.mortgage * 1.1).toLocaleString()}</strong></div>
-                    </div>
-                  </div>
-                )}
-                
-                {isAirport && (
-                  <div className="deed-rent-list">
-                    <div className="deed-rent-row">
-                      <span>1 Airport owned</span>
-                      <span>₦{tile.rent[0].toLocaleString()}</span>
-                    </div>
-                    <div className="deed-rent-row">
-                      <span>2 Airports owned</span>
-                      <span>₦{tile.rent[1].toLocaleString()}</span>
-                    </div>
-                    <div className="deed-rent-row">
-                      <span>3 Airports owned</span>
-                      <span>₦{tile.rent[2].toLocaleString()}</span>
-                    </div>
-                    <div className="deed-rent-row highlight">
-                      <span>4 Airports owned</span>
-                      <span>₦{tile.rent[3].toLocaleString()}</span>
-                    </div>
-                    
-                    <div className="deed-divider" />
-                    
-                    <div className="deed-cost-info">
-                      <div>Purchase Cost: <strong>₦{tile.price.toLocaleString()}</strong></div>
-                      <div>Mortgage Value: <strong>₦{tile.mortgage.toLocaleString()}</strong></div>
-                      <div>Unmortgage Cost: <strong>₦{Math.round(tile.mortgage * 1.1).toLocaleString()}</strong></div>
-                    </div>
-                  </div>
-                )}
-                
-                {isUtility && (
-                  <div className="deed-rent-list">
-                    <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: "1.4", margin: "0 0 1rem 0" }}>
-                      If one Utility is owned, rent is <strong>4x</strong> the value shown on the dice.
-                      <br />
-                      If both Utilities are owned, rent is <strong>10x</strong> the value shown on the dice.
-                    </p>
-                    
-                    <div className="deed-divider" />
-                    
-                    <div className="deed-cost-info">
-                      <div>Purchase Cost: <strong>₦{tile.price.toLocaleString()}</strong></div>
-                      <div>Mortgage Value: <strong>₦{tile.mortgage.toLocaleString()}</strong></div>
-                      <div>Unmortgage Cost: <strong>₦{Math.round(tile.mortgage * 1.1).toLocaleString()}</strong></div>
-                    </div>
-                  </div>
-                )}
-
-                {isTax && (
-                  <div style={{ padding: "0.5rem 0", fontSize: "0.9rem" }}>
-                    <p>Government Levy or Luxury Tax tile.</p>
-                    <p style={{ color: "var(--color-danger)", fontWeight: "bold", fontSize: "1.1rem" }}>
-                      Levy Amount: ₦{tile.amount.toLocaleString()}
-                    </p>
-                    <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                      When landing on this tile, pay the amount directly to the Bank (or Bukka Rest Stop Pot if enabled).
-                    </p>
-                  </div>
-                )}
-
-                {!isProp && !isAirport && !isUtility && !isTax && (
-                  <div style={{ padding: "0.5rem 0", fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: "1.4" }}>
-                    {tile.type === "go" && "START Tile. Collect ₦200,000 salary when passing."}
-                    {tile.type === "chance" && "Chance Tile. Draw a Chance card and follow instructions."}
-                    {tile.type === "esusu" && "Esusu Tile. Draw an Esusu card and collect/pay communal funds."}
-                    {tile.type === "jail" && "Kirikiri Prison (Jail). Just visiting, or serve jail time if arrested."}
-                    {tile.type === "free" && "Bukka Rest Stop. Rest up! Collect Bukka Pot jackpot taxes if enabled."}
-                    {tile.type === "gotojail" && "Arrest Warrant. Move directly to Kirikiri Prison. Do not pass START."}
-                  </div>
-                )}
-                
-                {ts && (
-                  <div className="deed-status-box" style={{ background: "var(--surface-1)", padding: "0.5rem", borderRadius: "6px", fontSize: "0.8rem", marginTop: "0.75rem", border: "1px solid var(--surface-2)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span>Owner Status:</span>
-                      <strong style={{ color: ts.ownerId ? "var(--color-gold)" : "var(--text-muted)" }}>
-                        {ownerName}
-                      </strong>
-                    </div>
-                    {ts.ownerId && (
-                      <>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.25rem" }}>
-                          <span>Mortgaged:</span>
-                          <strong style={{ color: ts.mortgaged ? "var(--color-danger)" : "#10b981" }}>
-                            {ts.mortgaged ? "Yes (Locked)" : "No"}
-                          </strong>
-                        </div>
-                        {isProp && ts.houses > 0 && (
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.25rem" }}>
-                            <span>Improvements:</span>
-                            <strong style={{ color: "var(--color-gold)" }}>
-                              {ts.houses === 5 ? "Hotel 🏨" : ts.houses === 4 ? "Mini-Estate 🏘️" : ts.houses === 3 ? "Mansion 🏰" : ts.houses === 2 ? "Duplex 🏠" : "Bungalow 🏡"}
-                            </strong>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-              
-              <div style={{ marginTop: "1.25rem", width: "100%" }}>
-                <button className="button-secondary" style={{ width: "100%" }} onClick={() => setSelectedTilePos(null)}>
-                  Close
-                </button>
-              </div>
-            </motion.div>
+            <div className="glass-panel" style={{ padding: "2rem 3rem", textAlign: "center", maxWidth: "360px" }}>
+              <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>🔄</div>
+              <h3 style={{ margin: "0 0 0.5rem 0" }}>Reconnecting...</h3>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", margin: 0 }}>
+                Lost connection to the server. Attempting to reconnect...
+              </p>
+            </div>
           </motion.div>
-        );
-      })()}
+        )}
       </AnimatePresence>
     </div>
   );

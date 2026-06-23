@@ -10,9 +10,11 @@ interface ControlPanelProps {
   onSendAction: (action: any) => void;
   chatMessages: any[];
   onSendChatMessage: (text: string, toId?: string) => void;
+  autoEndTurn?: boolean;
+  onToggleAutoEndTurn?: () => void;
 }
 
-export default function ControlPanel({ room, engineState, onSendAction, chatMessages, onSendChatMessage }: ControlPanelProps) {
+export default function ControlPanel({ room, engineState, onSendAction, chatMessages, onSendChatMessage, autoEndTurn, onToggleAutoEndTurn }: ControlPanelProps) {
   const [now, setNow] = useState<number>(Date.now());
   // Chat channels: "general" (everyone) or a specific playerId (private/direct).
   const [chatChannel, setChatChannel] = useState<string>("general");
@@ -474,7 +476,12 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
               <button
                 className="button-primary"
                 style={{ flex: 1, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}
-                onClick={() => onSendAction({ type: "RESPOND_TRADE", accept: true })}
+                onClick={() => {
+                  const summary = `You RECEIVE: ₦${activeTrade.giveCash.toLocaleString()} + ${getTileNamesStr(activeTrade.giveTiles)}\nYou GIVE: ₦${activeTrade.getCash.toLocaleString()} + ${getTileNamesStr(activeTrade.getTiles)}`;
+                  if (window.confirm(`Accept this trade?\n\n${summary}`)) {
+                    onSendAction({ type: "RESPOND_TRADE", accept: true });
+                  }
+                }}
               >
                 Accept Offer
               </button>
@@ -637,7 +644,11 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
             <button
               className="button-primary"
               style={{ background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)" }}
-              onClick={() => onSendAction({ type: "DECLARE_BANKRUPT" })}
+              onClick={() => {
+                if (window.confirm("Are you sure you want to declare bankruptcy? This cannot be undone — you will lose all your properties and be eliminated from the game.")) {
+                  onSendAction({ type: "DECLARE_BANKRUPT" });
+                }
+              }}
             >
               Declare Bankruptcy 💀
             </button>
@@ -660,8 +671,29 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
 
         {/* Turn HUD and Action Buttons */}
         {isBankrupt ? (
-          <div className="action-status-indicator">
-            💀 You are bankrupt. You are now a spectator.
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div className="action-status-indicator" style={{ background: "rgba(239, 68, 68, 0.06)", border: "1px solid rgba(239, 68, 68, 0.15)" }}>
+              💀 You are bankrupt — watching as a spectator
+            </div>
+            {/* Spectator: show who's currently playing */}
+            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--surface-2)", borderRadius: "8px", padding: "0.75rem" }}>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "bold", marginBottom: "0.5rem" }}>
+                📺 Live Game
+              </div>
+              <div style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}>
+                Current Turn: <strong style={{ color: "var(--color-gold)" }}>{players[engineState.currentPlayerIndex]?.name || "—"}</strong>
+                <span style={{ marginLeft: "0.3rem", fontSize: "0.75rem", color: "var(--text-muted)" }}>({engineState.phase})</span>
+              </div>
+              {/* Mini leaderboard */}
+              <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                {players.filter((p: any) => !p.bankrupt).sort((a: any, b: any) => b.cash - a.cash).map((p: any, i: number) => (
+                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.2rem 0", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                    <span>{i + 1}. {p.name}</span>
+                    <span style={{ color: "var(--color-naira)" }}>₦{p.cash.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         ) : isAuctionActive ? (
           /* Active Auction Panel */
@@ -817,15 +849,22 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
             )}
 
             {engineState.phase === "awaiting-end-turn" && (
-              <button
-                className="button-primary full-width-btn"
-                style={{ padding: "0.9rem" }}
-                disabled={me?.cash < 0}
-                onClick={() => onSendAction({ type: "END_TURN" })}
-                title={me?.cash < 0 ? "You must mortgage properties, sell houses, or declare bankruptcy before ending your turn." : "End Turn 🏁"}
-              >
-                {me?.cash < 0 ? "Resolve Debt to End Turn 🏁" : "End Turn 🏁"}
-              </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <button
+                  className="button-primary full-width-btn"
+                  style={{ padding: "0.9rem" }}
+                  disabled={me?.cash < 0}
+                  onClick={() => onSendAction({ type: "END_TURN" })}
+                  title={me?.cash < 0 ? "You must mortgage properties, sell houses, or declare bankruptcy before ending your turn." : "End Turn 🏁"}
+                >
+                  {me?.cash < 0 ? "Resolve Debt to End Turn 🏁" : "End Turn 🏁"}
+                </button>
+                {autoEndTurn && me?.cash >= 0 && (
+                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textAlign: "center", fontStyle: "italic" }}>
+                    ⏳ Auto-ending turn in ~2s...
+                  </div>
+                )}
+              </div>
             )}
 
             </>
@@ -834,6 +873,22 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
                 ⏳ Waiting for <strong>{players[engineState.currentPlayerIndex]?.name || "other players"}</strong> to act...
               </div>
             )}
+
+            {/* Auto End Turn toggle */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--surface-2)", paddingTop: "0.5rem" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", color: "var(--text-secondary)", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={!!autoEndTurn}
+                  onChange={onToggleAutoEndTurn}
+                  style={{ cursor: "pointer" }}
+                />
+                Auto End Turn
+              </label>
+              <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+                {autoEndTurn ? "On — turns end automatically" : "Off — manual end turn"}
+              </span>
+            </div>
 
             {/* Holdings are always visible; the action buttons enable only on your turn */}
             {myPropertyManager}

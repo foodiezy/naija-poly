@@ -212,3 +212,70 @@ export function playBuild() {
     console.warn("Audio playback error:", e);
   }
 }
+
+/**
+ * Distinctive rising tritone chime for "It's your turn!" notification.
+ * Two-note fanfare that is easily distinguishable from the cash/draw sounds.
+ */
+export function playYourTurn() {
+  if (isMuted) return;
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    const playNote = (delay: number, freq: number, duration: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + delay);
+
+      gain.gain.setValueAtTime(0.15, now + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + duration);
+
+      osc.start(now + delay);
+      osc.stop(now + delay + duration + 0.01);
+    };
+
+    // Rising three-note fanfare: G5 → B5 → D6
+    playNote(0, 783.99, 0.15);
+    playNote(0.12, 987.77, 0.15);
+    playNote(0.24, 1174.66, 0.25);
+  } catch (e) {
+    console.warn("Audio playback error:", e);
+  }
+}
+
+/**
+ * Triumphant fanfare for game-over / victory moment
+ */
+export function playGameOver() {
+  if (isMuted) return;
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    // C5 → E5 → G5 → C6 (major chord arpeggio)
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+
+    notes.forEach((freq, idx) => {
+      const delay = idx * 0.12;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, now + delay);
+
+      gain.gain.setValueAtTime(0.12, now + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.4);
+
+      osc.start(now + delay);
+      osc.stop(now + delay + 0.45);
+    });
+  } catch (e) {
+    console.warn("Audio playback error:", e);
+  }
+}

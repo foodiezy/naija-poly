@@ -1837,6 +1837,53 @@ h1, h2, h3, h4, h5, h6 {
 /* =============================================================================
    Title Deed Inspector Card
    ============================================================================= */
+/* Tile inspector (Phase 2) — full-screen deed overlay opened by clicking a tile */
+.tile-inspector-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 16, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.tile-inspector-overlay .deed-card {
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.tile-inspector-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-strong);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.tile-inspector-close:hover {
+  background: rgba(239, 68, 68, 0.6);
+}
+
+.tile-inspector-close:active {
+  transform: scale(0.92);
+}
+
 .deed-card {
   width: 90%;
   max-width: 380px;
