@@ -593,7 +593,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
         </div>
       )}
 
-      {/* 3. My Properties — compact list */}
+      {/* 3. My Properties — compact list with inline action buttons */}
       <div className="sidebar-properties">
         <div className="sidebar-properties-list">
           {myProperties.length === 0 ? (
@@ -607,22 +607,65 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
               const status = getPropStatus(ts);
               const statusClass = getPropStatusClass(ts);
               return (
-                <div key={tile.pos} className="sidebar-prop-row">
-                  <div className="sidebar-prop-left">
-                    {isProp && (
-                      <span
-                        className="sidebar-prop-dot"
-                        style={{ background: `var(--color-${(tile as PropertyTile).group})` }}
-                      />
-                    )}
-                    {!isProp && (
-                      <span className="sidebar-prop-dot" style={{ background: "var(--text-muted)" }} />
-                    )}
-                    <span className="sidebar-prop-name">{tile.name}</span>
+                <div key={tile.pos} className="sidebar-prop-row" style={{ display: "flex", flexDirection: "column", alignItems: "stretch", gap: "0.3rem", padding: "0.4rem 0.5rem", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div className="sidebar-prop-left">
+                      {isProp && (
+                        <span
+                          className="sidebar-prop-dot"
+                          style={{ background: `var(--color-${(tile as PropertyTile).group})` }}
+                        />
+                      )}
+                      {!isProp && (
+                        <span className="sidebar-prop-dot" style={{ background: "var(--text-muted)" }} />
+                      )}
+                      <span className="sidebar-prop-name" style={{ maxWidth: "150px" }}>{tile.name}</span>
+                    </div>
+                    <span className={`sidebar-prop-status ${statusClass}`}>
+                      {status}
+                    </span>
                   </div>
-                  <span className={`sidebar-prop-status ${statusClass}`}>
-                    {status}
-                  </span>
+
+                  {canManage && (canBuild(tile.pos) || canSellHouse(tile.pos) || canMortgage(tile.pos) || canUnmortgage(tile.pos)) && (
+                    <div style={{ display: "flex", gap: "0.3rem", justifyContent: "flex-end", marginTop: "0.1rem" }}>
+                      {canBuild(tile.pos) && (
+                        <button
+                          style={{ fontSize: "0.65rem", fontWeight: 600, padding: "2px 6px", background: "rgba(16, 185, 129, 0.15)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}
+                          onClick={() => onSendAction({ type: "BUILD", pos: tile.pos })}
+                          title={`Build ₦${((tile as PropertyTile).houseCost || 0).toLocaleString()}`}
+                        >
+                          <span>🔨</span> Build ₦{((tile as PropertyTile).houseCost || 0) / 1000}k
+                        </button>
+                      )}
+                      {canSellHouse(tile.pos) && (
+                        <button
+                          style={{ fontSize: "0.65rem", fontWeight: 600, padding: "2px 6px", background: "rgba(239, 68, 68, 0.15)", color: "var(--color-danger)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}
+                          onClick={() => onSendAction({ type: "SELL_HOUSE", pos: tile.pos })}
+                          title={`Sell house (receive ₦${((tile as PropertyTile).houseCost || 0) / 2})`}
+                        >
+                          <span>📉</span> Sell
+                        </button>
+                      )}
+                      {canMortgage(tile.pos) && (
+                        <button
+                          style={{ fontSize: "0.65rem", fontWeight: 600, padding: "2px 6px", background: "rgba(245, 158, 11, 0.15)", color: "var(--color-gold)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}
+                          onClick={() => onSendAction({ type: "MORTGAGE", pos: tile.pos })}
+                          title={`Mortgage (receive ₦${("mortgage" in tile ? tile.mortgage : 0).toLocaleString()})`}
+                        >
+                          <span>🔒</span> Mortgage
+                        </button>
+                      )}
+                      {canUnmortgage(tile.pos) && (
+                        <button
+                          style={{ fontSize: "0.65rem", fontWeight: 600, padding: "2px 6px", background: "rgba(16, 185, 129, 0.15)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}
+                          onClick={() => onSendAction({ type: "UNMORTGAGE", pos: tile.pos })}
+                          title={`Unmortgage (pay ₦${Math.round(("mortgage" in tile ? tile.mortgage : 0) * 1.1).toLocaleString()})`}
+                        >
+                          <span>🔓</span> Unmortgage
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })
@@ -681,17 +724,6 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                   >
                     Trade
                   </button>
-                  <button
-                    className="sidebar-action-btn sidebar-action-btn-outline"
-                    disabled={!canManage || myProperties.length === 0}
-                    onClick={() => {
-                      // Find first mortgageable property
-                      const mortgageable = myProperties.find((t) => canMortgage(t.pos));
-                      if (mortgageable) onSendAction({ type: "MORTGAGE", pos: mortgageable.pos });
-                    }}
-                  >
-                    Mortgage
-                  </button>
                 </>
               )
             )}
@@ -733,16 +765,6 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                 >
                   Trade
                 </button>
-                <button
-                  className="sidebar-action-btn sidebar-action-btn-outline"
-                  disabled={!canManage || myProperties.length === 0}
-                  onClick={() => {
-                    const mortgageable = myProperties.find((t) => canMortgage(t.pos));
-                    if (mortgageable) onSendAction({ type: "MORTGAGE", pos: mortgageable.pos });
-                  }}
-                >
-                  Mortgage
-                </button>
               </>
             )}
 
@@ -756,7 +778,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
         )}
       </div>
 
-      {/* Auto End Turn + Build/Sell toggles (compact) */}
+      {/* Auto End Turn toggle (compact) */}
       {!isBankrupt && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.3rem 0.75rem", borderBottom: "1px solid var(--border-subtle)" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.68rem", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -770,48 +792,6 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
           </label>
           {autoEndTurn && isMyTurn && engineState.phase === "awaiting-end-turn" && (me?.cash ?? 0) >= 0 && (
             <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", fontStyle: "italic" }}>⏳ auto ~2s</span>
-          )}
-
-          {/* Build/Sell quick buttons for properties with improvements */}
-          {canManage && myProperties.some((t) => t.type === "property") && (
-            <div style={{ display: "flex", gap: "0.2rem" }}>
-              {myProperties.filter((t) => canBuild(t.pos)).length > 0 && (
-                <button
-                  style={{ fontSize: "0.6rem", padding: "2px 5px", background: "rgba(16, 185, 129, 0.1)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "3px", cursor: "pointer" }}
-                  onClick={() => {
-                    const buildable = myProperties.find((t) => canBuild(t.pos));
-                    if (buildable) onSendAction({ type: "BUILD", pos: buildable.pos });
-                  }}
-                  title="Build on next available property"
-                >
-                  Build
-                </button>
-              )}
-              {myProperties.filter((t) => canSellHouse(t.pos)).length > 0 && (
-                <button
-                  style={{ fontSize: "0.6rem", padding: "2px 5px", background: "rgba(239, 68, 68, 0.1)", color: "var(--color-danger)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: "3px", cursor: "pointer" }}
-                  onClick={() => {
-                    const sellable = myProperties.find((t) => canSellHouse(t.pos));
-                    if (sellable) onSendAction({ type: "SELL_HOUSE", pos: sellable.pos });
-                  }}
-                  title="Sell house on next available property"
-                >
-                  Sell
-                </button>
-              )}
-              {myProperties.filter((t) => canUnmortgage(t.pos)).length > 0 && (
-                <button
-                  style={{ fontSize: "0.6rem", padding: "2px 5px", background: "rgba(16, 185, 129, 0.1)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "3px", cursor: "pointer" }}
-                  onClick={() => {
-                    const liftable = myProperties.find((t) => canUnmortgage(t.pos));
-                    if (liftable) onSendAction({ type: "UNMORTGAGE", pos: liftable.pos });
-                  }}
-                  title="Lift mortgage on next available property"
-                >
-                  Unmortgage
-                </button>
-              )}
-            </div>
           )}
         </div>
       )}
