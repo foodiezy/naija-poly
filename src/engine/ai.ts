@@ -16,6 +16,12 @@ function isProperty(pos: number): boolean {
   return BOARD[pos].type === "property";
 }
 
+// Rough cash value of a board position for trade valuation (list price).
+function tilePrice(pos: number): number {
+  const t = BOARD[pos];
+  return "price" in t ? t.price : 0;
+}
+
 // Properties in the same colour group as the given property tile.
 function groupTiles(tile: PropertyTile): PropertyTile[] {
   return BOARD.filter(
@@ -75,6 +81,18 @@ function findSellableHouse(state: GameState, playerId: PlayerId): number | null 
 export function getAIAction(state: GameState, playerId: PlayerId): Action | null {
   const me = state.players.find((p) => p.id === playerId);
   if (!me || me.bankrupt) return null;
+
+  // --- Trades: respond to an offer addressed to us. This can land on another
+  // player's turn (the proposer's), so it is checked before turn/auction logic.
+  // Accept only when we come out at least even by list value and can cover the
+  // cash we'd give up; otherwise decline so the proposer isn't left hanging.
+  if (state.activeTrade && state.activeTrade.toId === playerId) {
+    const t = state.activeTrade;
+    const receive = t.giveCash + t.giveTiles.reduce((s, p) => s + tilePrice(p), 0);
+    const giveUp = t.getCash + t.getTiles.reduce((s, p) => s + tilePrice(p), 0);
+    const accept = t.getCash <= me.cash && receive >= giveUp;
+    return { type: "RESPOND_TRADE", accept };
+  }
 
   // --- Auctions: any solvent participant may act, not just the active player.
   if (state.phase === "auction" && state.auctionState) {

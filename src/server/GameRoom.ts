@@ -136,15 +136,24 @@ export class GameRoom extends Room<GameRoomState> {
     if (engineState.phase === "game-over") return;
 
     let actorId: string | null = null;
-    if (engineState.phase === "auction" && engineState.auctionState) {
-      const a = engineState.auctionState;
-      actorId =
-        a.participantIds.find(
-          (id: string) => isAIPlayer(id) && !a.passedIds.includes(id) && a.highestBidderId !== id,
-        ) ?? null;
-    } else {
-      const current = engineState.players[engineState.currentPlayerIndex];
-      if (current && isAIPlayer(current.id) && !current.bankrupt) actorId = current.id;
+    // A trade offer addressed to a bot must be answered before its proposer can
+    // act again, so it takes priority over the auction/current-player checks.
+    const trade = engineState.activeTrade;
+    if (trade && isAIPlayer(trade.toId)) {
+      const recipient = engineState.players.find((p) => p.id === trade.toId);
+      if (recipient && !recipient.bankrupt) actorId = trade.toId;
+    }
+    if (!actorId) {
+      if (engineState.phase === "auction" && engineState.auctionState) {
+        const a = engineState.auctionState;
+        actorId =
+          a.participantIds.find(
+            (id: string) => isAIPlayer(id) && !a.passedIds.includes(id) && a.highestBidderId !== id,
+          ) ?? null;
+      } else {
+        const current = engineState.players[engineState.currentPlayerIndex];
+        if (current && isAIPlayer(current.id) && !current.bankrupt) actorId = current.id;
+      }
     }
     if (!actorId) return;
 

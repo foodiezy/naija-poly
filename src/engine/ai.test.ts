@@ -80,4 +80,24 @@ describe("getAIAction", () => {
     s.players[0].cash = -50_000;
     expect(getAIAction(s, "ai_1")).toEqual({ type: "DECLARE_BANKRUPT" });
   });
+
+  it("responds to a trade addressed to it, even on another player's turn", () => {
+    const s = setup();
+    s.phase = "awaiting-end-turn";
+    s.currentPlayerIndex = 1; // p2 (the proposer) is the active player
+    s.players[0].cash = 1_000_000;
+
+    // p2 offers ₦100,000 cash for nothing — clearly favorable, accept.
+    s.activeTrade = { fromId: "p2", toId: "ai_1", giveCash: 100_000, getCash: 0, giveTiles: [], getTiles: [] };
+    expect(getAIAction(s, "ai_1")).toEqual({ type: "RESPOND_TRADE", accept: true });
+
+    // p2 asks the AI for ₦100,000 and gives nothing — lopsided, decline.
+    s.activeTrade = { fromId: "p2", toId: "ai_1", giveCash: 0, getCash: 100_000, giveTiles: [], getTiles: [] };
+    expect(getAIAction(s, "ai_1")).toEqual({ type: "RESPOND_TRADE", accept: false });
+
+    // Asking more cash than the AI holds is declined regardless of value.
+    s.players[0].cash = 10_000;
+    s.activeTrade = { fromId: "p2", toId: "ai_1", giveCash: 0, getCash: 50_000, giveTiles: [1], getTiles: [] };
+    expect(getAIAction(s, "ai_1")).toEqual({ type: "RESPOND_TRADE", accept: false });
+  });
 });
