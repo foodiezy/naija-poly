@@ -1,9 +1,14 @@
-// Dev-only design harness: renders the GameBoard with mock state so the visual
+// Dev-only design harness: renders the full Game view with mock state so the visual
 // design can be iterated without a running game server. Served at /preview.html
 // by Vite in dev. Not part of the production app.
+import { useState } from "react";
 import ReactDOM from "react-dom/client";
 import { MotionConfig } from "framer-motion";
 import GameBoard from "./components/GameBoard";
+import ControlPanel from "./components/ControlPanel";
+import AssetsPanel from "./components/AssetsPanel";
+import ChatPanel from "./components/ChatPanel";
+import SettingsPanel from "./components/SettingsPanel";
 import { BOARD } from "../data/board";
 import { TOKENS } from "../data/tokens";
 import { RoomState } from "../shared/room";
@@ -60,6 +65,7 @@ const engineState = {
   settings: { startingCash: 1_500_000, turnLimit: 0, freeParkingJackpot: false },
   currentTurn: 4,
   freeParkingPot: 0,
+  activeTrade: null,
 };
 
 const lobbyPlayers = new Map(
@@ -79,17 +85,81 @@ const roomState: RoomState = {
   turnDeadline: 0,
 };
 
+function PreviewApp() {
+  const [muted, setMuted] = useState(false);
+  const [autoEndTurn, setAutoEndTurn] = useState(true);
+  const mockRoom = { sessionId: "p1", state: roomState } as any;
+
+  return (
+    <div className="app-container">
+      <header className="app-header">
+        <div className="header-left">
+          <div className="logo-container">
+            <span className="logo-text">Odogwu Empire (Design Preview)</span>
+          </div>
+        </div>
+        <div className="header-center">
+          <span className="header-tagline">Buy the land. Become the Odogwu.</span>
+          <span className="header-badge">✨ Premium Unicons & Property Manager Active</span>
+        </div>
+        <div className="header-right">
+          <button className="header-btn header-btn-outline" onClick={() => setMuted(!muted)}>
+            {muted ? "🔇" : "🔊"}
+          </button>
+        </div>
+      </header>
+
+      <div className="game-view" style={{ opacity: 1 }}>
+        <div className="game-col game-col-left">
+          <ChatPanel
+            room={mockRoom}
+            engineState={engineState as any}
+            chatMessages={[{ senderId: "System", senderName: "System", text: "Welcome to Odogwu Empire Preview!", tokenId: "agbada", timestamp: Date.now(), toId: "all" }]}
+            onSendChatMessage={() => {}}
+          />
+          <SettingsPanel muted={muted} onToggleMute={() => setMuted(!muted)} />
+        </div>
+
+        <div className="board-panel">
+          <GameBoard
+            engineState={engineState as any}
+            roomState={roomState}
+            mySessionId="p1"
+            onTileClick={() => {}}
+          />
+        </div>
+
+        <div className="game-col game-col-right">
+          <ControlPanel
+            room={mockRoom}
+            engineState={engineState as any}
+            onSendAction={(action) => console.log("Action dispatched in preview:", action)}
+            autoEndTurn={autoEndTurn}
+            onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
+          />
+          <AssetsPanel
+            room={mockRoom}
+            engineState={engineState as any}
+          />
+        </div>
+      </div>
+
+      <footer className="app-footer">
+        <div className="footer-left">
+          <span className="footer-logo">🏛️ Odogwu Empire</span>
+          <span>How to Play</span>
+          <span>Privacy</span>
+        </div>
+        <div className="footer-right">
+          © 2026 Odogwu Games · Made with Lagos vibes.
+        </div>
+      </footer>
+    </div>
+  );
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <MotionConfig reducedMotion="user">
-    <div style={{ display: "flex", justifyContent: "center", padding: "2rem" }}>
-      <div className="board-panel">
-        <GameBoard
-          engineState={engineState}
-          roomState={roomState}
-          mySessionId="p1"
-          onTileClick={() => {}}
-        />
-      </div>
-    </div>
-  </MotionConfig>,
+    <PreviewApp />
+  </MotionConfig>
 );
