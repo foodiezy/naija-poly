@@ -48,11 +48,11 @@
   --space-6: 2rem;
   --space-8: 3rem;
 
-  /* Radius scale */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 18px;
+  /* Radius scale — Authentic sharp tabletop cardboard/wood boxes */
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
   --radius-full: 999px;
 
   /* Elevation / shadows */
@@ -133,7 +133,7 @@ h1, h2, h3, h4, h5, h6 {
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  border-radius: 12px;
+  border-radius: 2px;
 }
 
 /* App container */
@@ -652,6 +652,42 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* Below 980px (specifically targeting 752px viewports), switch to a flawless
+   1-column full-width grid. The board expands to fill the entire screen width,
+   and side panels stack neatly underneath, filling all page spaces perfectly. */
+@media (max-width: 980px) {
+  :root {
+    --board-size: min(calc(100vw - 2rem), 750px);
+  }
+  .game-view {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    padding: 1rem;
+    width: 100%;
+  }
+  .game-col {
+    width: 100%;
+    max-width: 100%;
+  }
+  .board-panel {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  .game-col-right {
+    grid-column: 1;
+    grid-row: 2;
+    width: 100%;
+  }
+  .game-col-left {
+    grid-column: 1;
+    grid-row: 3;
+    width: 100%;
+  }
+}
+
 /* Center Board Panel */
 .board-panel {
   display: flex;
@@ -879,10 +915,11 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 5px 3px;
+  padding: 3px 2px;
   cursor: pointer;
   box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.4);
   transition: background-color 0.18s ease, box-shadow 0.18s ease, transform 0.1s ease;
+  overflow: visible;
 }
 
 .tile:hover {
@@ -919,14 +956,16 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .tile-name {
-  font-size: 0.65rem;
+  font-size: clamp(0.55rem, 1.25vw, 0.7rem);
   font-weight: 700;
   text-align: center;
-  line-height: 1.12;
+  line-height: 1.05;
   letter-spacing: 0.01em;
   color: var(--text-primary);
-  word-break: break-word;
+  word-break: normal;
+  overflow-wrap: break-word;
   max-width: 100%;
+  padding: 0 1px;
 }
 
 .tile-price {
@@ -1824,7 +1863,7 @@ html.high-contrast .glass-panel {
   line-height: 1.5;
   background: rgba(0, 0, 0, 0.3);
   padding: 0.75rem;
-  border-radius: 8px;
+  border-radius: 2px;
   border: 1px solid rgba(255, 255, 255, 0.03);
   display: flex;
   flex-direction: column;
@@ -1897,7 +1936,7 @@ html.high-contrast .glass-panel {
 .auction-panel {
   padding: 1rem;
   border: 1px solid var(--color-gold);
-  border-radius: 8px;
+  border-radius: 2px;
   background: rgba(245, 158, 11, 0.03);
   display: flex;
   flex-direction: column;
@@ -2309,7 +2348,7 @@ html.high-contrast .glass-panel {
   background: rgba(8, 12, 20, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(59, 130, 246, 0.05);
-  border-radius: 10px;
+  border-radius: 2px;
   padding: 0.8rem 1rem;
   z-index: 500;
   opacity: 0;
@@ -2396,7 +2435,7 @@ html.high-contrast .glass-panel {
   background: rgba(17, 24, 39, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.15);
-  border-radius: 16px;
+  border-radius: 2px;
   padding: 2.5rem;
   display: flex;
   flex-direction: column;
@@ -2441,7 +2480,7 @@ html.high-contrast .glass-panel {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
   padding: 1rem 2rem;
-  border-radius: 12px;
+  border-radius: 2px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -2467,7 +2506,7 @@ html.high-contrast .glass-panel {
   flex-direction: column;
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+  border-radius: 2px;
   overflow: hidden;
 }
 
@@ -2653,7 +2692,7 @@ html.high-contrast .glass-panel {
   overflow-y: auto;
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 8px;
+  border-radius: 2px;
   padding: 0.75rem;
   display: flex;
   flex-direction: column;
@@ -2763,7 +2802,7 @@ html.high-contrast .glass-panel {
   background: rgba(15, 23, 42, 0.95) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(245, 158, 11, 0.05);
-  border-radius: 12px;
+  border-radius: 2px;
   overflow: hidden;
   padding: 0 !important;
   animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
