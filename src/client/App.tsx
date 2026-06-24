@@ -7,6 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Lobby from "./components/Lobby";
 import RoomLobbyView from "./components/RoomLobbyView";
 import GameBoard from "./components/GameBoard";
+import AssetsPanel from "./components/AssetsPanel";
 import ChatPanel from "./components/ChatPanel";
 import ControlPanel from "./components/ControlPanel";
 import TileInspector from "./components/TileInspector";
@@ -239,8 +240,14 @@ export default function App() {
             </div>
           )}
 
-          {/* Left column: room chat */}
+          {/* Left column: assets + room chat */}
           <div className="game-col game-col-left">
+            <AssetsPanel
+              room={room}
+              engineState={engineState}
+              turnDeadline={roomState?.turnDeadline}
+              turnTimeoutSecs={roomState?.turnTimeoutSecs}
+            />
             <ChatPanel
               room={room}
               engineState={engineState}

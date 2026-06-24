@@ -1280,6 +1280,101 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--color-danger);
 }
 
+/* Left-column Assets + Round Timer panel */
+.assets-panel {
+  gap: 0.6rem;
+  min-height: 0;
+  flex: 0 0 auto;
+}
+
+.assets-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 0.5rem;
+}
+
+.assets-round-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.assets-round-badge strong { color: var(--color-gold); }
+.assets-round-limit { color: var(--text-muted); margin-left: 2px; }
+
+.assets-timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.assets-timer-secs {
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-naira);
+}
+.assets-timer-secs.urgent { color: var(--color-danger); }
+
+.assets-timer-track {
+  height: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.assets-timer-fill {
+  height: 100%;
+  background: var(--color-naira);
+  border-radius: 999px;
+  transition: width 0.25s linear;
+}
+.assets-timer-fill.urgent { background: var(--color-danger); }
+
+.assets-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-md);
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+.assets-total strong { font-size: 0.95rem; color: var(--color-naira); }
+
+.assets-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.assets-prop-value {
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gold);
+  white-space: nowrap;
+}
+
+.assets-empty {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 0.75rem 0.5rem;
+}
+
 /* Action buttons row — horizontal */
 .sidebar-actions {
   display: flex;
