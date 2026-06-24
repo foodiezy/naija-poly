@@ -52,6 +52,11 @@ export default function App() {
   const [autoEndTurn, setAutoEndTurn] = useState(true);
   const [gameResultRecorded, setGameResultRecorded] = useState(false);
 
+  // Preload any sample SFX files once (synth fallback covers missing files).
+  useEffect(() => {
+    sound.preloadSounds();
+  }, []);
+
   // Initialize sound effects
   useSoundEffects(engineState, mySessionId);
 

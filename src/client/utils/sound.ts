@@ -1,12 +1,45 @@
 // =============================================================================
-// client/utils/sound.ts — procedural sound effects using browser Web Audio API
+// client/utils/sound.ts — game sound effects
 // -----------------------------------------------------------------------------
-// This synthesizes clean retro game sound effects on-the-fly, requiring no
-// external .mp3 assets.
+// Two layers:
+//   1. Sample playback — if a real audio file exists in public/sfx/ for an
+//      event, it is decoded once and played (better quality, themed SFX).
+//   2. Synth fallback — if no sample is present (or it failed to load), a
+//      procedural Web Audio tone is generated, so the game always has sound
+//      with zero asset files. Drop files into public/sfx/ to upgrade in place.
+// See public/sfx/README.md for recommended CC0 sources and filenames.
 // =============================================================================
 
 let audioCtx: AudioContext | null = null;
 let isMuted = false;
+let masterVolume = 0.9;
+
+// Decoded sample buffers, keyed by event name. Absent = fall back to synth.
+const buffers = new Map<SfxName, AudioBuffer>();
+let preloadStarted = false;
+
+export type SfxName =
+  | "roll"
+  | "cash"
+  | "rent"
+  | "draw"
+  | "jail"
+  | "build"
+  | "your-turn"
+  | "game-over";
+
+// Where each event's sample lives (served from public/sfx/). BASE_URL keeps
+// paths correct when the app is deployed under a sub-path.
+const SFX_FILES: Record<SfxName, string> = {
+  roll: "roll.ogg",
+  cash: "cash.ogg",
+  rent: "rent.ogg",
+  draw: "draw.ogg",
+  jail: "jail.ogg",
+  build: "build.ogg",
+  "your-turn": "your-turn.ogg",
+  "game-over": "game-over.ogg",
+};
 
 export function setMuted(muted: boolean) {
   isMuted = muted;
@@ -14,6 +47,11 @@ export function setMuted(muted: boolean) {
 
 export function getMuted(): boolean {
   return isMuted;
+}
+
+// 0–1. Applied to sample playback (the synth tones use their own envelopes).
+export function setVolume(v: number) {
+  masterVolume = Math.max(0, Math.min(1, v));
 }
 
 function getAudioContext(): AudioContext {
@@ -28,11 +66,61 @@ function getAudioContext(): AudioContext {
   return audioCtx;
 }
 
-/**
- * Sweeping low rumble for rolling dice
- */
-export function playRoll() {
+// Fetch + decode every available sample once. Missing files are expected and
+// silently skipped (that event just uses its synth fallback). Safe to call
+// before any user gesture — decoding does not require a resumed context.
+export async function preloadSounds(): Promise<void> {
+  if (preloadStarted) return;
+  preloadStarted = true;
+  const ctx = getAudioContext();
+  await Promise.all(
+    (Object.keys(SFX_FILES) as SfxName[]).map(async (name) => {
+      try {
+        const url = `${import.meta.env.BASE_URL}sfx/${SFX_FILES[name]}`;
+        const res = await fetch(url);
+        if (!res.ok) return; // no file dropped in yet — use synth fallback
+        const data = await res.arrayBuffer();
+        buffers.set(name, await ctx.decodeAudioData(data));
+      } catch {
+        // Missing/corrupt/unsupported file — fall back to synth for this event.
+      }
+    })
+  );
+}
+
+// Play a decoded sample if we have one. Returns false when there's nothing to
+// play (so the caller can fall back to its synth tone).
+function playSample(name: SfxName): boolean {
+  const buffer = buffers.get(name);
+  if (!buffer) return false;
+  try {
+    const ctx = getAudioContext();
+    const src = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    src.buffer = buffer;
+    gain.gain.value = masterVolume;
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    src.start();
+    return true;
+  } catch (e) {
+    console.warn("Sample playback error:", e);
+    return false;
+  }
+}
+
+// Play the sample for `name`; if none is loaded, run the synth fallback.
+function play(name: SfxName, synth: () => void) {
   if (isMuted) return;
+  if (!playSample(name)) synth();
+}
+
+// =============================================================================
+// Synth fallbacks — procedural Web Audio tones (used when no sample is present)
+// =============================================================================
+
+/** Sweeping low rumble for rolling dice */
+function synthRoll() {
   try {
     const ctx = getAudioContext();
     const osc = ctx.createOscillator();
@@ -55,11 +143,8 @@ export function playRoll() {
   }
 }
 
-/**
- * Retro double-chime ding-ding for buying assets, passing START, or winning jackpots
- */
-export function playCash() {
-  if (isMuted) return;
+/** Retro double-chime for buying assets, passing START, or winning jackpots */
+function synthCash() {
   try {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
@@ -69,13 +154,13 @@ export function playCash() {
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
-      
+
       osc.type = "sine";
       osc.frequency.setValueAtTime(freq, now + delay);
-      
+
       gain.gain.setValueAtTime(0.12, now + delay);
       gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.22);
-      
+
       osc.start(now + delay);
       osc.stop(now + delay + 0.25);
     };
@@ -87,11 +172,8 @@ export function playCash() {
   }
 }
 
-/**
- * Sad descending sweep for paying rent or tax
- */
-export function playRentPay() {
-  if (isMuted) return;
+/** Sad descending sweep for paying rent or tax */
+function synthRentPay() {
   try {
     const ctx = getAudioContext();
     const osc = ctx.createOscillator();
@@ -114,11 +196,8 @@ export function playRentPay() {
   }
 }
 
-/**
- * Ascending arpeggio sweeps for drawing Chance or Esusu cards
- */
-export function playDraw() {
-  if (isMuted) return;
+/** Ascending arpeggio for drawing Chance or Esusu cards */
+function synthDraw() {
   try {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
@@ -145,11 +224,8 @@ export function playDraw() {
   }
 }
 
-/**
- * Detuned sawtooth warning buzz for getting sent to Jail (Kirikiri)
- */
-export function playJail() {
-  if (isMuted) return;
+/** Detuned sawtooth warning buzz for getting sent to Jail (Kirikiri) */
+function synthJail() {
   try {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
@@ -182,11 +258,8 @@ export function playJail() {
   }
 }
 
-/**
- * Dual percussive knocks (hammer-building sound) for upgrading properties
- */
-export function playBuild() {
-  if (isMuted) return;
+/** Dual percussive knocks (hammer-building sound) for upgrading properties */
+function synthBuild() {
   try {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
@@ -215,12 +288,8 @@ export function playBuild() {
   }
 }
 
-/**
- * Distinctive rising tritone chime for "It's your turn!" notification.
- * Two-note fanfare that is easily distinguishable from the cash/draw sounds.
- */
-export function playYourTurn() {
-  if (isMuted) return;
+/** Rising three-note fanfare for the "It's your turn!" notification */
+function synthYourTurn() {
   try {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
@@ -250,11 +319,8 @@ export function playYourTurn() {
   }
 }
 
-/**
- * Triumphant fanfare for game-over / victory moment
- */
-export function playGameOver() {
-  if (isMuted) return;
+/** Triumphant fanfare for game-over / victory moment */
+function synthGameOver() {
   try {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
@@ -281,3 +347,17 @@ export function playGameOver() {
     console.warn("Audio playback error:", e);
   }
 }
+
+// =============================================================================
+// Public API — sample-first, synth-fallback. Same names the rest of the app
+// already calls, so callers don't change.
+// =============================================================================
+
+export const playRoll = () => play("roll", synthRoll);
+export const playCash = () => play("cash", synthCash);
+export const playRentPay = () => play("rent", synthRentPay);
+export const playDraw = () => play("draw", synthDraw);
+export const playJail = () => play("jail", synthJail);
+export const playBuild = () => play("build", synthBuild);
+export const playYourTurn = () => play("your-turn", synthYourTurn);
+export const playGameOver = () => play("game-over", synthGameOver);
