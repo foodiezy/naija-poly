@@ -7,6 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Lobby from "./components/Lobby";
 import RoomLobbyView from "./components/RoomLobbyView";
 import GameBoard from "./components/GameBoard";
+import ChatPanel from "./components/ChatPanel";
 import ControlPanel from "./components/ControlPanel";
 import TileInspector from "./components/TileInspector";
 import GameOverModal from "./components/GameOverModal";
@@ -22,7 +23,7 @@ import { Player } from "../engine/types";
 
 export default function App() {
   const {
-    playerName,
+    playerName: _playerName,
     room,
     roomState,
     engineState,
@@ -36,6 +37,7 @@ export default function App() {
     leaveRoom,
     sendAction,
     selectToken,
+    addAI,
     updateSettings,
     startGame,
     sendChatMessage,
@@ -111,47 +113,46 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Header */}
+      {/* Header — 3-section layout */}
       <header className="app-header">
-        <div className="logo-container">
-          <span className="logo-text">Odogwu Empire</span>
+        <div className="header-left">
+          <div className="logo-container">
+            <span className="logo-text">Odogwu Empire</span>
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <button 
-            className="mute-toggle-btn" 
+
+        <div className="header-center">
+          <span className="header-tagline">Buy the land. Become the Odogwu.</span>
+          <span className="header-badge">👥 2-6 players · Real-time · Free</span>
+        </div>
+
+        <div className="header-right">
+          {room && (
+            <>
+              <span className="room-badge" onClick={copyRoomCode} title="Click to copy room code">
+                Room: {room.roomId}
+                <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>📋</span>
+              </span>
+              <button className="header-btn header-btn-gold" onClick={copyRoomCode}>
+                Copy
+              </button>
+            </>
+          )}
+          <button
+            className="header-btn header-btn-outline"
             onClick={() => {
               const nextMute = !muted;
               setMuted(nextMute);
               sound.setMuted(nextMute);
             }}
             title={muted ? "Unmute sounds" : "Mute sounds"}
-            style={{
-              background: "var(--surface-2)",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              borderRadius: "50%",
-              width: "36px",
-              height: "36px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              fontSize: "1.1rem",
-              transition: "all 0.2s ease",
-            }}
           >
             {muted ? "🔇" : "🔊"}
           </button>
           {room && (
-            <>
-              <span style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>Player: <strong style={{ color: "var(--color-naira)" }}>{playerName}</strong></span>
-              <span className="room-badge" style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "0.4rem" }} onClick={copyRoomCode} title="Click to copy room code">
-                Room: {room.roomId}
-                <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>📋</span>
-              </span>
-              <button className="button-secondary" style={{ padding: "0.3rem 0.75rem", fontSize: "0.8rem" }} onClick={leaveRoom}>
-                Exit Room
-              </button>
-            </>
+            <button className="header-btn header-btn-outline" onClick={leaveRoom}>
+              Exit
+            </button>
           )}
         </div>
       </header>
@@ -214,6 +215,7 @@ export default function App() {
             roomState={roomState}
             onCopyRoomCode={copyRoomCode}
             onSelectToken={selectToken}
+            onAddAI={addAI}
             onUpdateSettings={updateSettings}
             onStartGame={startGame}
             chatMessages={chatMessages}
@@ -237,28 +239,37 @@ export default function App() {
             </div>
           )}
 
-          {/* Side panel for Game Log and Controls */}
-          <div className="side-panel left-panel">
-            <ControlPanel
+          {/* Left column: room chat */}
+          <div className="game-col game-col-left">
+            <ChatPanel
               room={room}
               engineState={engineState}
-              onSendAction={sendAction}
               chatMessages={chatMessages}
               onSendChatMessage={sendChatMessage}
-              autoEndTurn={autoEndTurn}
-              onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
-              turnDeadline={roomState?.turnDeadline}
-              turnTimeoutSecs={roomState?.turnTimeoutSecs}
             />
           </div>
 
-          {/* Main Board view */}
+          {/* Center: the board */}
           <div className="board-panel">
             <GameBoard
               engineState={engineState}
               roomState={roomState}
               mySessionId={mySessionId || undefined}
               onTileClick={(pos) => setSelectedTilePos(pos)}
+              onEndTurn={() => sendAction({ type: "END_TURN" })}
+            />
+          </div>
+
+          {/* Right column: redesigned sidebar */}
+          <div className="game-col game-col-right">
+            <ControlPanel
+              room={room}
+              engineState={engineState}
+              onSendAction={sendAction}
+              autoEndTurn={autoEndTurn}
+              onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
+              turnDeadline={roomState?.turnDeadline}
+              turnTimeoutSecs={roomState?.turnTimeoutSecs}
             />
           </div>
 
@@ -289,6 +300,18 @@ export default function App() {
         </motion.div>
       ) : null}
       </AnimatePresence>
+
+      {/* Footer */}
+      <footer className="app-footer">
+        <div className="footer-left">
+          <span className="footer-logo">🏛️ Odogwu Empire</span>
+          <span>How to Play</span>
+          <span>Privacy</span>
+        </div>
+        <div className="footer-right">
+          © 2026 Odogwu Games · Made with Lagos vibes.
+        </div>
+      </footer>
     </div>
   );
 }

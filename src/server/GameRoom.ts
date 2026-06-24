@@ -2,8 +2,9 @@ import { Schema, type, MapSchema } from "@colyseus/schema";
 import { Room, Client } from "colyseus";
 import { createGame, applyAction } from "../engine/engine";
 import { getAIAction } from "../engine/ai";
-import type { Action } from "../engine/types";
+import type { Action, GameState } from "../engine/types";
 import { TOKEN_IDS, MAX_PLAYERS } from "../data/tokens";
+import type { ChatMessage } from "../shared/chat";
 
 // AI (computer) players use reserved session ids that no real client can have.
 function isAIPlayer(id: string): boolean {
@@ -29,21 +30,25 @@ export class GameRoomState extends Schema {
   @type("number") turnDeadline: number = 0; // epoch ms; 0 = no active timer
 }
 
-export class GameRoom extends Room<{ state: GameRoomState }> {
+export class GameRoom extends Room<GameRoomState> {
   // One distinct token per player, so the room can't exceed the token roster.
   maxClients = MAX_PLAYERS;
 
   // Server-owned countdown for the active auction (Colyseus clock timer).
-  private auctionTimer: any = undefined;
+  private auctionTimer?: ReturnType<typeof this.clock.setTimeout>;
   // Pending scheduled move for a computer player.
-  private aiTimer: any = undefined;
+  private aiTimer?: ReturnType<typeof this.clock.setTimeout>;
   // Per-turn AFK timeout (optional, host-configured).
-  private turnTimer: any = undefined;
+  private turnTimer?: ReturnType<typeof this.clock.setTimeout>;
+
+  private sendError(client: Client, message: string) {
+    client.send("ERROR", { message });
+  }
 
   // Single path for mutating game state: apply the action through the pure
   // engine, (re)arm the auction timer if an auction is live, then persist.
   private runEngineAction(playerId: string, action: Action) {
-    const engineState = JSON.parse(this.state.gameStateJson);
+    const engineState = JSON.parse(this.state.gameStateJson) as GameState;
     const nextEngineState = applyAction(engineState, playerId, action);
     this.armAuctionTimer(nextEngineState);
     this.state.gameStateJson = JSON.stringify(nextEngineState);
@@ -67,7 +72,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
 
   // Arm a per-turn countdown for a human's turn (if the host enabled it). Not
   // armed during auctions (those self-resolve) or for AI players (self-paced).
-  private armTurnTimer(state: any) {
+  private armTurnTimer(state: GameState) {
     this.clearTurnTimer();
     this.state.turnDeadline = 0;
     if (!this.state.turnTimerEnabled) return;
@@ -84,7 +89,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
   private onTurnTimeout() {
     this.turnTimer = undefined;
     if (this.state.status !== "in_progress") return;
-    let s: any;
+    let s: GameState;
     try {
       s = JSON.parse(this.state.gameStateJson);
     } catch {
@@ -103,8 +108,9 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     try {
       this.runEngineAction(current.id, action);
       this.broadcast("ERROR", { message: `${current.name} ran out of time — auto-played their turn.` });
-    } catch (err: any) {
-      console.error(`Turn timeout auto-move failed: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`Turn timeout auto-move failed: ${msg}`);
     }
   }
 
@@ -121,9 +127,9 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     this.clearAITimer();
     if (this.state.status !== "in_progress") return;
 
-    let engineState: any;
+    let engineState: GameState;
     try {
-      engineState = JSON.parse(this.state.gameStateJson);
+      engineState = JSON.parse(this.state.gameStateJson) as GameState;
     } catch {
       return;
     }
@@ -151,9 +157,9 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     this.aiTimer = undefined;
     if (this.state.status !== "in_progress") return;
 
-    let engineState: any;
+    let engineState: GameState;
     try {
-      engineState = JSON.parse(this.state.gameStateJson);
+      engineState = JSON.parse(this.state.gameStateJson) as GameState;
     } catch {
       return;
     }
@@ -165,8 +171,9 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     }
     try {
       this.runEngineAction(actorId, action); // persists + reschedules the next AI move
-    } catch (err: any) {
-      console.error(`AI ${actorId} action failed: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`AI ${actorId} action failed: ${msg}`);
       this.scheduleAIIfNeeded();
     }
   }
@@ -182,7 +189,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
   // Called after every engine action: arms a fresh window while an auction is
   // live (each new bid nulls the deadline, so this resets the clock), and
   // clears the timer once the auction is over.
-  private armAuctionTimer(state: any) {
+  private armAuctionTimer(state: GameState) {
     this.clearAuctionTimer();
     if (state.phase === "auction" && state.auctionState) {
       const duration = state.auctionState.bidDurationMs ?? 12000;
@@ -195,7 +202,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     this.auctionTimer = undefined;
     if (this.state.status !== "in_progress") return;
     try {
-      const engineState = JSON.parse(this.state.gameStateJson);
+      const engineState = JSON.parse(this.state.gameStateJson) as GameState;
       if (engineState.phase !== "auction") return;
       const nextEngineState = applyAction(engineState, "__server__", { type: "RESOLVE_AUCTION" });
       this.armAuctionTimer(nextEngineState);
@@ -205,12 +212,13 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
       }
       this.armTurnTimer(nextEngineState);
       this.scheduleAIIfNeeded();
-    } catch (err: any) {
-      console.error(`Error resolving auction on timeout: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`Error resolving auction on timeout: ${msg}`);
     }
   }
 
-  onCreate(_options: any) {
+  onCreate(_options: Record<string, unknown>) {
     this.setState(new GameRoomState());
 
     // Message handler to select token
@@ -219,14 +227,14 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
       // receiver and crashes the whole server process. Report back to the
       // offending client and bail instead.
       if (this.state.status !== "lobby") {
-        client.send("ERROR", { message: "Cannot select token once game starts" });
+        this.sendError(client, "Cannot select token once game starts");
         return;
       }
       const player = this.state.lobbyPlayers.get(client.sessionId);
       if (!player) return;
 
       if (!TOKEN_IDS.includes(message.tokenId)) {
-        client.send("ERROR", { message: "Unknown token" });
+        this.sendError(client, "Unknown token");
         return;
       }
 
@@ -239,7 +247,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
         }
       });
       if (takenByOther) {
-        client.send("ERROR", { message: "That token is already taken" });
+        this.sendError(client, "That token is already taken");
         return;
       }
 
@@ -250,18 +258,18 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     // Message handler to update lobby settings
     this.onMessage("UPDATE_SETTINGS", (client, message: { startingCash?: number; turnLimit?: number; freeParkingJackpot?: boolean; turnTimerEnabled?: boolean; turnTimeoutSecs?: number }) => {
       if (this.state.status !== "lobby") {
-        client.send("ERROR", { message: "Cannot change settings once game starts" });
+        this.sendError(client, "Cannot change settings once game starts");
         return;
       }
       if (client.sessionId !== this.state.hostId) {
-        client.send("ERROR", { message: "Only the host can modify settings" });
+        this.sendError(client, "Only the host can modify settings");
         return;
       }
 
       if (message.startingCash !== undefined) {
         const cash = Number(message.startingCash);
         if (!Number.isFinite(cash) || cash < 100_000 || cash > 10_000_000) {
-          client.send("ERROR", { message: "Starting cash must be between ₦100,000 and ₦10,000,000" });
+          this.sendError(client, "Starting cash must be between ₦100,000 and ₦10,000,000");
           return;
         }
         this.state.startingCash = cash;
@@ -269,7 +277,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
       if (message.turnLimit !== undefined) {
         const limit = Number(message.turnLimit);
         if (!Number.isFinite(limit) || limit < 0 || limit > 999) {
-          client.send("ERROR", { message: "Turn limit must be between 0 and 999" });
+          this.sendError(client, "Turn limit must be between 0 and 999");
           return;
         }
         this.state.turnLimit = Math.floor(limit);
@@ -283,7 +291,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
       if (message.turnTimeoutSecs !== undefined) {
         const secs = Number(message.turnTimeoutSecs);
         if (!Number.isFinite(secs) || secs < 10 || secs > 600) {
-          client.send("ERROR", { message: "Turn timeout must be between 10 and 600 seconds" });
+          this.sendError(client, "Turn timeout must be between 10 and 600 seconds");
           return;
         }
         this.state.turnTimeoutSecs = Math.floor(secs);
@@ -294,15 +302,15 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     // Message handler to add a computer player (host only, lobby only).
     this.onMessage("ADD_AI", (client) => {
       if (this.state.status !== "lobby") {
-        client.send("ERROR", { message: "Can only add AI players in the lobby" });
+        this.sendError(client, "Can only add AI players in the lobby");
         return;
       }
       if (client.sessionId !== this.state.hostId) {
-        client.send("ERROR", { message: "Only the host can add AI players" });
+        this.sendError(client, "Only the host can add AI players");
         return;
       }
       if (this.state.lobbyPlayers.size >= MAX_PLAYERS) {
-        client.send("ERROR", { message: "Room is full" });
+        this.sendError(client, "Room is full");
         return;
       }
 
@@ -316,7 +324,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
 
       const ai = new LobbyPlayer();
       ai.id = aiId;
-      ai.name = `CPU ${n}`;
+      ai.name = `Bot ${n}`;
       ai.tokenId = token;
       this.state.lobbyPlayers.set(aiId, ai);
       console.log(`Host added computer player ${aiId} (${ai.name})`);
@@ -325,17 +333,17 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     // Message handler to start game
     this.onMessage("START_GAME", (client, _message) => {
       if (this.state.status !== "lobby") {
-        client.send("ERROR", { message: "Game is already in progress" });
+        this.sendError(client, "Game is already in progress");
         return;
       }
       if (client.sessionId !== this.state.hostId) {
-        client.send("ERROR", { message: "Only the host can start the game" });
+        this.sendError(client, "Only the host can start the game");
         return;
       }
 
       const playerIds = Array.from(this.state.lobbyPlayers.keys()) as string[];
       if (playerIds.length < 2) {
-        client.send("ERROR", { message: "Must have at least 2 players to start" });
+        this.sendError(client, "Must have at least 2 players to start");
         return;
       }
 
@@ -366,29 +374,29 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     // Message handler for player actions
     this.onMessage("ACTION", (client, action: Action) => {
       if (this.state.status !== "in_progress") {
-        client.send("ERROR", { message: "Game is not in progress" });
+        this.sendError(client, "Game is not in progress");
         return;
       }
 
       // RESOLVE_AUCTION is a server-only timer event; clients must not fire it.
       if (action.type === "RESOLVE_AUCTION") {
-        client.send("ERROR", { message: "Auctions resolve automatically when the timer runs out." });
+        this.sendError(client, "Auctions resolve automatically when the timer runs out.");
         return;
       }
 
       try {
         this.runEngineAction(client.sessionId, action);
-      } catch (err: any) {
-        // Send error back to client
-        client.send("ERROR", { message: err.message });
-        console.error(`Error applying action from client ${client.sessionId}: ${err.message}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        this.sendError(client, message);
+        console.error(`Error applying action from client ${client.sessionId}: ${message}`);
       }
     });
 
     // Message handler to reset game back to lobby
     this.onMessage("RESET_GAME", (client, _message) => {
       if (client.sessionId !== this.state.hostId) {
-        client.send("ERROR", { message: "Only the host can reset the game" });
+        this.sendError(client, "Only the host can reset the game");
         return;
       }
       this.clearAuctionTimer();
@@ -411,7 +419,7 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
       const senderName = sender ? sender.name : "System";
       const tokenId = sender ? sender.tokenId : "";
 
-      const payload: any = {
+      const payload: ChatMessage = {
         senderId: client.sessionId,
         senderName,
         tokenId,
@@ -457,9 +465,8 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
     console.log(`Client ${client.sessionId} (Name: ${name}) joined room`);
   }
 
-  async onLeave(client: Client, code?: number) {
-    const consented = code === 1000 || code === 4000;
-    console.log(`Client ${client.sessionId} left (code: ${code}, consented: ${consented})`);
+  async onLeave(client: Client, consented?: boolean) {
+    console.log(`Client ${client.sessionId} left (consented: ${consented})`);
 
     if (this.state.status === "lobby") {
       // If still in lobby, remove immediately
@@ -486,8 +493,9 @@ export class GameRoom extends Room<{ state: GameRoomState }> {
           try {
             this.runEngineAction(client.sessionId, { type: "FORFEIT" });
             console.log(`Client ${client.sessionId} forfeited after disconnect.`);
-          } catch (err: any) {
-            console.error(`Error forfeiting disconnected player: ${err.message}`);
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(`Error forfeiting disconnected player: ${msg}`);
           }
         }
       }

@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { Client, Room } from "colyseus.js";
 import { toast } from "react-toastify";
 import { GameState, Action } from "../../engine/types";
+import { ChatMessage } from "../../shared/chat";
 
 // Fallback logic for local vs deployed addresses
 const isDev = (import.meta as any).env.DEV;
@@ -37,7 +38,7 @@ export function useGameRoom() {
   const [room, setRoom] = useState<Room | null>(null);
   const [roomState, setRoomState] = useState<any>(null);
   const [engineState, setEngineState] = useState<GameState | null>(null);
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [reconnecting, setReconnecting] = useState(false);
 
@@ -89,7 +90,7 @@ export function useGameRoom() {
       toast.error(`❌ ${message.message}`, { autoClose: 4000 });
     });
 
-    joinedRoom.onMessage("CHAT_MESSAGE", (chatMsg: any) => {
+    joinedRoom.onMessage("CHAT_MESSAGE", (chatMsg: ChatMessage) => {
       setChatMessages((prev) => [...prev, chatMsg]);
       if (chatMsg.toId && chatMsg.senderId !== mySessionIdRef.current) {
         toast.info(`🔒 ${chatMsg.senderName} (private): ${chatMsg.text}`, { autoClose: 4000 });
@@ -178,6 +179,10 @@ export function useGameRoom() {
     if (room) room.send("SELECT_TOKEN", { tokenId });
   };
 
+  const addAI = () => {
+    if (room) room.send("ADD_AI");
+  };
+
   const updateSettings = (settings: any) => {
     if (room) room.send("UPDATE_SETTINGS", settings);
   };
@@ -217,6 +222,7 @@ export function useGameRoom() {
     leaveRoom,
     sendAction,
     selectToken,
+    addAI,
     updateSettings,
     startGame,
     sendChatMessage,

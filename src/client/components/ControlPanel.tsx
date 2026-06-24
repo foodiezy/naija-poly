@@ -2,35 +2,21 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BOARD, PropertyTile, Tile } from "../../data/board";
 import { getDevelopmentName } from "../../engine/engine";
-import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player, Action, TradeOffer } from "../../engine/types";
+import { tokenEmoji } from "../../data/tokens";
 
 interface ControlPanelProps {
   room: any;
   engineState: GameState;
   onSendAction: (action: Action) => void;
-  chatMessages: any[];
-  onSendChatMessage: (text: string, toId?: string) => void;
   autoEndTurn?: boolean;
   onToggleAutoEndTurn?: () => void;
   turnDeadline?: number;
   turnTimeoutSecs?: number;
 }
 
-export default function ControlPanel({ room, engineState, onSendAction, chatMessages, onSendChatMessage, autoEndTurn, onToggleAutoEndTurn, turnDeadline, turnTimeoutSecs }: ControlPanelProps) {
+export default function ControlPanel({ room, engineState, onSendAction, autoEndTurn, onToggleAutoEndTurn, turnDeadline, turnTimeoutSecs }: ControlPanelProps) {
   const [now, setNow] = useState<number>(Date.now());
-  // Chat channels: "general" (everyone) or a specific playerId (private/direct).
-  const [chatChannel, setChatChannel] = useState<string>("general");
-  const [channelUnread, setChannelUnread] = useState<Record<string, number>>({});
-  const [lastMessageCount, setLastMessageCount] = useState(0);
-
-  // Keep the chat scrolled to the newest message in the active channel.
-  useEffect(() => {
-    const chatElement = document.getElementById("game-chat-box");
-    if (chatElement) {
-      chatElement.scrollTop = chatElement.scrollHeight;
-    }
-  }, [chatMessages, chatChannel]);
   const [tradeTargetId, setTradeTargetId] = useState<string>("");
   const [tradeGiveCash, setTradeGiveCash] = useState<number>(0);
   const [tradeGetCash, setTradeGetCash] = useState<number>(0);
@@ -43,7 +29,8 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
   const players = engineState?.players || [];
   const tilesState = engineState?.tiles || {};
   const me = players.find((p: Player) => p.id === mySessionId);
-  const isMyTurn = players[engineState?.currentPlayerIndex]?.id === mySessionId;
+  const currentPlayer = players[engineState?.currentPlayerIndex];
+  const isMyTurn = currentPlayer?.id === mySessionId;
   const isBankrupt = me?.bankrupt;
   // Property management (build/sell/mortgage/trade) is only legal on your own
   // turn while rolling or wrapping up — the engine rejects it otherwise. The
@@ -87,40 +74,6 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
     ? Math.max(0, Math.min(100, (turnMsLeft / (turnTimeoutSecs * 1000)) * 100))
     : 0;
 
-  // Which channel a message belongs to from MY perspective: "general" for
-  // broadcasts, otherwise the other party's id for private/direct messages.
-  const channelOf = (msg: any) => {
-    if (!msg?.toId) return "general";
-    return msg.senderId === mySessionId ? msg.toId : msg.senderId;
-  };
-
-  // Track unread counts per channel for messages that arrive while I'm not
-  // looking at that channel (and that I didn't send myself).
-  useEffect(() => {
-    if (chatMessages.length > lastMessageCount) {
-      const fresh = chatMessages.slice(lastMessageCount);
-      setChannelUnread((prev) => {
-        const next = { ...prev };
-        fresh.forEach((m: any) => {
-          if (m.senderId === mySessionId) return;
-          const ch = channelOf(m);
-          const viewing = chatChannel === ch;
-          if (!viewing) next[ch] = (next[ch] || 0) + 1;
-        });
-        return next;
-      });
-      setLastMessageCount(chatMessages.length);
-    } else if (chatMessages.length === 0) {
-      setChannelUnread({});
-      setLastMessageCount(0);
-    }
-  }, [chatMessages.length, chatChannel, lastMessageCount, mySessionId]);
-
-  // Clear the badge for whichever channel I'm currently viewing.
-  useEffect(() => {
-    setChannelUnread((prev) => (prev[chatChannel] ? { ...prev, [chatChannel]: 0 } : prev));
-  }, [chatChannel, chatMessages.length]);
-
   // Reset trade builder when turn or phase changes
   useEffect(() => {
     setShowTradeBuilder(false);
@@ -133,17 +86,6 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
 
   if (!engineState) return null;
 
-  // Chat: everyone except me gets a private channel; messages filtered to the
-  // active channel; tab badge sums unread across all channels.
-  const otherPlayers = players.filter((p: Player) => p.id !== mySessionId);
-  const visibleMessages = chatMessages.filter((m: any) => channelOf(m) === chatChannel);
-  const activeChannelName =
-    chatChannel === "general"
-      ? "Everyone"
-      : players.find((p: Player) => p.id === chatChannel)?.name || "Player";
-
-
-
   // Get recipient player object if trading is in progress
   const activeTrade = engineState.activeTrade;
 
@@ -155,8 +97,6 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
     if (posArray.length === 0) return "None";
     return posArray.map((pos) => BOARD[pos].name).join(", ");
   };
-
-
 
   // Build / mortgage details helpers
   const myProperties = BOARD.filter((tile: Tile) => {
@@ -264,187 +204,47 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
     return (me?.cash || 0) >= cost;
   };
 
-  // Always-visible holdings panel. Off-turn it is read-only: the list shows so
-  // players can review what they own at any time, but the action buttons are
-  // disabled until it is their turn (gated by `canManage`).
-  const myPropertyManager = (
-    <div style={{ borderTop: "1px solid var(--surface-2)", paddingTop: "0.75rem", marginTop: "0.25rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-        <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "var(--text-secondary)", textTransform: "uppercase" }}>My Properties ({myProperties.length})</span>
-        <button
-          className="button-secondary"
-          style={{ fontSize: "0.7rem", padding: "0.25rem 0.5rem" }}
-          onClick={() => setShowTradeBuilder(true)}
-          disabled={!canManage || players.length < 2 || activeTrade !== null}
-          title={!canManage ? "Available on your turn" : "Propose a trade"}
-        >
-          🤝 Propose Trade
-        </button>
-      </div>
+  // Get token emoji for a player via roomState lobbyPlayers
+  const getTokenEmoji = (playerId: string) => {
+    // Try roomState lobbyPlayers from parsed state
+    const roomState = room as any;
+    if (roomState?.state?.lobbyPlayers) {
+      const lp = roomState.state.lobbyPlayers.get?.(playerId);
+      if (lp?.tokenId) return tokenEmoji(lp.tokenId);
+    }
+    return tokenEmoji(undefined);
+  };
 
-      {!canManage && myProperties.length > 0 && (
-        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontStyle: "italic", marginBottom: "0.4rem" }}>
-          Viewing only — build, mortgage & trade unlock on your turn.
-        </div>
-      )}
+  // Get the token name for a player
+  const getTokenName = (playerId: string) => {
+    const roomState = room as any;
+    if (roomState?.state?.lobbyPlayers) {
+      const lp = roomState.state.lobbyPlayers.get?.(playerId);
+      if (lp?.tokenId) {
+        const names: Record<string, string> = { okada: "Okada", danfo_bus: "Danfo", agbada: "Agbada", eagle: "Eagle", keke: "Keke", fila: "Fila" };
+        return names[lp.tokenId] || lp.tokenId;
+      }
+    }
+    return "—";
+  };
 
-      <div style={{ maxHeight: "150px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-        {myProperties.map((tile: Tile) => {
-          const ts = tilesState[tile.pos];
-          const isProp = tile.type === "property";
-          return (
-            <div key={tile.pos} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.02)", padding: "0.35rem 0.5rem", borderRadius: "4px", border: "1px solid var(--surface-1)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                {isProp && (
-                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: `var(--color-${(tile as PropertyTile).group})` }} />
-                )}
-                <span style={{ fontSize: "0.8rem", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100px", whiteSpace: "nowrap" }}>
-                  {tile.name}
-                </span>
-                {ts?.houses > 0 && (
-                  <span style={{ fontSize: "0.75rem", background: "rgba(245, 158, 11, 0.15)", color: "var(--color-gold)", padding: "2px 6px", borderRadius: "4px", fontWeight: "bold" }}>
-                    {getDevelopmentName(ts.houses)}
-                  </span>
-                )}
-                {ts?.mortgaged && (
-                  <span style={{ fontSize: "0.65rem", background: "rgba(239, 68, 68, 0.15)", color: "var(--color-danger)", padding: "1px 4px", borderRadius: "3px" }}>
-                    M
-                  </span>
-                )}
-              </div>
+  // Property status label
+  const getPropStatus = (ts: any) => {
+    if (!ts) return "";
+    if (ts.mortgaged) return "Mortgaged";
+    if (ts.houses > 0) return getDevelopmentName(ts.houses);
+    return "";
+  };
 
-              <div style={{ display: "flex", gap: "2px" }}>
-                {isProp && (
-                  <>
-                    <button
-                      style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(16, 185, 129, 0.1)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "3px", cursor: "pointer" }}
-                      disabled={!canManage || !canBuild(tile.pos)}
-                      onClick={() => onSendAction({ type: "BUILD", pos: tile.pos })}
-                      title={`Build (₦${(tile as PropertyTile).houseCost.toLocaleString()})`}
-                    >
-                      Build
-                    </button>
-                    <button
-                      style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(239, 68, 68, 0.15)", color: "var(--color-danger)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "3px", cursor: "pointer" }}
-                      disabled={!canManage || !canSellHouse(tile.pos)}
-                      onClick={() => onSendAction({ type: "SELL_HOUSE", pos: tile.pos })}
-                      title={`Sell ${getDevelopmentName(ts.houses)}`}
-                    >
-                      Sell
-                    </button>
-                  </>
-                )}
-                {!ts?.mortgaged ? (
-                  <button
-                    style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(245, 158, 11, 0.1)", color: "var(--color-gold)", border: "1px solid rgba(245, 158, 11, 0.2)", borderRadius: "3px", cursor: "pointer" }}
-                    disabled={!canManage || !canMortgage(tile.pos)}
-                    onClick={() => onSendAction({ type: "MORTGAGE", pos: tile.pos })}
-                    title={`Mortgage for +₦${("mortgage" in tile ? tile.mortgage : 0).toLocaleString()}`}
-                  >
-                    Mortgage
-                  </button>
-                ) : (
-                  <button
-                    style={{ fontSize: "0.65rem", padding: "2px 5px", background: "rgba(16, 185, 129, 0.15)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "3px", cursor: "pointer" }}
-                    disabled={!canManage || !canUnmortgage(tile.pos)}
-                    onClick={() => onSendAction({ type: "UNMORTGAGE", pos: tile.pos })}
-                    title={`Unmortgage for -₦${("mortgage" in tile ? Math.round(tile.mortgage * 1.1) : 0).toLocaleString()}`}
-                  >
-                    Lift Mort.
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        {myProperties.length === 0 && (
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "0.5rem" }}>
-            You don't own any properties yet.
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  const getPropStatusClass = (ts: any) => {
+    if (!ts) return "";
+    if (ts.mortgaged) return "status-mortgaged";
+    if (ts.houses > 0) return "status-house";
+    return "";
+  };
 
   return (
-    <div className="console-panel glass-panel">
-      <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "150px" }}>
-        {/* Chat Header/Title */}
-        <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "0.5rem", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "0.5rem" }}>
-          💬 Room Chat
-        </div>
-
-        {/* Channel switcher: General (everyone) + a private channel per player */}
-        <div className="chat-channel-bar">
-          <button
-            type="button"
-            className={`chat-channel-chip ${chatChannel === "general" ? "active" : ""}`}
-            onClick={() => setChatChannel("general")}
-          >
-            📢 General
-            {chatChannel !== "general" && channelUnread["general"] > 0 && (
-              <span className="chat-channel-dot">{channelUnread["general"]}</span>
-            )}
-          </button>
-          {otherPlayers.map((p: Player) => (
-            <button
-              key={p.id}
-              type="button"
-              className={`chat-channel-chip ${chatChannel === p.id ? "active" : ""}`}
-              onClick={() => setChatChannel(p.id)}
-              title={`Private chat with ${p.name}`}
-            >
-              🔒 {p.name}
-              {chatChannel !== p.id && channelUnread[p.id] > 0 && (
-                <span className="chat-channel-dot">{channelUnread[p.id]}</span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        <div id="game-chat-box" className="console-logs" style={{ flex: 1, minHeight: "100px" }}>
-          {visibleMessages.length === 0 ? (
-            <div className="chat-empty-msg" style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "1rem" }}>
-              {chatChannel === "general"
-                ? "No messages yet. Chat with everyone!"
-                : `No private messages with ${activeChannelName} yet.`}
-            </div>
-          ) : (
-            visibleMessages.map((msg: any, idx: number) => (
-              <div key={idx} className="chat-msg-row" style={{ fontSize: "0.8rem", margin: "2px 0", border: "none" }}>
-                <strong style={{ color: msg.senderId === mySessionId ? "var(--color-naira)" : "var(--color-gold)" }}>
-                  {msg.toId && "🔒 "}
-                  {tokenEmoji(msg.tokenId)} {msg.senderId === mySessionId ? "You" : msg.senderName}:
-                </strong>{" "}
-                <span style={{ color: "#fff" }}>{msg.text}</span>
-              </div>
-            ))
-          )}
-        </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const form = e.currentTarget;
-            const input = form.elements.namedItem("chatText") as HTMLInputElement;
-            if (input && input.value.trim()) {
-              onSendChatMessage(input.value, chatChannel === "general" ? undefined : chatChannel);
-              input.value = "";
-            }
-          }}
-          style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}
-        >
-          <input
-            type="text"
-            name="chatText"
-            placeholder={chatChannel === "general" ? "Message everyone…" : `Whisper to ${activeChannelName}…`}
-            className="input-field"
-            autoComplete="off"
-            style={{ flex: 1, padding: "0.4rem 0.6rem", fontSize: "0.8rem", background: "rgba(0,0,0,0.4)" }}
-          />
-          <button type="submit" className="button-primary" style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", width: "auto" }}>Send</button>
-        </form>
-      </div>
-
+    <div className="console-panel glass-panel" style={{ padding: 0, overflow: "hidden" }}>
       {/* Trade response overlay (modal style) */}
       <AnimatePresence>
       {activeTrade && activeTrade.toId === mySessionId && (
@@ -639,89 +439,61 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
       )}
       </AnimatePresence>
 
-      {/* Main HUD actions container */}
-      <div className="action-controls">
-        {/* Turn timer countdown (when the host enabled it and it's my turn) */}
-        {isMyTurn && !isBankrupt && !isAuctionActive && turnDeadline && turnDeadline > 0 && (
-          <div style={{ background: "var(--surface-1)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-md)", padding: "0.4rem 0.6rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>
-              <span>⏱️ Turn time left</span>
-              <span style={{ fontWeight: "bold", color: turnPct < 20 ? "var(--color-danger)" : turnPct < 50 ? "var(--color-gold)" : "var(--color-naira)" }}>{turnSecsLeft}s</span>
-            </div>
-            <div style={{ height: "5px", background: "rgba(0,0,0,0.4)", borderRadius: "999px", overflow: "hidden" }}>
-              <div style={{ width: `${turnPct}%`, height: "100%", background: turnPct < 20 ? "var(--color-danger)" : turnPct < 50 ? "var(--color-gold)" : "var(--color-naira)", transition: "width 0.25s linear" }} />
-            </div>
-          </div>
-        )}
+      {/* ─── SIDEBAR LAYOUT ─── */}
 
-        {/* Bankruptcy handling */}
-        {me && me.cash < 0 && !isBankrupt && (
-          <div className="auction-panel" style={{ borderColor: "var(--color-danger)", background: "rgba(239, 68, 68, 0.05)" }}>
-            <div className="auction-title" style={{ color: "var(--color-danger)" }}>⚠️ NEGATIVE CASH DEBT</div>
-            <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", textAlign: "center" }}>
-              Your cash balance is <strong style={{ color: "var(--color-danger)" }}>₦{me.cash.toLocaleString()}</strong>.
-              You must sell houses or mortgage properties to clear debt, or declare bankruptcy.
-            </p>
-            <button
-              className="button-primary"
-              style={{ background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)" }}
-              onClick={() => {
-                if (window.confirm("Are you sure you want to declare bankruptcy? This cannot be undone — you will lose all your properties and be eliminated from the game.")) {
-                  onSendAction({ type: "DECLARE_BANKRUPT" });
-                }
-              }}
-            >
-              Declare Bankruptcy 💀
-            </button>
+      {/* 1. Turn / Round Indicator */}
+      <div className="sidebar-turn-indicator">
+        <div>
+          <div className="sidebar-turn-label">Turn</div>
+          <div style={{ fontSize: "0.8rem", color: isMyTurn ? "var(--color-naira)" : "var(--text-secondary)", fontWeight: 600 }}>
+            {isMyTurn ? "Your Turn" : (currentPlayer?.name || "—")}
           </div>
-        )}
+        </div>
+        <div className="sidebar-round-badge">
+          <span className="round-label">Round</span>
+          <span className="round-number">{engineState.currentTurn ?? 1}</span>
+          {engineState.settings?.turnLimit > 0 && (
+            <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>/ {engineState.settings.turnLimit}</span>
+          )}
+        </div>
+      </div>
 
-        {/* Trade pending status */}
-        {activeTrade && activeTrade.fromId === mySessionId && (
-          <div className="action-status-indicator" style={{ border: "1px solid var(--color-gold)", background: "rgba(245, 158, 11, 0.05)", borderRadius: "6px" }}>
-            🤝 Waiting for recipient player to respond to your trade offer...
+      {/* Turn timer countdown */}
+      {isMyTurn && !isBankrupt && !isAuctionActive && turnDeadline && turnDeadline > 0 && (
+        <div style={{ padding: "0.3rem 0.75rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.65rem", color: "var(--text-muted)", marginBottom: "0.2rem" }}>
+            <span>⏱️ Turn timer</span>
+            <span style={{ fontWeight: "bold", color: turnPct < 20 ? "var(--color-danger)" : turnPct < 50 ? "var(--color-gold)" : "var(--color-naira)" }}>{turnSecsLeft}s</span>
           </div>
-        )}
+          <div style={{ height: "4px", background: "rgba(0,0,0,0.4)", borderRadius: "999px", overflow: "hidden" }}>
+            <div style={{ width: `${turnPct}%`, height: "100%", background: turnPct < 20 ? "var(--color-danger)" : turnPct < 50 ? "var(--color-gold)" : "var(--color-naira)", transition: "width 0.25s linear" }} />
+          </div>
+        </div>
+      )}
 
-        {/* Passive trade status */}
-        {activeTrade && activeTrade.fromId !== mySessionId && activeTrade.toId !== mySessionId && (
-          <div className="action-status-indicator" style={{ border: "1px solid rgba(255, 255, 255, 0.1)", background: "rgba(255, 255, 255, 0.02)", borderRadius: "6px" }}>
-            🤝 {players.find((p: Player) => p.id === activeTrade.fromId)?.name || "Host"} is negotiating a trade deal with {players.find((p: Player) => p.id === activeTrade.toId)?.name || "Player"}...
-          </div>
-        )}
+      {/* 2. Active Player Card */}
+      <div className="sidebar-player-card">
+        <div className="sidebar-player-avatar">
+          {me ? getTokenEmoji(me.id) : "👤"}
+        </div>
+        <div className="sidebar-player-name">{me?.name || "—"}</div>
+        <div className="sidebar-player-token-label">Token: {me ? getTokenName(me.id) : "—"}</div>
+        <div className="sidebar-player-balance">₦{(me?.cash ?? 0).toLocaleString()}</div>
+      </div>
 
-        {/* Turn HUD and Action Buttons */}
-        {isBankrupt ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            <div className="action-status-indicator" style={{ background: "rgba(239, 68, 68, 0.06)", border: "1px solid rgba(239, 68, 68, 0.15)" }}>
-              💀 You are bankrupt — watching as a spectator
-            </div>
-            {/* Spectator: show who's currently playing */}
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--surface-2)", borderRadius: "8px", padding: "0.75rem" }}>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "bold", marginBottom: "0.5rem" }}>
-                📺 Live Game
-              </div>
-              <div style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}>
-                Current Turn: <strong style={{ color: "var(--color-gold)" }}>{players[engineState.currentPlayerIndex]?.name || "—"}</strong>
-                <span style={{ marginLeft: "0.3rem", fontSize: "0.75rem", color: "var(--text-muted)" }}>({engineState.phase})</span>
-              </div>
-              {/* Mini leaderboard */}
-              <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                {players.filter((p: Player) => !p.bankrupt).sort((a: Player, b: Player) => b.cash - a.cash).map((p: Player, i: number) => (
-                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.2rem 0", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                    <span>{i + 1}. {p.name}</span>
-                    <span style={{ color: "var(--color-naira)" }}>₦{p.cash.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : isAuctionActive ? (
-          /* Active Auction Panel */
-          <div className={`auction-panel ${secsLeft <= 3 && auction.deadline ? "auction-urgent" : ""}`}>
-            <div className="auction-title">🔨 LIVE AUCTION — BID FAST!</div>
-            <div style={{ textAlign: "center", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-              Tile: <strong>{BOARD[auction.tilePos].name}</strong> | Valuation: ₦{("price" in BOARD[auction.tilePos] ? (BOARD[auction.tilePos] as any).price : 0).toLocaleString()}
+      {/* Auction Panel — appears when auction is active */}
+      <AnimatePresence>
+      {isAuctionActive && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          style={{ overflow: "hidden" }}
+        >
+          <div className={`auction-panel ${secsLeft <= 3 && auction.deadline ? "auction-urgent" : ""}`} style={{ margin: "0 0.75rem", borderRadius: "var(--radius-md)" }}>
+            <div className="auction-title">🔨 LIVE AUCTION</div>
+            <div style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+              <strong>{BOARD[auction.tilePos].name}</strong>
             </div>
 
             {/* Countdown timer */}
@@ -734,21 +506,18 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
                   />
                 </div>
                 <div className={`auction-timer-secs ${secsLeft <= 3 ? "urgent" : ""}`}>
-                  {secsLeft > 0 ? `${secsLeft}s` : "GOING, GONE!"}
+                  {secsLeft > 0 ? `${secsLeft}s` : "GONE!"}
                 </div>
               </div>
             )}
 
             <div className="auction-bid-hud">
-              <span>Top Bid: <strong style={{ color: "var(--color-naira)" }}>₦{auction.highestBid.toLocaleString()}</strong></span>
-              <span>By: <strong>{auction.highestBidderId ? players.find((p: Player) => p.id === auction.highestBidderId)?.name : "No bids yet"}</strong></span>
+              <span>Top: <strong style={{ color: "var(--color-naira)" }}>₦{auction.highestBid.toLocaleString()}</strong></span>
+              <span>{auction.highestBidderId ? players.find((p: Player) => p.id === auction.highestBidderId)?.name : "No bids"}</span>
             </div>
 
             {canBid ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.25rem" }}>
-                <div className="action-status-indicator" style={{ color: "var(--color-gold)", fontWeight: "bold" }}>
-                  Raise the bid 👇
-                </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                 <div className="auction-increment-buttons">
                   {auction.bidIncrements.map((inc: number) => {
                     const total = auction.highestBid + inc;
@@ -760,9 +529,9 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
                         disabled={tooRich}
                         title={tooRich ? "Not enough cash" : `Bid ₦${total.toLocaleString()}`}
                         onClick={() => onSendAction({ type: "BID", amount: total })}
+                        style={{ fontSize: "0.7rem", padding: "0.4rem 0.2rem" }}
                       >
                         ▲ ₦{inc.toLocaleString()}
-                        <span className="bid-increment-total">₦{total.toLocaleString()}</span>
                       </button>
                     );
                   })}
@@ -770,151 +539,319 @@ export default function ControlPanel({ room, engineState, onSendAction, chatMess
                 <button
                   className="button-secondary"
                   onClick={() => onSendAction({ type: "PASS_BID" })}
+                  style={{ fontSize: "0.75rem", padding: "0.35rem" }}
                 >
-                  Pass (Leave Auction)
+                  Pass
                 </button>
-                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textAlign: "center" }}>
-                  Your cash: ₦{me?.cash.toLocaleString()}
-                </div>
               </div>
             ) : iAmHighest ? (
-              <div className="action-status-indicator" style={{ color: "var(--color-naira)", fontWeight: "bold" }}>
-                🥇 You hold the top bid — hang on!
+              <div className="action-status-indicator" style={{ color: "var(--color-naira)", fontWeight: "bold", fontSize: "0.75rem" }}>
+                🥇 You hold the top bid!
               </div>
             ) : iPassed ? (
-              <div className="action-status-indicator">
-                You folded. Watching the rest fight it out…
+              <div className="action-status-indicator" style={{ fontSize: "0.75rem" }}>
+                You folded.
               </div>
             ) : (
-              <div className="action-status-indicator">
-                Spectating the auction…
+              <div className="action-status-indicator" style={{ fontSize: "0.75rem" }}>
+                Spectating…
               </div>
             )}
           </div>
-        ) : (
-          /* Non-auction: your-turn actions or a waiting note, plus always-visible holdings */
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {isMyTurn ? (
-            <>
-            <div className="action-status-indicator" style={{ background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
-              🟢 It is <strong style={{ color: "var(--color-naira)" }}>YOUR TURN</strong>!
-            </div>
+        </motion.div>
+      )}
+      </AnimatePresence>
 
-            {engineState.phase === "awaiting-roll" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {me?.inJail ? (
-                  <>
-                    <div style={{ fontSize: "0.8rem", color: "var(--color-danger)", textAlign: "center", fontStyle: "italic" }}>
-                      You are in Kirikiri Prison (Jail Attempt {me.jailTurns}/3).
-                    </div>
-                    <div className="action-buttons-grid">
-                      <button className="button-primary full-width-btn" onClick={() => onSendAction({ type: "ROLL" })}>
-                        Roll for Doubles 🎲
-                      </button>
-                      <button className="button-secondary" onClick={() => onSendAction({ type: "PAY_JAIL_FINE" })} disabled={(me?.cash || 0) < 50000}>
-                        Pay ₦50,000 Fine
-                      </button>
-                      <button
-                        className="button-secondary"
-                        onClick={() => onSendAction({ type: "USE_JAIL_CARD" })}
-                        disabled={(me?.getOutOfJailCards || 0) === 0}
-                      >
-                        Use Jail Card ({me?.getOutOfJailCards || 0})
-                      </button>
-                    </div>
-                  </>
-                ) : (
-          <motion.button
-            className="button-primary full-width-btn"
-            style={{ padding: "1rem" }}
-            onClick={() => onSendAction({ type: "ROLL" })}
-            whileTap={{ scale: 0.94 }}
-            whileHover={{ scale: 1.02 }}
-            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+      {/* Bankruptcy warning */}
+      {me && me.cash < 0 && !isBankrupt && (
+        <div style={{ margin: "0 0.75rem", padding: "0.5rem", background: "rgba(239, 68, 68, 0.06)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: "var(--radius-md)" }}>
+          <div style={{ fontSize: "0.75rem", color: "var(--color-danger)", textAlign: "center", fontWeight: "bold", marginBottom: "0.3rem" }}>
+            ⚠️ DEBT: ₦{me.cash.toLocaleString()}
+          </div>
+          <button
+            className="button-primary"
+            style={{ width: "100%", background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)", fontSize: "0.75rem", padding: "0.4rem" }}
+            onClick={() => {
+              if (window.confirm("Declare bankruptcy? You will lose everything.")) {
+                onSendAction({ type: "DECLARE_BANKRUPT" });
+              }
+            }}
           >
-            Roll Dice 🎲
-          </motion.button>
-                )}
-              </div>
+            Declare Bankruptcy 💀
+          </button>
+        </div>
+      )}
+
+      {/* Trade pending / passive statuses */}
+      {activeTrade && activeTrade.fromId === mySessionId && (
+        <div style={{ margin: "0 0.75rem", padding: "0.4rem", fontSize: "0.72rem", textAlign: "center", color: "var(--text-secondary)", border: "1px solid rgba(245, 158, 11, 0.15)", borderRadius: "var(--radius-sm)", background: "rgba(245, 158, 11, 0.03)" }}>
+          🤝 Waiting for trade response...
+        </div>
+      )}
+      {activeTrade && activeTrade.fromId !== mySessionId && activeTrade.toId !== mySessionId && (
+        <div style={{ margin: "0 0.75rem", padding: "0.4rem", fontSize: "0.72rem", textAlign: "center", color: "var(--text-muted)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)" }}>
+          🤝 Trade in progress...
+        </div>
+      )}
+
+      {/* 3. My Properties — compact list */}
+      <div className="sidebar-properties">
+        <div className="sidebar-properties-list">
+          {myProperties.length === 0 ? (
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "0.5rem" }}>
+              No properties yet
+            </div>
+          ) : (
+            myProperties.map((tile: Tile) => {
+              const ts = tilesState[tile.pos];
+              const isProp = tile.type === "property";
+              const status = getPropStatus(ts);
+              const statusClass = getPropStatusClass(ts);
+              return (
+                <div key={tile.pos} className="sidebar-prop-row">
+                  <div className="sidebar-prop-left">
+                    {isProp && (
+                      <span
+                        className="sidebar-prop-dot"
+                        style={{ background: `var(--color-${(tile as PropertyTile).group})` }}
+                      />
+                    )}
+                    {!isProp && (
+                      <span className="sidebar-prop-dot" style={{ background: "var(--text-muted)" }} />
+                    )}
+                    <span className="sidebar-prop-name">{tile.name}</span>
+                  </div>
+                  <span className={`sidebar-prop-status ${statusClass}`}>
+                    {status}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* 4. Action Buttons — horizontal row */}
+      <div className="sidebar-actions">
+        {isBankrupt ? (
+          <div style={{ flex: 1, textAlign: "center", fontSize: "0.75rem", color: "var(--text-muted)", padding: "0.25rem" }}>
+            💀 Spectating
+          </div>
+        ) : isAuctionActive ? null : (
+          <>
+            {/* Roll Dice / Jail actions */}
+            {engineState.phase === "awaiting-roll" && isMyTurn && (
+              me?.inJail ? (
+                <>
+                  <button
+                    className="sidebar-action-btn sidebar-action-btn-primary"
+                    onClick={() => onSendAction({ type: "ROLL" })}
+                  >
+                    🎲 Roll
+                  </button>
+                  <button
+                    className="sidebar-action-btn sidebar-action-btn-outline"
+                    onClick={() => onSendAction({ type: "PAY_JAIL_FINE" })}
+                    disabled={(me?.cash || 0) < 50000}
+                    title="Pay ₦50,000"
+                  >
+                    Pay Fine
+                  </button>
+                  <button
+                    className="sidebar-action-btn sidebar-action-btn-outline"
+                    onClick={() => onSendAction({ type: "USE_JAIL_CARD" })}
+                    disabled={(me?.getOutOfJailCards || 0) === 0}
+                    title={`Jail cards: ${me?.getOutOfJailCards || 0}`}
+                  >
+                    Jail Card
+                  </button>
+                </>
+              ) : (
+                <>
+                  <motion.button
+                    className="sidebar-action-btn sidebar-action-btn-primary"
+                    onClick={() => onSendAction({ type: "ROLL" })}
+                    whileTap={{ scale: 0.94 }}
+                  >
+                    🎲 Roll Dice
+                  </motion.button>
+                  <button
+                    className="sidebar-action-btn sidebar-action-btn-outline"
+                    onClick={() => setShowTradeBuilder(true)}
+                    disabled={!canManage || players.length < 2 || activeTrade !== null}
+                  >
+                    Trade
+                  </button>
+                  <button
+                    className="sidebar-action-btn sidebar-action-btn-outline"
+                    disabled={!canManage || myProperties.length === 0}
+                    onClick={() => {
+                      // Find first mortgageable property
+                      const mortgageable = myProperties.find((t) => canMortgage(t.pos));
+                      if (mortgageable) onSendAction({ type: "MORTGAGE", pos: mortgageable.pos });
+                    }}
+                  >
+                    Mortgage
+                  </button>
+                </>
+              )
             )}
 
-            {engineState.phase === "awaiting-buy-decision" && (
-              <div className="auction-panel" style={{ borderColor: "var(--color-gold)", background: "rgba(245, 158, 11, 0.03)" }}>
+            {/* Buy / Decline */}
+            {engineState.phase === "awaiting-buy-decision" && isMyTurn && (
+              <>
                 {(() => {
                   const tile = me ? BOARD[me.position] : undefined;
                   const price = tile && "price" in tile ? tile.price : 0;
                   return (
                     <>
-                      <div style={{ textAlign: "center", fontSize: "0.9rem" }}>
-                        Landed on unowned: <strong>{tile?.name}</strong>
-                      </div>
-                      <div style={{ textAlign: "center", fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>
-                        Price: <strong style={{ color: "var(--color-naira)" }}>₦{price.toLocaleString()}</strong>
-                      </div>
-                      <div className="action-buttons-grid">
-                        <button
-                          className="button-primary"
-                          disabled={(me?.cash || 0) < price}
-                          onClick={() => onSendAction({ type: "BUY" })}
-                        >
-                          Buy Property ₦
-                        </button>
-                        <button className="button-secondary" onClick={() => onSendAction({ type: "DECLINE_BUY" })}>
-                          Decline (Auction)
-                        </button>
-                      </div>
+                      <button
+                        className="sidebar-action-btn sidebar-action-btn-primary"
+                        disabled={(me?.cash || 0) < price}
+                        onClick={() => onSendAction({ type: "BUY" })}
+                      >
+                        Buy ₦{(price / 1000).toFixed(0)}k
+                      </button>
+                      <button
+                        className="sidebar-action-btn sidebar-action-btn-outline"
+                        onClick={() => onSendAction({ type: "DECLINE_BUY" })}
+                      >
+                        Auction
+                      </button>
                     </>
                   );
                 })()}
-              </div>
+              </>
             )}
 
-            {engineState.phase === "awaiting-end-turn" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {/* Awaiting end turn — actions */}
+            {engineState.phase === "awaiting-end-turn" && isMyTurn && (
+              <>
                 <button
-                  className="button-primary full-width-btn"
-                  style={{ padding: "0.9rem" }}
-                  disabled={(me?.cash ?? 0) < 0}
-                  onClick={() => onSendAction({ type: "END_TURN" })}
-                  title={(me?.cash ?? 0) < 0 ? "You must mortgage properties, sell houses, or declare bankruptcy before ending your turn." : "End Turn 🏁"}
+                  className="sidebar-action-btn sidebar-action-btn-outline"
+                  onClick={() => setShowTradeBuilder(true)}
+                  disabled={!canManage || players.length < 2 || activeTrade !== null}
                 >
-                  {(me?.cash ?? 0) < 0 ? "Resolve Debt to End Turn 🏁" : "End Turn 🏁"}
+                  Trade
                 </button>
-                {autoEndTurn && (me?.cash ?? 0) >= 0 && (
-                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textAlign: "center", fontStyle: "italic" }}>
-                    ⏳ Auto-ending turn in ~2s...
-                  </div>
-                )}
-              </div>
+                <button
+                  className="sidebar-action-btn sidebar-action-btn-outline"
+                  disabled={!canManage || myProperties.length === 0}
+                  onClick={() => {
+                    const mortgageable = myProperties.find((t) => canMortgage(t.pos));
+                    if (mortgageable) onSendAction({ type: "MORTGAGE", pos: mortgageable.pos });
+                  }}
+                >
+                  Mortgage
+                </button>
+              </>
             )}
 
-            </>
-            ) : (
-              <div className="action-status-indicator">
-                ⏳ Waiting for <strong>{players[engineState.currentPlayerIndex]?.name || "other players"}</strong> to act...
+            {/* Not my turn — show waiting */}
+            {!isMyTurn && !isAuctionActive && (
+              <div style={{ flex: 1, textAlign: "center", fontSize: "0.75rem", color: "var(--text-muted)", padding: "0.25rem" }}>
+                ⏳ Waiting for {currentPlayer?.name || "—"}
               </div>
             )}
-
-            {/* Auto End Turn toggle */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--surface-2)", paddingTop: "0.5rem" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", color: "var(--text-secondary)", cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={!!autoEndTurn}
-                  onChange={onToggleAutoEndTurn}
-                  style={{ cursor: "pointer" }}
-                />
-                Auto End Turn
-              </label>
-              <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
-                {autoEndTurn ? "On — turns end automatically" : "Off — manual end turn"}
-              </span>
-            </div>
-
-            {/* Holdings are always visible; the action buttons enable only on your turn */}
-            {myPropertyManager}
-          </div>
+          </>
         )}
+      </div>
+
+      {/* Auto End Turn + Build/Sell toggles (compact) */}
+      {!isBankrupt && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.3rem 0.75rem", borderBottom: "1px solid var(--border-subtle)" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.68rem", color: "var(--text-muted)", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={!!autoEndTurn}
+              onChange={onToggleAutoEndTurn}
+              style={{ cursor: "pointer" }}
+            />
+            Auto End Turn
+          </label>
+          {autoEndTurn && isMyTurn && engineState.phase === "awaiting-end-turn" && (me?.cash ?? 0) >= 0 && (
+            <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", fontStyle: "italic" }}>⏳ auto ~2s</span>
+          )}
+
+          {/* Build/Sell quick buttons for properties with improvements */}
+          {canManage && myProperties.some((t) => t.type === "property") && (
+            <div style={{ display: "flex", gap: "0.2rem" }}>
+              {myProperties.filter((t) => canBuild(t.pos)).length > 0 && (
+                <button
+                  style={{ fontSize: "0.6rem", padding: "2px 5px", background: "rgba(16, 185, 129, 0.1)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "3px", cursor: "pointer" }}
+                  onClick={() => {
+                    const buildable = myProperties.find((t) => canBuild(t.pos));
+                    if (buildable) onSendAction({ type: "BUILD", pos: buildable.pos });
+                  }}
+                  title="Build on next available property"
+                >
+                  Build
+                </button>
+              )}
+              {myProperties.filter((t) => canSellHouse(t.pos)).length > 0 && (
+                <button
+                  style={{ fontSize: "0.6rem", padding: "2px 5px", background: "rgba(239, 68, 68, 0.1)", color: "var(--color-danger)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: "3px", cursor: "pointer" }}
+                  onClick={() => {
+                    const sellable = myProperties.find((t) => canSellHouse(t.pos));
+                    if (sellable) onSendAction({ type: "SELL_HOUSE", pos: sellable.pos });
+                  }}
+                  title="Sell house on next available property"
+                >
+                  Sell
+                </button>
+              )}
+              {myProperties.filter((t) => canUnmortgage(t.pos)).length > 0 && (
+                <button
+                  style={{ fontSize: "0.6rem", padding: "2px 5px", background: "rgba(16, 185, 129, 0.1)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "3px", cursor: "pointer" }}
+                  onClick={() => {
+                    const liftable = myProperties.find((t) => canUnmortgage(t.pos));
+                    if (liftable) onSendAction({ type: "UNMORTGAGE", pos: liftable.pos });
+                  }}
+                  title="Lift mortgage on next available property"
+                >
+                  Unmortgage
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 5. Players List */}
+      <div className="sidebar-players">
+        <div className="sidebar-players-title">Players</div>
+        <div className="sidebar-players-list">
+          {players.map((p: Player) => {
+            const isActive = p.id === currentPlayer?.id;
+            return (
+              <div
+                key={p.id}
+                className={`sidebar-player-row ${p.bankrupt ? "bankrupt" : ""}`}
+              >
+                <div className="sidebar-player-row-left">
+                  <div className={`sidebar-player-row-avatar ${isActive ? "active-turn" : ""}`}>
+                    {getTokenEmoji(p.id)}
+                  </div>
+                  <div>
+                    <div className="sidebar-player-row-name">
+                      {p.name} {p.id === mySessionId && "(You)"}
+                    </div>
+                    {p.bankrupt ? (
+                      <div className="sidebar-player-row-status" style={{ color: "var(--color-danger)" }}>Bankrupt</div>
+                    ) : !isActive ? (
+                      <div className="sidebar-player-row-status is-waiting">Waiting</div>
+                    ) : (
+                      <div className="sidebar-player-row-status" style={{ color: "var(--color-gold)" }}>Playing</div>
+                    )}
+                  </div>
+                </div>
+                <div className="sidebar-player-row-cash">
+                  ₦{p.cash.toLocaleString()}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

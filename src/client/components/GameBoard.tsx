@@ -19,6 +19,7 @@ interface GameBoardProps {
   roomState: any;
   mySessionId?: string;
   onTileClick?: (pos: number) => void;
+  onEndTurn?: () => void;
 }
 
 // Which edge a tile sits on — determines color-bar side
@@ -84,7 +85,7 @@ function getTileGridCoords(pos: number): { row: number; col: number } {
   }
 }
 
-export default function GameBoard({ engineState, roomState, mySessionId, onTileClick }: GameBoardProps) {
+export default function GameBoard({ engineState, roomState, mySessionId, onTileClick, onEndTurn }: GameBoardProps) {
   if (!engineState) {
     return (
       <div className="glass-panel" style={{ padding: "2rem", textAlign: "center" }}>
@@ -103,6 +104,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   const myPosition = myPlayer ? myPlayer.position : -1;
   const activePlayerIndex = engineState.currentPlayerIndex ?? -1;
   const activePlayerId = activePlayerIndex >= 0 && players[activePlayerIndex] ? players[activePlayerIndex].id : null;
+  const isMyTurn = activePlayerId === mySessionId;
 
   const logsEndRef = useRef<HTMLDivElement>(null);
   // Whether the drawn-card banner is currently shown (auto-dismisses).
@@ -203,6 +205,9 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
     return () => clearTimeout(t);
   }, [lastLog]);
 
+  // Can the local player end their turn right now?
+  const canEndTurn = isMyTurn && engineState.phase === "awaiting-end-turn" && (myPlayer?.cash ?? 0) >= 0;
+
   return (
     <div className="monopoly-board">
       {/* Board Center */}
@@ -254,9 +259,8 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
           </motion.div>
         </div>
 
-        {/* Center: Game Feed scrollable logs box */}
+        {/* Center: Game Feed — no title, blends with board center */}
         <div className="board-center-feed">
-          <div className="board-center-feed-title">📢 Game Feed</div>
           <div className="board-center-feed-logs">
             {engineState.log?.map((logLine: string, idx: number) => (
               <div key={idx} className={getLogClass(logLine)}>
@@ -267,7 +271,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
           </div>
         </div>
 
-        {/* Bottom Row: Dice and Card draws */}
+        {/* Bottom Row: Dice, End Turn, Card draws, Notification */}
         <div className="board-center-bottom-row">
           {/* Dice */}
           <AnimatePresence mode="wait">
@@ -286,6 +290,21 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             )}
           </AnimatePresence>
 
+          {/* End Turn button — centered in board */}
+          {canEndTurn && onEndTurn && (
+            <motion.button
+              className="board-end-turn-btn"
+              onClick={onEndTurn}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              End Turn
+            </motion.button>
+          )}
+
           {/* Drawn Card Overlay */}
           <AnimatePresence>
             {activeCardDraw && cardVisible && (
@@ -301,6 +320,19 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Notification bar — latest game event */}
+          {lastLog && (
+            <motion.div
+              className="board-notification-bar"
+              key={lastLog}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {lastLog}
+            </motion.div>
+          )}
         </div>
       </div>
 

@@ -7,6 +7,7 @@ interface RoomLobbyViewProps {
   roomState: any;
   onCopyRoomCode: () => void;
   onSelectToken: (tokenId: string) => void;
+  onAddAI: () => void;
   onUpdateSettings: (settings: any) => void;
   onStartGame: () => void;
   chatMessages: any[];
@@ -18,12 +19,15 @@ export default function RoomLobbyView({
   roomState,
   onCopyRoomCode,
   onSelectToken,
+  onAddAI,
   onUpdateSettings,
   onStartGame,
   chatMessages,
   onSendChatMessage,
 }: RoomLobbyViewProps) {
   const isHost = roomState?.hostId === room.sessionId;
+  const playerCount = roomState?.lobbyPlayers?.size ?? 0;
+  const roomFull = playerCount >= 6;
   const myTokenId = roomState?.lobbyPlayers?.get(room.sessionId)?.tokenId;
 
   return (
@@ -141,15 +145,27 @@ export default function RoomLobbyView({
           </div>
         )}
 
+        {isHost && (
+          <button
+            className="button-secondary full-width-btn"
+            style={{ padding: "0.75rem", fontSize: "0.95rem", marginBottom: "0.75rem" }}
+            onClick={onAddAI}
+            disabled={roomFull}
+            title={roomFull ? "Room is full" : "Add a bot opponent"}
+          >
+            {roomFull ? "Room Full" : "➕ Add Bot Player 🤖"}
+          </button>
+        )}
+
         {isHost ? (
           <button
             className="button-primary full-width-btn"
             style={{ padding: "1rem", fontSize: "1.1rem" }}
             onClick={onStartGame}
-            disabled={!roomState?.lobbyPlayers || roomState.lobbyPlayers.size < 2}
+            disabled={playerCount < 2}
           >
-            {roomState?.lobbyPlayers && roomState.lobbyPlayers.size < 2 
-              ? "Waiting for more players..." 
+            {playerCount < 2
+              ? "Waiting for more players..."
               : "Start Game 🎲"}
           </button>
         ) : (
