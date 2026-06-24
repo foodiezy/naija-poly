@@ -77,8 +77,11 @@
   --text-2xl: 1.85rem;
   --text-3xl: 2.6rem;
 
-  /* Layout Size */
-  --board-size: 720px;
+  /* Layout Size — the board grows to fill whichever is the tighter constraint:
+     the viewport height (minus header/footer) or the width left after the two
+     side columns. This maximizes tile size (so card text doesn't spill) and
+     removes dead space, instead of stepping through fixed sizes. */
+  --board-size: clamp(420px, min(calc(100vh - 160px), calc(100vw - 620px)), 880px);
   --tile-size: calc(var(--board-size) / 11);
 }
 
@@ -618,9 +621,11 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  flex: 1 1 300px;
+  /* basis 0 so the columns size from the space left after the board rather
+     than forcing a wrap when their basis + the board exceed the row. */
+  flex: 1 1 0;
   min-width: 280px;
-  max-width: 440px;
+  max-width: 460px;
 }
 
 .game-col-left { order: 1; }
@@ -2072,23 +2077,13 @@ html.high-contrast .glass-panel {
 
 /* Responsiveness */
 
-/* Scale the board down on smaller desktops so the three columns (chat/assets,
-   board, controls) stay on a single centered row instead of wrapping. The
-   board is the widest fixed element, so stepping it down keeps the layout
-   filling the viewport rather than dropping a column below. */
-@media (min-width: 1700px) {
-  :root { --board-size: 760px; }
-  .game-col { max-width: 480px; }
-}
-@media (max-width: 1600px) {
-  :root { --board-size: 620px; }
-}
-@media (max-width: 1340px) {
-  :root { --board-size: 540px; }
-  .game-col { flex-basis: 280px; }
-}
-
+/* Below ~1100px the three columns can't sit side-by-side, so stack them with
+   the board on top. The board no longer competes with the side columns for
+   width, so size it to fill the viewport (height- or width-bound). */
 @media (max-width: 1100px) {
+  :root {
+    --board-size: min(calc(100vh - 160px), calc(100vw - 32px));
+  }
   .game-view {
     flex-direction: column;
     flex-wrap: nowrap;

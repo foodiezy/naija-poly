@@ -246,14 +246,8 @@ export default function App() {
             </div>
           )}
 
-          {/* Left column: assets + room chat */}
+          {/* Left column: room chat + settings */}
           <div className="game-col game-col-left">
-            <AssetsPanel
-              room={room}
-              engineState={engineState}
-              turnDeadline={roomState?.turnDeadline}
-              turnTimeoutSecs={roomState?.turnTimeoutSecs}
-            />
             <ChatPanel
               room={room}
               engineState={engineState}
@@ -289,6 +283,12 @@ export default function App() {
               onSendAction={sendAction}
               autoEndTurn={autoEndTurn}
               onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
+              turnDeadline={roomState?.turnDeadline}
+              turnTimeoutSecs={roomState?.turnTimeoutSecs}
+            />
+            <AssetsPanel
+              room={room}
+              engineState={engineState}
               turnDeadline={roomState?.turnDeadline}
               turnTimeoutSecs={roomState?.turnTimeoutSecs}
             />
