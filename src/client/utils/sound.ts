@@ -54,6 +54,10 @@ export function setVolume(v: number) {
   masterVolume = Math.max(0, Math.min(1, v));
 }
 
+export function getVolume(): number {
+  return masterVolume;
+}
+
 function getAudioContext(): AudioContext {
   if (!audioCtx) {
     const Ctor = window.AudioContext

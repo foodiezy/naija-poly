@@ -1440,6 +1440,63 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--color-naira);
 }
 
+.settings-slider-row {
+  cursor: default;
+}
+.settings-slider-row:hover {
+  background: var(--surface-1);
+  border-color: var(--border-subtle);
+}
+.settings-slider-row.muted-dim {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.settings-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.volume-slider {
+  width: 70px;
+  height: 4px;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+.volume-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-gold, #f59e0b);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+.volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+.volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-gold, #f59e0b);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+.volume-slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+.settings-slider-val {
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  min-width: 2.5ch;
+  text-align: right;
+}
+
 /* High-contrast accessibility mode — brighten dim text and strengthen borders */
 html.high-contrast {
   --text-secondary: #e5e7eb;
