@@ -6,6 +6,7 @@ import { getDevelopmentName } from "../../engine/engine";
 import { GameState, Player, Action, TradeOffer, TileState } from "../../engine/types";
 import { tokenEmoji } from "../../data/tokens";
 import { RoomState } from "../../shared/room";
+import { IconRoll, IconBuild, IconSell, IconMortgage, IconUnmortgage, IconTrade, IconAuction, IconTimer, IconBankrupt, IconTrophy, IconWarning } from "./icons";
 
 interface ControlPanelProps {
   room: Room;
@@ -255,8 +256,8 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
           transition={{ type: "spring", stiffness: 300, damping: 26 }}
         >
           <div className="trade-card glass-panel" style={{ border: "2px solid var(--color-gold)", background: "#0e1525" }}>
-            <h3 className="auction-title" style={{ color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "0.5rem" }}>
-              🤝 Incoming Trade Offer
+            <h3 className="auction-title" style={{ color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <IconTrade size={22} /> Incoming Trade Offer
             </h3>
             <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", textAlign: "center" }}>
               <strong>{tradeProposer?.name}</strong> proposed a trade deal to you!
@@ -316,7 +317,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
           transition={{ type: "spring", stiffness: 280, damping: 24 }}
         >
           <div className="trade-card glass-panel" style={{ background: "#0e1525", maxWidth: "550px", overflowY: "auto", maxHeight: "90vh" }}>
-            <h3 className="auction-title">🤝 Propose Trade Deal</h3>
+            <h3 className="auction-title" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><IconTrade size={22} /> Propose Trade Deal</h3>
             
             {/* Recipient selection */}
             <div className="form-group">
@@ -461,7 +462,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
       {isMyTurn && !isBankrupt && !isAuctionActive && turnDeadline && turnDeadline > 0 && (
         <div style={{ padding: "0.3rem 0.75rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.65rem", color: "var(--text-muted)", marginBottom: "0.2rem" }}>
-            <span>⏱️ Turn timer</span>
+            <span style={{ display: "flex", alignItems: "center", gap: "0.2rem" }}><IconTimer size={14} /> Turn timer</span>
             <span style={{ fontWeight: "bold", color: turnPct < 20 ? "var(--color-danger)" : turnPct < 50 ? "var(--color-gold)" : "var(--color-naira)" }}>{turnSecsLeft}s</span>
           </div>
           <div style={{ height: "4px", background: "rgba(0,0,0,0.4)", borderRadius: "999px", overflow: "hidden" }}>
@@ -490,7 +491,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
           style={{ overflow: "hidden" }}
         >
           <div className={`auction-panel ${secsLeft <= 3 && auction.deadline ? "auction-urgent" : ""}`} style={{ margin: "0 0.75rem", borderRadius: "var(--radius-md)" }}>
-            <div className="auction-title">🔨 LIVE AUCTION</div>
+            <div className="auction-title" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}><IconAuction size={20} /> LIVE AUCTION</div>
             <div style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
               <strong>{BOARD[auction.tilePos].name}</strong>
             </div>
@@ -544,8 +545,8 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                 </button>
               </div>
             ) : iAmHighest ? (
-              <div className="action-status-indicator" style={{ color: "var(--color-naira)", fontWeight: "bold", fontSize: "0.75rem" }}>
-                🥇 You hold the top bid!
+              <div className="action-status-indicator" style={{ color: "var(--color-naira)", fontWeight: "bold", fontSize: "0.75rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}>
+                <IconTrophy size={16} /> You hold the top bid!
               </div>
             ) : iPassed ? (
               <div className="action-status-indicator" style={{ fontSize: "0.75rem" }}>
@@ -564,19 +565,19 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
       {/* Bankruptcy warning */}
       {me && me.cash < 0 && !isBankrupt && (
         <div style={{ margin: "0 0.75rem", padding: "0.5rem", background: "rgba(239, 68, 68, 0.06)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: "var(--radius-md)" }}>
-          <div style={{ fontSize: "0.75rem", color: "var(--color-danger)", textAlign: "center", fontWeight: "bold", marginBottom: "0.3rem" }}>
-            ⚠️ DEBT: ₦{me.cash.toLocaleString()}
+          <div style={{ fontSize: "0.75rem", color: "var(--color-danger)", textAlign: "center", fontWeight: "bold", marginBottom: "0.3rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}>
+            <IconWarning size={16} /> DEBT: ₦{me.cash.toLocaleString()}
           </div>
           <button
             className="button-primary"
-            style={{ width: "100%", background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)", fontSize: "0.75rem", padding: "0.4rem" }}
+            style={{ width: "100%", background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)", fontSize: "0.75rem", padding: "0.4rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
             onClick={() => {
               if (window.confirm("Declare bankruptcy? You will lose everything.")) {
                 onSendAction({ type: "DECLARE_BANKRUPT" });
               }
             }}
           >
-            Declare Bankruptcy 💀
+            Declare Bankruptcy <IconBankrupt size={16} />
           </button>
         </div>
       )}
@@ -634,7 +635,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                           onClick={() => onSendAction({ type: "BUILD", pos: tile.pos })}
                           title={`Build ₦${((tile as PropertyTile).houseCost || 0).toLocaleString()}`}
                         >
-                          <span>🔨</span> Build ₦{((tile as PropertyTile).houseCost || 0) / 1000}k
+                          <IconBuild size={13} /> Build ₦{((tile as PropertyTile).houseCost || 0) / 1000}k
                         </button>
                       )}
                       {canSellHouse(tile.pos) && (
@@ -643,7 +644,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                           onClick={() => onSendAction({ type: "SELL_HOUSE", pos: tile.pos })}
                           title={`Sell house (receive ₦${((tile as PropertyTile).houseCost || 0) / 2})`}
                         >
-                          <span>📉</span> Sell
+                          <IconSell size={13} /> Sell
                         </button>
                       )}
                       {canMortgage(tile.pos) && (
@@ -652,7 +653,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                           onClick={() => onSendAction({ type: "MORTGAGE", pos: tile.pos })}
                           title={`Mortgage (receive ₦${("mortgage" in tile ? tile.mortgage : 0).toLocaleString()})`}
                         >
-                          <span>🔒</span> Mortgage
+                          <IconMortgage size={13} /> Mortgage
                         </button>
                       )}
                       {canUnmortgage(tile.pos) && (
@@ -661,7 +662,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                           onClick={() => onSendAction({ type: "UNMORTGAGE", pos: tile.pos })}
                           title={`Unmortgage (pay ₦${Math.round(("mortgage" in tile ? tile.mortgage : 0) * 1.1).toLocaleString()})`}
                         >
-                          <span>🔓</span> Unmortgage
+                          <IconUnmortgage size={13} /> Unmortgage
                         </button>
                       )}
                     </div>
@@ -688,8 +689,9 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                   <button
                     className="sidebar-action-btn sidebar-action-btn-primary"
                     onClick={() => onSendAction({ type: "ROLL" })}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
                   >
-                    🎲 Roll
+                    <IconRoll size={18} /> Roll
                   </button>
                   <button
                     className="sidebar-action-btn sidebar-action-btn-outline"
@@ -714,15 +716,17 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                     className="sidebar-action-btn sidebar-action-btn-primary"
                     onClick={() => onSendAction({ type: "ROLL" })}
                     whileTap={{ scale: 0.94 }}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
                   >
-                    🎲 Roll Dice
+                    <IconRoll size={18} /> Roll Dice
                   </motion.button>
                   <button
                     className="sidebar-action-btn sidebar-action-btn-outline"
                     onClick={() => setShowTradeBuilder(true)}
                     disabled={!canManage || players.length < 2 || activeTrade !== null}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}
                   >
-                    Trade
+                    <IconTrade size={16} /> Trade
                   </button>
                 </>
               )
@@ -762,8 +766,9 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                   className="sidebar-action-btn sidebar-action-btn-outline"
                   onClick={() => setShowTradeBuilder(true)}
                   disabled={!canManage || players.length < 2 || activeTrade !== null}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}
                 >
-                  Trade
+                  <IconTrade size={16} /> Trade
                 </button>
               </>
             )}
