@@ -606,16 +606,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* In-game layout: chat (left) · board (center) · controls + trade (right).
-   Uses a highly optimized responsive CSS Grid that seamlessly adapts to medium
-   viewports like 1155px by stacking side panels, maximizing board space. */
+   Uses a highly optimized responsive CSS Grid that seamlessly adapts across all viewports. */
 .game-view {
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(560px, 1fr) minmax(300px, 400px);
+  grid-template-columns: minmax(260px, 320px) minmax(500px, 1fr) minmax(300px, 400px);
   align-items: start;
   justify-content: center;
   gap: 1.5rem;
   padding: 1.5rem max(1.5rem, calc((100vw - 1650px) / 2));
   width: 100%;
+  max-width: 100vw;
+  overflow: hidden;
 }
 
 .game-col {
@@ -623,6 +624,7 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
   gap: 1.25rem;
   width: 100%;
+  min-width: 0; /* Prevent flex/grid blowouts */
 }
 
 .game-col-left { order: 1; }
@@ -631,7 +633,7 @@ h1, h2, h3, h4, h5, h6 {
 
 @media (max-width: 1350px) {
   .game-view {
-    grid-template-columns: minmax(560px, 1fr) minmax(320px, 420px);
+    grid-template-columns: minmax(450px, 1fr) minmax(300px, 400px);
     gap: 1.5rem 1.25rem;
     padding: 1.25rem;
   }
@@ -652,16 +654,14 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Below 980px (specifically targeting 752px viewports), switch to a flawless
-   1-column full-width grid. The board expands to fill the entire screen width,
-   and side panels stack neatly underneath, filling all page spaces perfectly. */
+/* Below 980px, switch to a flawless 1-column full-width grid. */
 @media (max-width: 980px) {
   :root {
     --board-size: min(calc(100vw - 2rem), 750px);
   }
   .game-view {
     grid-template-columns: 1fr;
-    gap: 1.25rem;
+    gap: 1.5rem;
     padding: 1rem;
     width: 100%;
   }
@@ -694,20 +694,24 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
   align-items: center;
   width: 100%;
+  min-width: 0; /* Prevent grid overflow */
 }
 
 .monopoly-board {
-  width: var(--board-size);
-  height: var(--board-size);
+  width: 100%;
+  max-width: var(--board-size);
+  aspect-ratio: 1 / 1;
+  height: auto;
+  max-height: var(--board-size);
   display: grid;
-  grid-template-columns: repeat(11, var(--tile-size));
-  grid-template-rows: repeat(11, var(--tile-size));
+  grid-template-columns: repeat(11, 1fr);
+  grid-template-rows: repeat(11, 1fr);
   background:
     radial-gradient(ellipse at 50% 45%, rgba(16, 185, 129, 0.12) 0%, transparent 70%),
     #0f172a;
   border: 6px solid rgba(245, 158, 11, 0.25);
   box-shadow: 0 25px 65px rgba(0, 0, 0, 0.75), 0 0 40px rgba(16, 185, 129, 0.15), inset 0 0 80px rgba(0, 0, 0, 0.8);
-  border-radius: 2px; /* Authentic sharp tabletop cardboard/wood cut corners */
+  border-radius: 2px; /* Authentic sharp tabletop boxes */
   position: relative;
   overflow: hidden;
 }
@@ -2147,36 +2151,8 @@ html.high-contrast .glass-panel {
   to { transform: translateX(0); opacity: 1; }
 }
 
-/* Responsiveness */
-
-/* Below ~1100px the three columns can't sit side-by-side, so stack them with
-   the board on top. The board no longer competes with the side columns for
-   width, so size it to fill the viewport (height- or width-bound). */
-@media (max-width: 1100px) {
-  :root {
-    --board-size: min(calc(100vh - 160px), calc(100vw - 32px));
-  }
-  .game-view {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    align-items: center;
-  }
-  .board-panel {
-    order: 1;
-    flex: 0 0 auto;
-  }
-  .game-col-left { order: 2; }
-  .game-col-right { order: 3; }
-  .game-col {
-    width: 100%;
-    max-width: var(--board-size);
-  }
-}
-
+/* Supplemental Tiny Viewport Adjustments */
 @media (max-width: 760px) {
-  :root {
-    --board-size: 100vw;
-  }
   .dashboard-view {
     padding: 0.5rem;
   }
@@ -2201,22 +2177,12 @@ html.high-contrast .glass-panel {
   .board-center-feed-logs {
     max-height: 110px;
   }
-  .tile-name {
-    font-size: 0.5rem;
-  }
-  .tile-price {
-    font-size: 0.45rem;
-  }
-  /* Tooltips can overflow tiny screens — rely on the click-through inspector */
   .tile-tooltip {
     display: none;
   }
 }
 
 @media (max-width: 480px) {
-  .tile-name {
-    display: none;
-  }
   .player-token {
     width: 18px;
     height: 18px;

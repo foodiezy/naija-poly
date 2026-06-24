@@ -433,9 +433,8 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             {/* Tile Name */}
             <span className="tile-name">{boardLabel(tile)}</span>
 
-            {/* Price shows only until purchased; once owned the badge signals
-                ownership (but a mortgaged tile still flags "Mortgaged"). */}
-            {priceLabel && (!tileState?.ownerId || isMortgaged) && (
+            {/* Richup.io permanent bottom price stripe */}
+            {priceLabel && (
               <span
                 className="tile-price"
                 style={isMortgaged ? { color: "var(--color-danger)", textDecoration: "line-through" } : {}}
