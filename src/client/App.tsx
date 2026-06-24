@@ -9,6 +9,7 @@ import RoomLobbyView from "./components/RoomLobbyView";
 import GameBoard from "./components/GameBoard";
 import AssetsPanel from "./components/AssetsPanel";
 import ChatPanel from "./components/ChatPanel";
+import SettingsPanel from "./components/SettingsPanel";
 import ControlPanel from "./components/ControlPanel";
 import TileInspector from "./components/TileInspector";
 import GameOverModal from "./components/GameOverModal";
@@ -82,7 +83,7 @@ export default function App() {
               } else {
                 myNetWorth += tile.price;
                 if (tile.type === "property" && ts.houses > 0) {
-                  myNetWorth += ts.houses * (tile as any).houseCost;
+                  myNetWorth += ts.houses * tile.houseCost;
                 }
               }
             }
@@ -253,6 +254,14 @@ export default function App() {
               engineState={engineState}
               chatMessages={chatMessages}
               onSendChatMessage={sendChatMessage}
+            />
+            <SettingsPanel
+              muted={muted}
+              onToggleMute={() => {
+                const nextMute = !muted;
+                setMuted(nextMute);
+                sound.setMuted(nextMute);
+              }}
             />
           </div>
 

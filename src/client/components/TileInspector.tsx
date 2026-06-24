@@ -3,11 +3,12 @@ import { BOARD, PropertyTile, AirportTile, UtilityTile, TaxTile } from "../../da
 import { getDevelopmentName } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
+import { RoomState } from "../../shared/room";
 
 interface TileInspectorProps {
   tilePos: number;
   engineState: GameState;
-  roomState: any;
+  roomState: RoomState | null;
   onClose: () => void;
 }
 

@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Room } from "colyseus.js";
 import { BOARD, PropertyTile, Tile } from "../../data/board";
 import { getDevelopmentName } from "../../engine/engine";
-import { GameState, Player, Action, TradeOffer } from "../../engine/types";
+import { GameState, Player, Action, TradeOffer, TileState } from "../../engine/types";
 import { tokenEmoji } from "../../data/tokens";
+import { RoomState } from "../../shared/room";
 
 interface ControlPanelProps {
-  room: any;
+  room: Room;
   engineState: GameState;
   onSendAction: (action: Action) => void;
   autoEndTurn?: boolean;
@@ -200,43 +202,40 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
     if (!ts || ts.ownerId !== mySessionId || !ts.mortgaged) return false;
     const tile = BOARD[pos];
     if (!("mortgage" in tile)) return false;
-    const cost = Math.round((tile as any).mortgage * 1.1);
+    const cost = Math.round(tile.mortgage * 1.1);
     return (me?.cash || 0) >= cost;
   };
 
+  // The live synced room state (lobbyPlayers is a MapSchema at runtime, but
+  // exposes the same .get the RoomState view type declares).
+  const liveState = room.state as RoomState | undefined;
+
   // Get token emoji for a player via roomState lobbyPlayers
   const getTokenEmoji = (playerId: string) => {
-    // Try roomState lobbyPlayers from parsed state
-    const roomState = room as any;
-    if (roomState?.state?.lobbyPlayers) {
-      const lp = roomState.state.lobbyPlayers.get?.(playerId);
-      if (lp?.tokenId) return tokenEmoji(lp.tokenId);
-    }
+    const lp = liveState?.lobbyPlayers?.get(playerId);
+    if (lp?.tokenId) return tokenEmoji(lp.tokenId);
     return tokenEmoji(undefined);
   };
 
   // Get the token name for a player
   const getTokenName = (playerId: string) => {
-    const roomState = room as any;
-    if (roomState?.state?.lobbyPlayers) {
-      const lp = roomState.state.lobbyPlayers.get?.(playerId);
-      if (lp?.tokenId) {
-        const names: Record<string, string> = { okada: "Okada", danfo_bus: "Danfo", agbada: "Agbada", eagle: "Eagle", keke: "Keke", fila: "Fila" };
-        return names[lp.tokenId] || lp.tokenId;
-      }
+    const lp = liveState?.lobbyPlayers?.get(playerId);
+    if (lp?.tokenId) {
+      const names: Record<string, string> = { okada: "Okada", danfo_bus: "Danfo", agbada: "Agbada", eagle: "Eagle", keke: "Keke", fila: "Fila" };
+      return names[lp.tokenId] || lp.tokenId;
     }
     return "—";
   };
 
   // Property status label
-  const getPropStatus = (ts: any) => {
+  const getPropStatus = (ts: TileState | undefined) => {
     if (!ts) return "";
     if (ts.mortgaged) return "Mortgaged";
     if (ts.houses > 0) return getDevelopmentName(ts.houses);
     return "";
   };
 
-  const getPropStatusClass = (ts: any) => {
+  const getPropStatusClass = (ts: TileState | undefined) => {
     if (!ts) return "";
     if (ts.mortgaged) return "status-mortgaged";
     if (ts.houses > 0) return "status-house";

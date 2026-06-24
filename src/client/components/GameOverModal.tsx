@@ -1,17 +1,18 @@
 import { motion } from "framer-motion";
-import { BOARD } from "../../data/board";
+import { BOARD, Tile } from "../../data/board";
 import { tokenEmoji } from "../../data/tokens";
-import { GameState, Player } from "../../engine/types";
+import { GameState, Player, TileState } from "../../engine/types";
+import { RoomState } from "../../shared/room";
 
 interface GameOverModalProps {
   engineState: GameState;
-  roomState: any;
+  roomState: RoomState | null;
   mySessionId: string | null;
   onResetGame: () => void;
 }
 
 export default function GameOverModal({ engineState, roomState, mySessionId, onResetGame }: GameOverModalProps) {
-  const calculatePlayerNetWorth = (p: Player, tiles: any) => {
+  const calculatePlayerNetWorth = (p: Player, tiles: Record<number, TileState>) => {
     if (p.bankrupt) return 0;
     let netWorth = p.cash;
     Object.keys(tiles || {}).forEach((posStr) => {
@@ -25,7 +26,7 @@ export default function GameOverModal({ engineState, roomState, mySessionId, onR
           } else {
             netWorth += tile.price;
             if (tile.type === "property" && ts.houses > 0) {
-              netWorth += ts.houses * (tile as any).houseCost;
+              netWorth += ts.houses * tile.houseCost;
             }
           }
         }
@@ -136,7 +137,7 @@ export default function GameOverModal({ engineState, roomState, mySessionId, onR
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1rem" }}>
             {[
               { label: "Rounds Played", value: engineState.currentTurn ?? 1 },
-              { label: "Properties Owned", value: BOARD.filter((t: any) => engineState.tiles[t.pos]?.ownerId).length },
+              { label: "Properties Owned", value: BOARD.filter((t: Tile) => engineState.tiles[t.pos]?.ownerId).length },
               { label: "Players", value: engineState.players.length },
             ].map((s) => (
               <div key={s.label} style={{ background: "var(--surface-1)", borderRadius: "var(--radius-md)", padding: "0.75rem", textAlign: "center" }}>

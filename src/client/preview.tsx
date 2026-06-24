@@ -6,6 +6,7 @@ import { MotionConfig } from "framer-motion";
 import GameBoard from "./components/GameBoard";
 import { BOARD } from "../data/board";
 import { TOKENS } from "../data/tokens";
+import { RoomState } from "../shared/room";
 import "./index.css";
 
 const players = [
@@ -62,8 +63,21 @@ const engineState = {
 };
 
 const lobbyPlayers = new Map(
-  players.map((p, i) => [p.id, { name: p.name, tokenId: TOKENS[i].id }]),
+  players.map((p, i) => [p.id, { id: p.id, name: p.name, tokenId: TOKENS[i].id }]),
 );
+
+const roomState: RoomState = {
+  status: "in_progress",
+  lobbyPlayers,
+  hostId: "p1",
+  gameStateJson: "",
+  startingCash: 1_500_000,
+  turnLimit: 0,
+  freeParkingJackpot: false,
+  turnTimerEnabled: false,
+  turnTimeoutSecs: 120,
+  turnDeadline: 0,
+};
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <MotionConfig reducedMotion="user">
@@ -71,7 +85,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <div className="board-panel">
         <GameBoard
           engineState={engineState}
-          roomState={{ lobbyPlayers }}
+          roomState={roomState}
           mySessionId="p1"
           onTileClick={() => {}}
         />

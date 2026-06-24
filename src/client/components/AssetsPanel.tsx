@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Room } from "colyseus.js";
-import { BOARD, PropertyTile, Tile } from "../../data/board";
-import { getDevelopmentName } from "../../engine/engine";
+import { PropertyTile, Tile } from "../../data/board";
 import { GameState, Player } from "../../engine/types";
+import { ownedTiles, tileValue, netWorth, ownsFullGroup, developmentPips } from "../lib/holdings";
 
 interface AssetsPanelProps {
   room: Room;
@@ -36,26 +36,9 @@ export default function AssetsPanel({ room, engineState, turnDeadline, turnTimeo
   const timerActive = !!turnDeadline && turnDeadline > 0;
   const mmss = `${String(Math.floor(turnSecsLeft / 60)).padStart(2, "0")}:${String(turnSecsLeft % 60).padStart(2, "0")}`;
 
-  // The local player's owned tiles, plus the bank value of each.
-  const myProperties = BOARD.filter((tile: Tile) => tilesState[tile.pos]?.ownerId === mySessionId);
-  const tileValue = (tile: Tile): number => {
-    if (!("price" in tile)) return 0;
-    const ts = tilesState[tile.pos];
-    if (ts?.mortgaged) return tile.mortgage;
-    let v = tile.price;
-    if (tile.type === "property" && ts && ts.houses > 0) v += ts.houses * (tile as PropertyTile).houseCost;
-    return v;
-  };
-  const propertyValue = myProperties.reduce((sum, t) => sum + tileValue(t), 0);
-  const netWorth = (me?.cash ?? 0) + propertyValue;
-
-  const statusOf = (tile: Tile): { text: string; cls: string } | null => {
-    const ts = tilesState[tile.pos];
-    if (!ts) return null;
-    if (ts.mortgaged) return { text: "Mortgaged", cls: "status-mortgaged" };
-    if (tile.type === "property" && ts.houses > 0) return { text: getDevelopmentName(ts.houses), cls: "status-house" };
-    return null;
-  };
+  // The local player's owned tiles + total net worth (cash + bank values).
+  const myProperties = ownedTiles(tilesState, mySessionId);
+  const totalNetWorth = netWorth(me?.cash ?? 0, tilesState, mySessionId);
 
   if (!engineState) return null;
 
@@ -90,7 +73,7 @@ export default function AssetsPanel({ room, engineState, turnDeadline, turnTimeo
       {/* Net worth summary */}
       <div className="assets-total">
         <span>Net worth</span>
-        <strong>₦{netWorth.toLocaleString()}</strong>
+        <strong>₦{totalNetWorth.toLocaleString()}</strong>
       </div>
 
       {/* Holdings list */}
@@ -100,18 +83,22 @@ export default function AssetsPanel({ room, engineState, turnDeadline, turnTimeo
         ) : (
           myProperties.map((tile: Tile) => {
             const isProp = tile.type === "property";
-            const status = statusOf(tile);
+            const ts = tilesState[tile.pos];
+            const pips = developmentPips(tile.pos, tilesState);
+            const monopoly = ownsFullGroup(tile.pos, tilesState, mySessionId);
             return (
-              <div key={tile.pos} className="sidebar-prop-row">
+              <div key={tile.pos} className={`sidebar-prop-row ${monopoly ? "assets-monopoly" : ""}`}>
                 <div className="sidebar-prop-left">
                   <span
                     className="sidebar-prop-dot"
                     style={{ background: isProp ? `var(--color-${(tile as PropertyTile).group})` : "var(--text-muted)" }}
+                    title={monopoly ? "You own the full group" : undefined}
                   />
                   <span className="sidebar-prop-name">{tile.name}</span>
-                  {status && <span className={`sidebar-prop-status ${status.cls}`}>{status.text}</span>}
+                  {pips && <span className="assets-prop-pips" title={`${ts?.houses === 5 ? "Hotel" : `${ts?.houses} house(s)`}`}>{pips}</span>}
+                  {ts?.mortgaged && <span className="sidebar-prop-status status-mortgaged">Mortgaged</span>}
                 </div>
-                <span className="assets-prop-value">₦{tileValue(tile).toLocaleString()}</span>
+                <span className="assets-prop-value">₦{tileValue(tile.pos, tilesState).toLocaleString()}</span>
               </div>
             );
           })

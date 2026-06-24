@@ -1367,12 +1367,89 @@ h1, h2, h3, h4, h5, h6 {
   white-space: nowrap;
 }
 
+.assets-prop-pips {
+  font-size: 0.6rem;
+  line-height: 1;
+  letter-spacing: -1px;
+  white-space: nowrap;
+}
+
+/* Monopoly (full color group owned): tint the row + glow the color dot */
+.sidebar-prop-row.assets-monopoly {
+  background: rgba(245, 158, 11, 0.07);
+  border-radius: var(--radius-sm);
+}
+.sidebar-prop-row.assets-monopoly .sidebar-prop-dot {
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.45);
+}
+
 .assets-empty {
   font-size: 0.72rem;
   color: var(--text-muted);
   font-style: italic;
   text-align: center;
   padding: 0.75rem 0.5rem;
+}
+
+/* Left-column settings strip */
+.settings-panel {
+  gap: 0.4rem;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.settings-panel-header {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 0.5rem;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.settings-row:hover { background: var(--surface-2); border-color: var(--border-strong); }
+
+.settings-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-muted);
+}
+.settings-pill.on {
+  background: rgba(16, 185, 129, 0.16);
+  color: var(--color-naira);
+}
+
+/* High-contrast accessibility mode — brighten dim text and strengthen borders */
+html.high-contrast {
+  --text-secondary: #e5e7eb;
+  --text-muted: #c3ccd9;
+  --border-subtle: rgba(255, 255, 255, 0.22);
+  --border-strong: rgba(255, 255, 255, 0.42);
+  --bg-panel: rgba(13, 18, 32, 0.94);
+}
+html.high-contrast .glass-panel {
+  border-color: var(--border-strong);
 }
 
 /* Action buttons row — horizontal */
@@ -1937,15 +2014,36 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Responsiveness */
+
+/* Scale the board down on smaller desktops so the three columns (chat/assets,
+   board, controls) stay on a single centered row instead of wrapping. The
+   board is the widest fixed element, so stepping it down keeps the layout
+   filling the viewport rather than dropping a column below. */
+@media (min-width: 1700px) {
+  :root { --board-size: 760px; }
+  .game-col { max-width: 480px; }
+}
+@media (max-width: 1600px) {
+  :root { --board-size: 620px; }
+}
+@media (max-width: 1340px) {
+  :root { --board-size: 540px; }
+  .game-col { flex-basis: 280px; }
+}
+
 @media (max-width: 1100px) {
-  .dashboard-view {
+  .game-view {
     flex-direction: column;
+    flex-wrap: nowrap;
     align-items: center;
   }
   .board-panel {
+    order: 1;
     flex: 0 0 auto;
   }
-  .side-panel {
+  .game-col-left { order: 2; }
+  .game-col-right { order: 3; }
+  .game-col {
     width: 100%;
     max-width: var(--board-size);
   }

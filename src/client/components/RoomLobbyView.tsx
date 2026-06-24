@@ -1,16 +1,18 @@
 import { motion } from "framer-motion";
 import { TOKENS, tokenEmoji } from "../../data/tokens";
 import { Room } from "colyseus.js";
+import { ChatMessage } from "../../shared/chat";
+import { RoomState, RoomSettings, LobbyPlayerView } from "../../shared/room";
 
 interface RoomLobbyViewProps {
   room: Room;
-  roomState: any;
+  roomState: RoomState | null;
   onCopyRoomCode: () => void;
   onSelectToken: (tokenId: string) => void;
   onAddAI: () => void;
-  onUpdateSettings: (settings: any) => void;
+  onUpdateSettings: (settings: RoomSettings) => void;
   onStartGame: () => void;
-  chatMessages: any[];
+  chatMessages: ChatMessage[];
   onSendChatMessage: (text: string) => void;
 }
 
@@ -178,7 +180,7 @@ export default function RoomLobbyView({
       <div className="lobby-card glass-panel" style={{ display: "flex", flexDirection: "column" }}>
         <h2 className="lobby-title">Players Joined ({roomState?.lobbyPlayers?.size || 0})</h2>
         <div className="lobby-players-list">
-          {roomState?.lobbyPlayers && Array.from(roomState.lobbyPlayers.entries() as IterableIterator<[string, any]>).map(([pId, pData]) => (
+          {roomState?.lobbyPlayers && Array.from(roomState.lobbyPlayers.entries() as IterableIterator<[string, LobbyPlayerView]>).map(([pId, pData]) => (
             <motion.div
               key={pId}
               className="lobby-player-row"
@@ -194,7 +196,7 @@ export default function RoomLobbyView({
         
         <h3 style={{ fontSize: "1rem", margin: "1rem 0 0.5rem", color: "var(--text-secondary)" }}>Lobby Chat</h3>
         <div id="lobby-chat-box" className="chat-messages-container" style={{ flexGrow: 1, minHeight: "150px" }}>
-          {chatMessages.filter(m => !m.toId).map((msg: any, idx: number) => (
+          {chatMessages.filter(m => !m.toId).map((msg: ChatMessage, idx: number) => (
             <div key={idx} className={`chat-message ${msg.senderId === room.sessionId ? 'my-message' : 'other-message'}`}>
               <span className="chat-sender">{msg.senderName}:</span> {msg.text}
             </div>

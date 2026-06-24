@@ -3,6 +3,7 @@ import { Room } from "colyseus.js";
 import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
 import { ChatMessage } from "../../shared/chat";
+import { channelOf as channelOfMsg } from "../lib/chatChannels";
 
 interface ChatPanelProps {
   room: Room;
@@ -22,12 +23,8 @@ export default function ChatPanel({ room, engineState, chatMessages, onSendChatM
   const mySessionId = room.sessionId;
   const players = engineState?.players || [];
 
-  // Which channel a message belongs to from MY perspective: "general" for
-  // broadcasts, otherwise the other party's id for private/direct messages.
-  const channelOf = (msg: ChatMessage) => {
-    if (!msg?.toId) return "general";
-    return msg.senderId === mySessionId ? msg.toId : msg.senderId;
-  };
+  // Which channel a message belongs to from MY perspective (see lib/chatChannels).
+  const channelOf = (msg: ChatMessage) => channelOfMsg(msg, mySessionId);
 
   // Keep the chat scrolled to the newest message in the active channel.
   useEffect(() => {

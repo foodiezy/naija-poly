@@ -4,6 +4,7 @@ import { BOARD, Tile, PropertyTile } from "../../data/board";
 import { getDevelopmentName } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
+import { RoomState } from "../../shared/room";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
 // type, so drop the redundant "Airport"/"Corporation" suffix; the full name
@@ -16,7 +17,7 @@ function boardLabel(tile: Tile): string {
 
 interface GameBoardProps {
   engineState: GameState;
-  roomState: any;
+  roomState: RoomState | null;
   mySessionId?: string;
   onTileClick?: (pos: number) => void;
   onEndTurn?: () => void;

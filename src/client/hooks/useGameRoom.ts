@@ -3,20 +3,36 @@ import { Client, Room } from "colyseus.js";
 import { toast } from "react-toastify";
 import { GameState, Action } from "../../engine/types";
 import { ChatMessage } from "../../shared/chat";
+import { RoomState, RoomSettings } from "../../shared/room";
 
 // Fallback logic for local vs deployed addresses
-const isDev = (import.meta as any).env.DEV;
+const isDev = import.meta.env.DEV;
 const endpoint = isDev
   ? "ws://localhost:2567"
-  : ((import.meta as any).env.VITE_SERVER_URL ?? window.location.origin.replace(/^http/, "ws"));
+  : (import.meta.env.VITE_SERVER_URL ?? window.location.origin.replace(/^http/, "ws"));
 
-// Compatibility patch for Colyseus 0.17 matchmaking response in 0.16.22 client
+// The 0.16.22 matchmaking seat-reservation response, minus the `room` field
+// that the 0.17 server omits and we synthesize below.
+interface SeatReservation {
+  room?: unknown;
+  name?: string;
+  roomId?: string;
+  processId?: string;
+  publicAddress?: string;
+}
+
+// Compatibility patch for Colyseus 0.17 matchmaking response in 0.16.22 client.
+// `consumeSeatReservation` is a private client internal, so reaching it needs a
+// single cast; the wrapper itself is fully typed.
 function patchClientForV017(client: Client) {
-  const originalConsume = (client as any).consumeSeatReservation.bind(client);
-  (client as any).consumeSeatReservation = function (
-    response: any,
-    rootSchema: any,
-    reuseRoomInstance: any
+  const internals = client as unknown as {
+    consumeSeatReservation: (response: SeatReservation, rootSchema: unknown, reuse: unknown) => unknown;
+  };
+  const originalConsume = internals.consumeSeatReservation.bind(client);
+  internals.consumeSeatReservation = function (
+    response: SeatReservation,
+    rootSchema: unknown,
+    reuseRoomInstance: unknown
   ) {
     if (response && !response.room) {
       response.room = {
@@ -33,10 +49,15 @@ function patchClientForV017(client: Client) {
 const colyseusClient = new Client(endpoint);
 patchClientForV017(colyseusClient);
 
+// Pull a human-readable message off an unknown thrown value.
+function errText(e: unknown, fallback: string): string {
+  return e instanceof Error && e.message ? e.message : fallback;
+}
+
 export function useGameRoom() {
   const [playerName, setPlayerName] = useState("");
   const [room, setRoom] = useState<Room | null>(null);
-  const [roomState, setRoomState] = useState<any>(null);
+  const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [engineState, setEngineState] = useState<GameState | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -60,7 +81,7 @@ export function useGameRoom() {
       Notification.requestPermission().catch(() => {});
     }
 
-    joinedRoom.onStateChange((state: any) => {
+    joinedRoom.onStateChange((state: RoomState) => {
       setRoomState({
         status: state.status,
         lobbyPlayers: new Map(state.lobbyPlayers),
@@ -128,9 +149,9 @@ export function useGameRoom() {
       const roomInstance = await colyseusClient.create("odogwu", { name });
       setPlayerName(name);
       handleRoomJoined(roomInstance);
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      showError(e.message || "Failed to create game room");
+      showError(errText(e, "Failed to create game room"));
     }
   };
 
@@ -143,9 +164,9 @@ export function useGameRoom() {
       const roomInstance = await colyseusClient.joinById(roomId.trim(), { name });
       setPlayerName(name);
       handleRoomJoined(roomInstance);
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      showError(e.message || `Failed to join room "${roomId}"`);
+      showError(errText(e, `Failed to join room "${roomId}"`));
     }
   };
 
@@ -154,9 +175,9 @@ export function useGameRoom() {
       const roomInstance = await colyseusClient.joinOrCreate("odogwu", { name });
       setPlayerName(name);
       handleRoomJoined(roomInstance);
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      showError(e.message || "Couldn't find a game — try creating a room");
+      showError(errText(e, "Couldn't find a game — try creating a room"));
     }
   };
 
@@ -183,7 +204,7 @@ export function useGameRoom() {
     if (room) room.send("ADD_AI");
   };
 
-  const updateSettings = (settings: any) => {
+  const updateSettings = (settings: RoomSettings) => {
     if (room) room.send("UPDATE_SETTINGS", settings);
   };
 
@@ -191,8 +212,8 @@ export function useGameRoom() {
     if (room) {
       try {
         room.send("START_GAME");
-      } catch (e: any) {
-        showError(e.message);
+      } catch (e) {
+        showError(errText(e, "Failed to start game"));
       }
     }
   };
