@@ -211,17 +211,19 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
 
   return (
     <div className="monopoly-board">
-      {/* Board Center */}
-      <div className="board-center">
-        <div className="board-center-logo">ODOGWU EMPIRE</div>
-        
-        {/* Top Row: Bukka Pot and Game Phase/Turn HUD */}
-        <div className="board-center-top-row">
+      {/* Board Center (Richup.io Style) */}
+      <div className="board-center" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", background: "linear-gradient(135deg, #120e24 0%, #0a0814 100%)", padding: "1.5rem", borderRadius: "2px" }}>
+        {/* Top Row: Logo, Bukka Pot and Game Phase/Turn HUD */}
+        <div className="board-center-top-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 5, width: "100%" }}>
+          <div className="board-center-logo" style={{ margin: 0, fontSize: "1.2rem", letterSpacing: "0.2em", background: "linear-gradient(135deg, var(--color-gold) 0%, #f97316 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            ODOGWU EMPIRE
+          </div>
+          
           {/* Bukka Pot Display */}
-          {engineState.settings?.freeParkingJackpot ? (
+          {engineState.settings?.freeParkingJackpot && (
             <motion.div
               className="bukka-pot-display"
-              style={{ margin: 0, padding: "0.35rem 0.75rem", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "20px", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", color: "var(--color-naira)", boxShadow: "0 0 10px rgba(16, 185, 129, 0.15)", zIndex: 5 }}
+              style={{ margin: 0, padding: "0.35rem 0.75rem", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "2px", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", color: "var(--color-naira)", boxShadow: "0 0 10px rgba(16, 185, 129, 0.15)", zIndex: 5 }}
               key={engineState.freeParkingPot}
               animate={engineState.freeParkingPot > 0 ? {
                 boxShadow: ["0 0 10px rgba(16,185,129,0.15)", "0 0 22px rgba(16,185,129,0.45)", "0 0 10px rgba(16,185,129,0.15)"],
@@ -238,8 +240,6 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
                 ₦{(engineState.freeParkingPot ?? 0).toLocaleString()}
               </motion.span>
             </motion.div>
-          ) : (
-            <div style={{ flex: 1 }} />
           )}
 
           {/* Game Phase / Turn Indicator */}
@@ -248,7 +248,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "1px", zIndex: 5 }}
+            style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px", zIndex: 5 }}
           >
             <div style={{ color: "var(--text-secondary)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.03em" }}>
               Phase: <span style={{ color: "var(--color-gold)", fontWeight: "bold" }}>{engineState.phase.replace("-", " ")}</span>
@@ -260,30 +260,19 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
           </motion.div>
         </div>
 
-        {/* Center: Game Feed — no title, blends with board center */}
-        <div className="board-center-feed">
-          <div className="board-center-feed-logs">
-            {engineState.log?.map((logLine: string, idx: number) => (
-              <div key={idx} className={getLogClass(logLine)}>
-                {logLine}
-              </div>
-            ))}
-            <div ref={logsEndRef} />
-          </div>
-        </div>
-
-        {/* Bottom Row: Dice, End Turn, Card draws, Notification */}
-        <div className="board-center-bottom-row">
+        {/* Central Display: Dice + Active Player Status (Richup.io centerpiece) */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, margin: "1rem 0", zIndex: 10 }}>
           {/* Dice */}
           <AnimatePresence mode="wait">
             {engineState.dice && (
               <motion.div
                 key={`${engineState.dice[0]}-${engineState.dice[1]}-${engineState.currentTurn}`}
                 className="dice-container-center"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
+                style={{ marginBottom: "1.5rem" }}
               >
                 {renderDie3D(engineState.dice[0], `die0-${engineState.dice[0]}-${engineState.currentTurn}`)}
                 {renderDie3D(engineState.dice[1], `die1-${engineState.dice[1]}-${engineState.currentTurn}`)}
@@ -291,7 +280,13 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             )}
           </AnimatePresence>
 
-          {/* End Turn button — centered in board */}
+          {/* Richup Active Player Announcement */}
+          <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem", textShadow: "0 2px 4px rgba(0,0,0,0.5)" }}>
+            {activePlayerId && <span>{getTokenEmoji(activePlayerId)}</span>}
+            <span>{activePlayerId ? `${players[activePlayerIndex]?.name} is playing...` : "Waiting for players..."}</span>
+          </div>
+
+          {/* End Turn button — prominently centered */}
           {canEndTurn && onEndTurn && (
             <motion.button
               className="board-end-turn-btn"
@@ -301,20 +296,25 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
               exit={{ opacity: 0 }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              style={{ padding: "0.6rem 2rem", fontSize: "1rem", fontWeight: 700, borderRadius: "2px", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", boxShadow: "0 4px 15px rgba(16, 185, 129, 0.4)", border: "none", color: "#fff", cursor: "pointer" }}
             >
               End Turn
             </motion.button>
           )}
+        </div>
 
+        {/* Bottom Section: Game Feed & Card draws */}
+        <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", zIndex: 5 }}>
           {/* Drawn Card Overlay */}
           <AnimatePresence>
             {activeCardDraw && cardVisible && (
               <motion.div
                 className={`card-draw-overlay ${activeCardDraw.type}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
                 transition={{ duration: 0.25 }}
+                style={{ width: "100%", maxWidth: "450px", marginBottom: "0.5rem", borderRadius: "2px" }}
               >
                 <div className="card-deck-title">{activeCardDraw.type} DRAWN BY {activeCardDraw.player.toUpperCase()}</div>
                 <div className="card-text">"{activeCardDraw.text}"</div>
@@ -322,18 +322,17 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             )}
           </AnimatePresence>
 
-          {/* Notification bar — latest game event */}
-          {lastLog && (
-            <motion.div
-              className="board-notification-bar"
-              key={lastLog}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              {lastLog}
-            </motion.div>
-          )}
+          {/* Center: Game Feed */}
+          <div className="board-center-feed" style={{ width: "100%", maxWidth: "550px", margin: 0, background: "rgba(0, 0, 0, 0.4)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "2px", maxHeight: "110px" }}>
+            <div className="board-center-feed-logs" style={{ padding: "0.5rem 1rem" }}>
+              {engineState.log?.map((logLine: string, idx: number) => (
+                <div key={idx} className={getLogClass(logLine)} style={{ fontSize: "0.78rem", padding: "2px 0", textAlign: "center" }}>
+                  {logLine}
+                </div>
+              ))}
+              <div ref={logsEndRef} />
+            </div>
+          </div>
         </div>
       </div>
 

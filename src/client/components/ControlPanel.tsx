@@ -439,40 +439,81 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
       )}
       </AnimatePresence>
 
-      {/* ─── SIDEBAR LAYOUT ─── */}
+      {/* ─── SIDEBAR LAYOUT (RICHUP.IO STYLE) ─── */}
 
-      {/* 1. Turn / Round Indicator */}
-      <div className="sidebar-turn-indicator">
-        <div>
-          <div className="sidebar-turn-label">Turn</div>
-          <div style={{ fontSize: "0.8rem", color: isMyTurn ? "var(--color-naira)" : "var(--text-secondary)", fontWeight: 600 }}>
-            {isMyTurn ? "Your Turn" : (currentPlayer?.name || "—")}
+      {/* 1. Players List (Richup style top panel) */}
+      <div className="sidebar-players" style={{ padding: "1rem", background: "#161329", borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+          <span className="sidebar-players-title" style={{ margin: 0, color: "var(--text-secondary)" }}>Players</span>
+          <div className="sidebar-round-badge" style={{ margin: 0 }}>
+            <span className="round-label">Round</span>
+            <span className="round-number">{engineState.currentTurn ?? 1}</span>
+            {engineState.settings?.turnLimit > 0 && (
+              <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>/ {engineState.settings.turnLimit}</span>
+            )}
           </div>
         </div>
-        <div className="sidebar-round-badge">
-          <span className="round-label">Round</span>
-          <span className="round-number">{engineState.currentTurn ?? 1}</span>
-          {engineState.settings?.turnLimit > 0 && (
-            <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>/ {engineState.settings.turnLimit}</span>
-          )}
+        <div className="sidebar-players-list">
+          {players.map((p: Player) => {
+            const isActive = p.id === currentPlayer?.id;
+            return (
+              <div
+                key={p.id}
+                className={`sidebar-player-row ${p.bankrupt ? "bankrupt" : ""}`}
+                style={{
+                  background: isActive ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.2)",
+                  borderLeft: isActive ? "4px solid var(--color-gold)" : "4px solid transparent",
+                  padding: "0.6rem 0.75rem",
+                  borderRadius: "2px",
+                  marginBottom: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  boxShadow: isActive ? "0 0 12px rgba(245, 158, 11, 0.15)" : "none",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <div className="sidebar-player-row-left" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                  <div className={`sidebar-player-row-avatar ${isActive ? "active-turn" : ""}`} style={{ width: "32px", height: "32px", fontSize: "1.3rem" }}>
+                    {getTokenEmoji(p.id)}
+                  </div>
+                  <div>
+                    <div className="sidebar-player-row-name" style={{ fontSize: "0.85rem", fontWeight: 700, color: "#fff" }}>
+                      {p.name} {p.id === mySessionId && <span style={{ color: "var(--color-gold)", fontSize: "0.75rem" }}>(You)</span>}
+                    </div>
+                    {p.bankrupt ? (
+                      <div className="sidebar-player-row-status" style={{ color: "var(--color-danger)", fontSize: "0.7rem" }}>Bankrupt</div>
+                    ) : !isActive ? (
+                      <div className="sidebar-player-row-status is-waiting" style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Waiting</div>
+                    ) : (
+                      <div className="sidebar-player-row-status" style={{ color: "var(--color-gold)", fontSize: "0.7rem", fontWeight: 600 }}>Playing…</div>
+                    )}
+                  </div>
+                </div>
+                <div className="sidebar-player-row-cash" style={{ fontFamily: "var(--font-display)", fontSize: "0.9rem", fontWeight: 700, color: p.bankrupt ? "var(--color-danger)" : "var(--color-naira)" }}>
+                  ₦{p.cash.toLocaleString()}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* Turn timer countdown */}
       {isMyTurn && !isBankrupt && !isAuctionActive && turnDeadline && turnDeadline > 0 && (
-        <div style={{ padding: "0.3rem 0.75rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.65rem", color: "var(--text-muted)", marginBottom: "0.2rem" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "0.2rem" }}><IconTimer size={14} /> Turn timer</span>
+        <div style={{ padding: "0.5rem 1rem", background: "rgba(16, 185, 129, 0.05)", borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--text-secondary)", marginBottom: "0.3rem", fontWeight: 600 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}><IconTimer size={14} /> Turn timer</span>
             <span style={{ fontWeight: "bold", color: turnPct < 20 ? "var(--color-danger)" : turnPct < 50 ? "var(--color-gold)" : "var(--color-naira)" }}>{turnSecsLeft}s</span>
           </div>
-          <div style={{ height: "4px", background: "rgba(0,0,0,0.4)", borderRadius: "999px", overflow: "hidden" }}>
+          <div style={{ height: "6px", background: "rgba(0,0,0,0.4)", borderRadius: "2px", overflow: "hidden" }}>
             <div style={{ width: `${turnPct}%`, height: "100%", background: turnPct < 20 ? "var(--color-danger)" : turnPct < 50 ? "var(--color-gold)" : "var(--color-naira)", transition: "width 0.25s linear" }} />
           </div>
         </div>
       )}
 
       {/* 2. Active Player Card */}
-      <div className="sidebar-player-card">
+      <div className="sidebar-player-card" style={{ background: "rgba(0, 0, 0, 0.15)", margin: 0, borderBottom: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: 0 }}>
         <div className="sidebar-player-avatar">
           {me ? getTokenEmoji(me.id) : "👤"}
         </div>
@@ -490,7 +531,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
           exit={{ opacity: 0, height: 0 }}
           style={{ overflow: "hidden" }}
         >
-          <div className={`auction-panel ${secsLeft <= 3 && auction.deadline ? "auction-urgent" : ""}`} style={{ margin: "0 0.75rem", borderRadius: "var(--radius-md)" }}>
+          <div className={`auction-panel ${secsLeft <= 3 && auction.deadline ? "auction-urgent" : ""}`} style={{ margin: "0.75rem", borderRadius: "2px" }}>
             <div className="auction-title" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}><IconAuction size={20} /> LIVE AUCTION</div>
             <div style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
               <strong>{BOARD[auction.tilePos].name}</strong>
@@ -529,7 +570,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                         disabled={tooRich}
                         title={tooRich ? "Not enough cash" : `Bid ₦${total.toLocaleString()}`}
                         onClick={() => onSendAction({ type: "BID", amount: total })}
-                        style={{ fontSize: "0.7rem", padding: "0.4rem 0.2rem" }}
+                        style={{ fontSize: "0.7rem", padding: "0.4rem 0.2rem", borderRadius: "2px" }}
                       >
                         ▲ ₦{inc.toLocaleString()}
                       </button>
@@ -539,7 +580,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                 <button
                   className="button-secondary"
                   onClick={() => onSendAction({ type: "PASS_BID" })}
-                  style={{ fontSize: "0.75rem", padding: "0.35rem" }}
+                  style={{ fontSize: "0.75rem", padding: "0.35rem", borderRadius: "2px" }}
                 >
                   Pass
                 </button>
@@ -564,13 +605,13 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
 
       {/* Bankruptcy warning */}
       {me && me.cash < 0 && !isBankrupt && (
-        <div style={{ margin: "0 0.75rem", padding: "0.5rem", background: "rgba(239, 68, 68, 0.06)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: "var(--radius-md)" }}>
+        <div style={{ margin: "0.75rem", padding: "0.5rem", background: "rgba(239, 68, 68, 0.06)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: "2px" }}>
           <div style={{ fontSize: "0.75rem", color: "var(--color-danger)", textAlign: "center", fontWeight: "bold", marginBottom: "0.3rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}>
             <IconWarning size={16} /> DEBT: ₦{me.cash.toLocaleString()}
           </div>
           <button
             className="button-primary"
-            style={{ width: "100%", background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)", fontSize: "0.75rem", padding: "0.4rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
+            style={{ width: "100%", background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)", fontSize: "0.75rem", padding: "0.4rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", borderRadius: "2px" }}
             onClick={() => {
               if (window.confirm("Declare bankruptcy? You will lose everything.")) {
                 onSendAction({ type: "DECLARE_BANKRUPT" });
@@ -584,98 +625,18 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
 
       {/* Trade pending / passive statuses */}
       {activeTrade && activeTrade.fromId === mySessionId && (
-        <div style={{ margin: "0 0.75rem", padding: "0.4rem", fontSize: "0.72rem", textAlign: "center", color: "var(--text-secondary)", border: "1px solid rgba(245, 158, 11, 0.15)", borderRadius: "var(--radius-sm)", background: "rgba(245, 158, 11, 0.03)" }}>
+        <div style={{ margin: "0.75rem", padding: "0.4rem", fontSize: "0.72rem", textAlign: "center", color: "var(--text-secondary)", border: "1px solid rgba(245, 158, 11, 0.15)", borderRadius: "2px", background: "rgba(245, 158, 11, 0.03)" }}>
           🤝 Waiting for trade response...
         </div>
       )}
       {activeTrade && activeTrade.fromId !== mySessionId && activeTrade.toId !== mySessionId && (
-        <div style={{ margin: "0 0.75rem", padding: "0.4rem", fontSize: "0.72rem", textAlign: "center", color: "var(--text-muted)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)" }}>
+        <div style={{ margin: "0.75rem", padding: "0.4rem", fontSize: "0.72rem", textAlign: "center", color: "var(--text-muted)", border: "1px solid var(--border-subtle)", borderRadius: "2px" }}>
           🤝 Trade in progress...
         </div>
       )}
 
-      {/* 3. My Properties — compact list with inline action buttons */}
-      <div className="sidebar-properties">
-        <div className="sidebar-properties-list">
-          {myProperties.length === 0 ? (
-            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "0.5rem" }}>
-              No properties yet
-            </div>
-          ) : (
-            myProperties.map((tile: Tile) => {
-              const ts = tilesState[tile.pos];
-              const isProp = tile.type === "property";
-              const status = getPropStatus(ts);
-              const statusClass = getPropStatusClass(ts);
-              return (
-                <div key={tile.pos} className="sidebar-prop-row" style={{ display: "flex", flexDirection: "column", alignItems: "stretch", gap: "0.3rem", padding: "0.4rem 0.5rem", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div className="sidebar-prop-left">
-                      {isProp && (
-                        <span
-                          className="sidebar-prop-dot"
-                          style={{ background: `var(--color-${(tile as PropertyTile).group})` }}
-                        />
-                      )}
-                      {!isProp && (
-                        <span className="sidebar-prop-dot" style={{ background: "var(--text-muted)" }} />
-                      )}
-                      <span className="sidebar-prop-name" style={{ maxWidth: "150px" }}>{tile.name}</span>
-                    </div>
-                    <span className={`sidebar-prop-status ${statusClass}`}>
-                      {status}
-                    </span>
-                  </div>
-
-                  {canManage && (canBuild(tile.pos) || canSellHouse(tile.pos) || canMortgage(tile.pos) || canUnmortgage(tile.pos)) && (
-                    <div style={{ display: "flex", gap: "0.3rem", justifyContent: "flex-end", marginTop: "0.1rem" }}>
-                      {canBuild(tile.pos) && (
-                        <button
-                          style={{ fontSize: "0.65rem", fontWeight: 600, padding: "2px 6px", background: "rgba(16, 185, 129, 0.15)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}
-                          onClick={() => onSendAction({ type: "BUILD", pos: tile.pos })}
-                          title={`Build ₦${((tile as PropertyTile).houseCost || 0).toLocaleString()}`}
-                        >
-                          <IconBuild size={13} /> Build ₦{((tile as PropertyTile).houseCost || 0) / 1000}k
-                        </button>
-                      )}
-                      {canSellHouse(tile.pos) && (
-                        <button
-                          style={{ fontSize: "0.65rem", fontWeight: 600, padding: "2px 6px", background: "rgba(239, 68, 68, 0.15)", color: "var(--color-danger)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}
-                          onClick={() => onSendAction({ type: "SELL_HOUSE", pos: tile.pos })}
-                          title={`Sell house (receive ₦${((tile as PropertyTile).houseCost || 0) / 2})`}
-                        >
-                          <IconSell size={13} /> Sell
-                        </button>
-                      )}
-                      {canMortgage(tile.pos) && (
-                        <button
-                          style={{ fontSize: "0.65rem", fontWeight: 600, padding: "2px 6px", background: "rgba(245, 158, 11, 0.15)", color: "var(--color-gold)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}
-                          onClick={() => onSendAction({ type: "MORTGAGE", pos: tile.pos })}
-                          title={`Mortgage (receive ₦${("mortgage" in tile ? tile.mortgage : 0).toLocaleString()})`}
-                        >
-                          <IconMortgage size={13} /> Mortgage
-                        </button>
-                      )}
-                      {canUnmortgage(tile.pos) && (
-                        <button
-                          style={{ fontSize: "0.65rem", fontWeight: 600, padding: "2px 6px", background: "rgba(16, 185, 129, 0.15)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}
-                          onClick={() => onSendAction({ type: "UNMORTGAGE", pos: tile.pos })}
-                          title={`Unmortgage (pay ₦${Math.round(("mortgage" in tile ? tile.mortgage : 0) * 1.1).toLocaleString()})`}
-                        >
-                          <IconUnmortgage size={13} /> Unmortgage
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      {/* 4. Action Buttons — horizontal row */}
-      <div className="sidebar-actions">
+      {/* 3. Action Buttons — Richup style prominent actions row */}
+      <div className="sidebar-actions" style={{ padding: "0.75rem 1rem", background: "#1c1835", borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}>
         {isBankrupt ? (
           <div style={{ flex: 1, textAlign: "center", fontSize: "0.75rem", color: "var(--text-muted)", padding: "0.25rem" }}>
             💀 Spectating
@@ -689,7 +650,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                   <button
                     className="sidebar-action-btn sidebar-action-btn-primary"
                     onClick={() => onSendAction({ type: "ROLL" })}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", borderRadius: "2px" }}
                   >
                     <IconRoll size={18} /> Roll
                   </button>
@@ -698,6 +659,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                     onClick={() => onSendAction({ type: "PAY_JAIL_FINE" })}
                     disabled={(me?.cash || 0) < 50000}
                     title="Pay ₦50,000"
+                    style={{ borderRadius: "2px" }}
                   >
                     Pay Fine
                   </button>
@@ -706,6 +668,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                     onClick={() => onSendAction({ type: "USE_JAIL_CARD" })}
                     disabled={(me?.getOutOfJailCards || 0) === 0}
                     title={`Jail cards: ${me?.getOutOfJailCards || 0}`}
+                    style={{ borderRadius: "2px" }}
                   >
                     Jail Card
                   </button>
@@ -716,7 +679,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                     className="sidebar-action-btn sidebar-action-btn-primary"
                     onClick={() => onSendAction({ type: "ROLL" })}
                     whileTap={{ scale: 0.94 }}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", borderRadius: "2px", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)" }}
                   >
                     <IconRoll size={18} /> Roll Dice
                   </motion.button>
@@ -724,7 +687,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                     className="sidebar-action-btn sidebar-action-btn-outline"
                     onClick={() => setShowTradeBuilder(true)}
                     disabled={!canManage || players.length < 2 || activeTrade !== null}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem", borderRadius: "2px" }}
                   >
                     <IconTrade size={16} /> Trade
                   </button>
@@ -744,12 +707,14 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                         className="sidebar-action-btn sidebar-action-btn-primary"
                         disabled={(me?.cash || 0) < price}
                         onClick={() => onSendAction({ type: "BUY" })}
+                        style={{ borderRadius: "2px", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}
                       >
                         Buy ₦{(price / 1000).toFixed(0)}k
                       </button>
                       <button
                         className="sidebar-action-btn sidebar-action-btn-outline"
                         onClick={() => onSendAction({ type: "DECLINE_BUY" })}
+                        style={{ borderRadius: "2px" }}
                       >
                         Auction
                       </button>
@@ -766,7 +731,7 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
                   className="sidebar-action-btn sidebar-action-btn-outline"
                   onClick={() => setShowTradeBuilder(true)}
                   disabled={!canManage || players.length < 2 || activeTrade !== null}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem", borderRadius: "2px" }}
                 >
                   <IconTrade size={16} /> Trade
                 </button>
@@ -785,8 +750,8 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
 
       {/* Auto End Turn toggle (compact) */}
       {!isBankrupt && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.3rem 0.75rem", borderBottom: "1px solid var(--border-subtle)" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.68rem", color: "var(--text-muted)", cursor: "pointer" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.4rem 1rem", background: "rgba(0, 0, 0, 0.2)", borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.7rem", color: "var(--text-muted)", cursor: "pointer", fontWeight: 600 }}>
             <input
               type="checkbox"
               checked={!!autoEndTurn}
@@ -801,40 +766,86 @@ export default function ControlPanel({ room, engineState, onSendAction, autoEndT
         </div>
       )}
 
-      {/* 5. Players List */}
-      <div className="sidebar-players">
-        <div className="sidebar-players-title">Players</div>
-        <div className="sidebar-players-list">
-          {players.map((p: Player) => {
-            const isActive = p.id === currentPlayer?.id;
-            return (
-              <div
-                key={p.id}
-                className={`sidebar-player-row ${p.bankrupt ? "bankrupt" : ""}`}
-              >
-                <div className="sidebar-player-row-left">
-                  <div className={`sidebar-player-row-avatar ${isActive ? "active-turn" : ""}`}>
-                    {getTokenEmoji(p.id)}
-                  </div>
-                  <div>
-                    <div className="sidebar-player-row-name">
-                      {p.name} {p.id === mySessionId && "(You)"}
+      {/* 4. My Properties — compact list with inline action buttons */}
+      <div className="sidebar-properties" style={{ padding: "0.75rem 1rem", flex: 1, overflowY: "auto" }}>
+        <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "0.5rem", letterSpacing: "0.05em" }}>
+          My Properties ({myProperties.length})
+        </div>
+        <div className="sidebar-properties-list">
+          {myProperties.length === 0 ? (
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "1rem 0" }}>
+              No properties yet
+            </div>
+          ) : (
+            myProperties.map((tile: Tile) => {
+              const ts = tilesState[tile.pos];
+              const isProp = tile.type === "property";
+              const status = getPropStatus(ts);
+              const statusClass = getPropStatusClass(ts);
+              return (
+                <div key={tile.pos} className="sidebar-prop-row" style={{ display: "flex", flexDirection: "column", alignItems: "stretch", gap: "0.3rem", padding: "0.5rem", background: "rgba(0,0,0,0.2)", borderRadius: "2px", marginBottom: "4px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div className="sidebar-prop-left" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                      {isProp && (
+                        <span
+                          className="sidebar-prop-dot"
+                          style={{ background: `var(--color-${(tile as PropertyTile).group})`, width: "10px", height: "10px", borderRadius: "2px" }}
+                        />
+                      )}
+                      {!isProp && (
+                        <span className="sidebar-prop-dot" style={{ background: "var(--text-muted)", width: "10px", height: "10px", borderRadius: "2px" }} />
+                      )}
+                      <span className="sidebar-prop-name" style={{ maxWidth: "140px", fontSize: "0.78rem", fontWeight: 600, color: "#fff" }}>{tile.name}</span>
                     </div>
-                    {p.bankrupt ? (
-                      <div className="sidebar-player-row-status" style={{ color: "var(--color-danger)" }}>Bankrupt</div>
-                    ) : !isActive ? (
-                      <div className="sidebar-player-row-status is-waiting">Waiting</div>
-                    ) : (
-                      <div className="sidebar-player-row-status" style={{ color: "var(--color-gold)" }}>Playing</div>
-                    )}
+                    <span className={`sidebar-prop-status ${statusClass}`} style={{ fontSize: "0.7rem", fontWeight: 600 }}>
+                      {status}
+                    </span>
                   </div>
+
+                  {canManage && (canBuild(tile.pos) || canSellHouse(tile.pos) || canMortgage(tile.pos) || canUnmortgage(tile.pos)) && (
+                    <div style={{ display: "flex", gap: "0.3rem", justifyContent: "flex-end", marginTop: "0.2rem" }}>
+                      {canBuild(tile.pos) && (
+                        <button
+                          style={{ fontSize: "0.65rem", fontWeight: 600, padding: "2px 6px", background: "rgba(16, 185, 129, 0.15)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "2px", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}
+                          onClick={() => onSendAction({ type: "BUILD", pos: tile.pos })}
+                          title={`Build ₦${((tile as PropertyTile).houseCost || 0).toLocaleString()}`}
+                        >
+                          <IconBuild size={13} /> Build ₦{((tile as PropertyTile).houseCost || 0) / 1000}k
+                        </button>
+                      )}
+                      {canSellHouse(tile.pos) && (
+                        <button
+                          style={{ fontSize: "0.65rem", fontWeight: 600, padding: "2px 6px", background: "rgba(239, 68, 68, 0.15)", color: "var(--color-danger)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "2px", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}
+                          onClick={() => onSendAction({ type: "SELL_HOUSE", pos: tile.pos })}
+                          title={`Sell house (receive ₦${((tile as PropertyTile).houseCost || 0) / 2})`}
+                        >
+                          <IconSell size={13} /> Sell
+                        </button>
+                      )}
+                      {canMortgage(tile.pos) && (
+                        <button
+                          style={{ fontSize: "0.65rem", fontWeight: 600, padding: "2px 6px", background: "rgba(245, 158, 11, 0.15)", color: "var(--color-gold)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "2px", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}
+                          onClick={() => onSendAction({ type: "MORTGAGE", pos: tile.pos })}
+                          title={`Mortgage (receive ₦${("mortgage" in tile ? tile.mortgage : 0).toLocaleString()})`}
+                        >
+                          <IconMortgage size={13} /> Mortgage
+                        </button>
+                      )}
+                      {canUnmortgage(tile.pos) && (
+                        <button
+                          style={{ fontSize: "0.65rem", fontWeight: 600, padding: "2px 6px", background: "rgba(16, 185, 129, 0.15)", color: "var(--color-naira)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "2px", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}
+                          onClick={() => onSendAction({ type: "UNMORTGAGE", pos: tile.pos })}
+                          title={`Unmortgage (pay ₦${Math.round(("mortgage" in tile ? tile.mortgage : 0) * 1.1).toLocaleString()})`}
+                        >
+                          <IconUnmortgage size={13} /> Unmortgage
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="sidebar-player-row-cash">
-                  ₦{p.cash.toLocaleString()}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
     </div>

@@ -71,7 +71,7 @@ export default function ChatPanel({ room, engineState, chatMessages, onSendChatM
       : players.find((p: Player) => p.id === chatChannel)?.name || "Player";
 
   return (
-    <div className="console-panel glass-panel">
+    <div className="console-panel glass-panel" style={{ background: "#1c1835", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "2px" }}>
       <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "150px" }}>
         {/* Chat Header/Title */}
         <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "0.5rem", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "0.5rem" }}>
