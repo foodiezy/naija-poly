@@ -1,12 +1,27 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BOARD, Tile, PropertyTile } from "../../data/board";
+import { getDevelopmentName } from "../../engine/engine";
+import { tokenEmoji } from "../../data/tokens";
+import { GameState, Player } from "../../engine/types";
+import { RoomState } from "../../shared/room";
+import { useTokenWalker } from "../hooks/useTokenWalker";
+
+// Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
+// type, so drop the redundant "Airport"/"Corporation" suffix; the full name
+// still shows in the deed inspector.
+function boardLabel(tile: Tile): string {
+  if (tile.type === "airport") return tile.name.replace(/\s*Airport$/i, "");
+  if (tile.type === "utility") return tile.name.replace(/\s*Corporation$/i, "");
+  return tile.name;
+}
 
 interface GameBoardProps {
-  engineState: any;
-  roomState: any;
+  engineState: GameState;
+  roomState: RoomState | null;
   mySessionId?: string;
   onTileClick?: (pos: number) => void;
+  onEndTurn?: () => void;
 }
 
 // Which edge a tile sits on — determines color-bar side
@@ -72,7 +87,7 @@ function getTileGridCoords(pos: number): { row: number; col: number } {
   }
 }
 
-export default function GameBoard({ engineState, roomState, mySessionId, onTileClick }: GameBoardProps) {
+export default function GameBoard({ engineState, roomState, mySessionId, onTileClick, onEndTurn }: GameBoardProps) {
   if (!engineState) {
     return (
       <div className="glass-panel" style={{ padding: "2rem", textAlign: "center" }}>
@@ -86,19 +101,40 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   const tilesState = engineState.tiles || {};
   const lobbyPlayers = roomState?.lobbyPlayers || new Map();
 
+  // Smoothly walk tokens hop-by-hop toward their authoritative positions
+  const displayedPositions = useTokenWalker(players);
+  const getDisplayedPos = (p: Player) => displayedPositions.get(p.id) ?? p.position;
+
   // Identify the local player's position and the active turn player
-  const myPlayer = mySessionId ? players.find((p: any) => p.id === mySessionId) : null;
-  const myPosition = myPlayer ? myPlayer.position : -1;
+  const myPlayer = mySessionId ? players.find((p: Player) => p.id === mySessionId) : null;
+  const myPosition = myPlayer ? getDisplayedPos(myPlayer) : -1;
   const activePlayerIndex = engineState.currentPlayerIndex ?? -1;
   const activePlayerId = activePlayerIndex >= 0 && players[activePlayerIndex] ? players[activePlayerIndex].id : null;
+  const isMyTurn = activePlayerId === mySessionId;
 
   const logsEndRef = useRef<HTMLDivElement>(null);
+  // Whether the drawn-card banner is currently shown (auto-dismisses).
+  const [cardVisible, setCardVisible] = useState(false);
+  // Shake the dice briefly when a new roll comes in, then settle.
+  const [diceShaking, setDiceShaking] = useState(false);
+  const prevDiceKey = useRef<string>("");
 
   useEffect(() => {
     if (logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [engineState.log?.length]);
+
+  // Trigger dice shake when the dice values change
+  useEffect(() => {
+    const key = engineState.dice ? `${engineState.dice[0]}-${engineState.dice[1]}-${engineState.currentTurn}` : "";
+    if (key && key !== prevDiceKey.current) {
+      prevDiceKey.current = key;
+      setDiceShaking(true);
+      const t = setTimeout(() => setDiceShaking(false), 380);
+      return () => clearTimeout(t);
+    }
+  }, [engineState.dice, engineState.currentTurn]);
 
   const getLogClass = (logLine: string) => {
     if (logLine.includes("rolled") || logLine.includes("START") || logLine.includes("Prison") || logLine.includes("escaped")) {
@@ -113,22 +149,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
     return "log-entry";
   };
 
-  const getTokenEmoji = (playerId: string) => {
-    const player = lobbyPlayers.get(playerId);
-    const tokenId = player?.tokenId;
-    switch (tokenId) {
-      case "okada":
-        return "🏍️";
-      case "danfo_bus":
-        return "🚌";
-      case "agbada":
-        return "🧥";
-      case "eagle":
-        return "🦅";
-      default:
-        return "👤";
-    }
-  };
+  const getTokenEmoji = (playerId: string) => tokenEmoji(lobbyPlayers.get(playerId)?.tokenId);
 
   const renderDie3D = (value: number, key: string) => {
     let rotation = "";
@@ -192,19 +213,36 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
     text: cardDrawMatch[3]
   } : null;
 
+  // Show the drawn-card banner briefly, then auto-dismiss so it stops covering
+  // the game feed and doesn't linger until the next log line.
+  useEffect(() => {
+    if (!cardDrawMatch) {
+      setCardVisible(false);
+      return;
+    }
+    setCardVisible(true);
+    const t = setTimeout(() => setCardVisible(false), 4000);
+    return () => clearTimeout(t);
+  }, [lastLog]);
+
+  // Can the local player end their turn right now?
+  const canEndTurn = isMyTurn && engineState.phase === "awaiting-end-turn" && (myPlayer?.cash ?? 0) >= 0;
+
   return (
     <div className="monopoly-board">
-      {/* Board Center */}
-      <div className="board-center">
-        <div className="board-center-logo">ODOGWU EMPIRE</div>
-        
-        {/* Top Row: Bukka Pot and Game Phase/Turn HUD */}
-        <div className="board-center-top-row">
+      {/* Board Center (Richup.io Style) */}
+      <div className="board-center" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", background: "linear-gradient(135deg, #120e24 0%, #0a0814 100%)", padding: "1.5rem", borderRadius: "2px" }}>
+        {/* Top Row: Logo, Bukka Pot and Game Phase/Turn HUD */}
+        <div className="board-center-top-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 5, width: "100%" }}>
+          <div className="board-center-logo" style={{ margin: 0, fontSize: "1.2rem", letterSpacing: "0.2em", background: "linear-gradient(135deg, var(--color-gold) 0%, #f97316 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            ODOGWU EMPIRE
+          </div>
+          
           {/* Bukka Pot Display */}
-          {engineState.settings?.freeParkingJackpot ? (
+          {engineState.settings?.freeParkingJackpot && (
             <motion.div
               className="bukka-pot-display"
-              style={{ margin: 0, padding: "0.35rem 0.75rem", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "20px", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", color: "var(--color-naira)", boxShadow: "0 0 10px rgba(16, 185, 129, 0.15)", zIndex: 5 }}
+              style={{ margin: 0, padding: "0.35rem 0.75rem", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "2px", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", color: "var(--color-naira)", boxShadow: "0 0 10px rgba(16, 185, 129, 0.15)", zIndex: 5 }}
               key={engineState.freeParkingPot}
               animate={engineState.freeParkingPot > 0 ? {
                 boxShadow: ["0 0 10px rgba(16,185,129,0.15)", "0 0 22px rgba(16,185,129,0.45)", "0 0 10px rgba(16,185,129,0.15)"],
@@ -221,8 +259,6 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
                 ₦{(engineState.freeParkingPot ?? 0).toLocaleString()}
               </motion.span>
             </motion.div>
-          ) : (
-            <div style={{ flex: 1 }} />
           )}
 
           {/* Game Phase / Turn Indicator */}
@@ -231,7 +267,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "1px", zIndex: 5 }}
+            style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px", zIndex: 5 }}
           >
             <div style={{ color: "var(--text-secondary)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.03em" }}>
               Phase: <span style={{ color: "var(--color-gold)", fontWeight: "bold" }}>{engineState.phase.replace("-", " ")}</span>
@@ -243,29 +279,16 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
           </motion.div>
         </div>
 
-        {/* Center: Game Feed scrollable logs box */}
-        <div className="board-center-feed">
-          <div className="board-center-feed-title">📢 Game Feed</div>
-          <div className="board-center-feed-logs">
-            {engineState.log?.map((logLine: string, idx: number) => (
-              <div key={idx} className={getLogClass(logLine)}>
-                {logLine}
-              </div>
-            ))}
-            <div ref={logsEndRef} />
-          </div>
-        </div>
-
-        {/* Bottom Row: Dice and Card draws */}
-        <div className="board-center-bottom-row">
-          {/* Dice */}
+        {/* Central Display: Dice + Active Player Status (Richup.io centerpiece) */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, margin: "1rem 0", zIndex: 10 }}>
+          {/* Dice — bigger stage, shake-then-settle */}
           <AnimatePresence mode="wait">
             {engineState.dice && (
               <motion.div
                 key={`${engineState.dice[0]}-${engineState.dice[1]}-${engineState.currentTurn}`}
-                className="dice-container-center"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
+                className={`dice-stage${diceShaking ? " shaking" : ""}`}
+                initial={{ opacity: 0, scale: 0.6 }}
+                animate={{ opacity: 1, scale: 1.55 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
               >
@@ -275,21 +298,74 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             )}
           </AnimatePresence>
 
+          {/* Active Player Hero card */}
+          {activePlayerId ? (
+            <motion.div
+              key={activePlayerId}
+              className={`active-player-hero${activePlayerId === mySessionId ? " is-me" : ""}`}
+              initial={{ opacity: 0, y: 8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 22 }}
+            >
+              <div className="active-player-hero-avatar">{getTokenEmoji(activePlayerId)}</div>
+              <div className="active-player-hero-meta">
+                <div className="active-player-hero-name">{players[activePlayerIndex]?.name}</div>
+                <div className="active-player-hero-sub">
+                  {activePlayerId === mySessionId ? "Your turn" : "Now playing"}
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <div style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>Waiting for players...</div>
+          )}
+
+          {/* End Turn button — prominently centered */}
+          {canEndTurn && onEndTurn && (
+            <motion.button
+              className="board-end-turn-btn"
+              onClick={onEndTurn}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{ padding: "0.6rem 2rem", fontSize: "1rem", fontWeight: 700, borderRadius: "2px", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", boxShadow: "0 4px 15px rgba(16, 185, 129, 0.4)", border: "none", color: "#fff", cursor: "pointer" }}
+            >
+              End Turn
+            </motion.button>
+          )}
+        </div>
+
+        {/* Bottom Section: Game Feed & Card draws */}
+        <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", zIndex: 5 }}>
           {/* Drawn Card Overlay */}
           <AnimatePresence>
-            {activeCardDraw && (
+            {activeCardDraw && cardVisible && (
               <motion.div
                 className={`card-draw-overlay ${activeCardDraw.type}`}
-                initial={{ opacity: 0, scale: 0.85, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                transition={{ type: "spring", stiffness: 300, damping: 24 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.25 }}
+                style={{ width: "100%", maxWidth: "450px", marginBottom: "0.5rem", borderRadius: "2px" }}
               >
                 <div className="card-deck-title">{activeCardDraw.type} DRAWN BY {activeCardDraw.player.toUpperCase()}</div>
                 <div className="card-text">"{activeCardDraw.text}"</div>
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Center: Game Feed */}
+          <div className="board-center-feed" style={{ width: "100%", maxWidth: "550px", margin: 0, background: "rgba(0, 0, 0, 0.4)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "2px", maxHeight: "110px" }}>
+            <div className="board-center-feed-logs" style={{ padding: "0.5rem 1rem" }}>
+              {engineState.log?.map((logLine: string, idx: number) => (
+                <div key={idx} className={getLogClass(logLine)} style={{ fontSize: "0.78rem", padding: "2px 0", textAlign: "center" }}>
+                  {logLine}
+                </div>
+              ))}
+              <div ref={logsEndRef} />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -299,10 +375,10 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
         const tileState = tilesState[tile.pos];
         const isCorner = tile.pos % 10 === 0;
 
-        // Find players on this tile
-        const playersOnTile = players.filter((p: any) => p.position === tile.pos && !p.bankrupt);
+        // Find players on this tile (using their walking display position)
+        const playersOnTile = players.filter((p: Player) => getDisplayedPos(p) === tile.pos && !p.bankrupt);
         const hasMyToken = myPosition === tile.pos;
-        const hasActivePlayer = playersOnTile.some((p: any) => p.id === activePlayerId);
+        const hasActivePlayer = playersOnTile.some((p: Player) => p.id === activePlayerId);
 
         // Render color bar for property tiles
         const hasColorBar = tile.type === "property";
@@ -337,7 +413,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             if (tileState.mortgaged) {
               t += " (Mortgaged)";
             } else if (tileState.houses > 0) {
-              const devName = tileState.houses === 5 ? "Hotel" : tileState.houses === 4 ? "Mini-Estate" : tileState.houses === 3 ? "Mansion" : tileState.houses === 2 ? "Duplex" : "Bungalow";
+              const devName = tileState.houses > 0 ? getDevelopmentName(tileState.houses) : "";
               t += ` (${devName})`;
             }
           }
@@ -345,12 +421,12 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
         };
 
         const getOwnerTitle = () => {
-          const ownerName = players.find((p: any) => p.id === tileState.ownerId)?.name || "Unknown";
+          const ownerName = players.find((p: Player) => p.id === tileState.ownerId)?.name || "Unknown";
           if (isMortgaged) {
             return `Owned by ${ownerName} (Mortgaged)`;
           }
           if (tileState.houses > 0) {
-            const devName = tileState.houses === 5 ? "Hotel" : tileState.houses === 4 ? "Mini-Estate" : tileState.houses === 3 ? "Mansion" : tileState.houses === 2 ? "Duplex" : "Bungalow";
+            const devName = getDevelopmentName(tileState.houses);
             return `Owned by ${ownerName} - ${devName}`;
           }
           return `Owned by ${ownerName}`;
@@ -388,9 +464,9 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             {tileIcon && <span className="tile-type-icon">{tileIcon}</span>}
 
             {/* Tile Name */}
-            <span className="tile-name">{tile.name}</span>
+            <span className="tile-name">{boardLabel(tile)}</span>
 
-            {/* Tile Price/Amount or Mortgaged */}
+            {/* Richup.io permanent bottom price stripe */}
             {priceLabel && (
               <span
                 className="tile-price"
@@ -414,7 +490,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             {/* Player tokens — each animates with layoutId so it slides across board */}
             {playersOnTile.length > 0 && (
               <div className="tile-tokens-container">
-                {playersOnTile.map((p: any) => (
+                {playersOnTile.map((p: Player) => (
                   <motion.div
                     key={p.id}
                     layoutId={`player-token-${p.id}`}
@@ -434,6 +510,34 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
                     {getTokenEmoji(p.id)}
                   </motion.div>
                 ))}
+              </div>
+            )}
+
+            {/* Hover tooltip — mini deed summary; click opens the full inspector */}
+            {(tile.type === "property" || tile.type === "airport" || tile.type === "utility") && (
+              <div className="tile-tooltip">
+                <div className="tile-tooltip-name">{tile.name}</div>
+                <div className="tile-tooltip-row">
+                  {tileState?.ownerId
+                    ? `Owned by ${players.find((p: Player) => p.id === tileState.ownerId)?.name ?? "—"}`
+                    : "Unowned"}
+                </div>
+                {tile.type === "property" && (
+                  <div className="tile-tooltip-row">
+                    Rent: ₦{((tileState?.houses ?? 0) > 0
+                      ? (tile as PropertyTile).rent[tileState.houses]
+                      : (tile as PropertyTile).rent[0]
+                    ).toLocaleString()}
+                    {(tileState?.houses ?? 0) > 0 && ` · ${getDevelopmentName(tileState.houses)}`}
+                  </div>
+                )}
+                {"price" in tile && (
+                  <div className="tile-tooltip-row tile-tooltip-muted">Price ₦{tile.price.toLocaleString()}</div>
+                )}
+                {tileState?.mortgaged && (
+                  <div className="tile-tooltip-row" style={{ color: "var(--color-danger)" }}>🔒 Mortgaged</div>
+                )}
+                <div className="tile-tooltip-row tile-tooltip-muted">Click for full deed</div>
               </div>
             )}
           </div>

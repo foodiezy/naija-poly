@@ -15,7 +15,7 @@ export interface Player {
   position: number; // 0–39
   inJail: boolean;
   jailTurns: number; // failed roll-out attempts
-  getOutOfJailCards: number;
+  jailCardSources: Array<"chance" | "esusu">; // which deck each held card came from
   bankrupt: boolean;
   order: number; // turn order
 }
@@ -96,6 +96,7 @@ export type Action =
   | { type: "PAY_JAIL_FINE" }
   | { type: "USE_JAIL_CARD" }
   | { type: "DECLARE_BANKRUPT" }
+  | { type: "FORFEIT" } // a player permanently left (disconnect): eliminate them
   | { type: "END_TURN" };
 
 export interface TradeOffer {

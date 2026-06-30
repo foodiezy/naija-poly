@@ -2,6 +2,7 @@
 // running server (npm start) to exercise the renamed room, chat routing, and
 // the timed/increment auction. Run with: npx tsx src/server/integration-check.ts
 import { Client, Room } from "colyseus.js";
+import type { ChatMessage } from "../shared/chat";
 
 function patchClientForV017(client: Client) {
   const originalConsume = (client as any).consumeSeatReservation.bind(client);
@@ -21,7 +22,7 @@ function patchClientForV017(client: Client) {
 interface Tracked {
   name: string;
   room: Room;
-  chats: any[];
+  chats: ChatMessage[];
   errors: any[];
   engine: any;
 }

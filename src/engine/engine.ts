@@ -21,6 +21,24 @@ import {
 } from "../data/board";
 import type { Action, GameState, PlayerId, TileState, Player, GameSettings } from "./types";
 
+// Move the turn to the next non-bankrupt player and reset per-turn state.
+// Used when the active player can no longer act (e.g. forfeited a turn by
+// leaving). Does not handle round/turn-limit accounting — that lives in
+// END_TURN, which is the normal path for completing a turn.
+function advanceTurnSkippingBankrupt(state: GameState): void {
+  let nextIndex = (state.currentPlayerIndex + 1) % state.players.length;
+  let guard = 0;
+  while (state.players[nextIndex].bankrupt && guard < state.players.length) {
+    nextIndex = (nextIndex + 1) % state.players.length;
+    guard++;
+  }
+  state.currentPlayerIndex = nextIndex;
+  state.doublesCount = 0;
+  state.dice = null;
+  state.phase = "awaiting-roll";
+  state.log.push(`It is now ${state.players[nextIndex].name}'s turn.`);
+}
+
 // Award the auctioned tile to the standing high bidder (or close with no sale),
 // then hand the turn back. Shared by BID / PASS_BID / RESOLVE_AUCTION.
 function finalizeAuction(state: GameState): void {
@@ -39,6 +57,11 @@ function finalizeAuction(state: GameState): void {
   }
   state.auctionState = null;
   state.phase = "awaiting-end-turn";
+  // The decliner who triggered the auction may have left mid-auction; never
+  // strand the turn on a bankrupt player.
+  if (state.players[state.currentPlayerIndex].bankrupt) {
+    advanceTurnSkippingBankrupt(state);
+  }
 }
 
 // Helper: Shuffles an array using Fisher-Yates and the injected rng
@@ -122,18 +145,9 @@ export function createGame(
     throw new Error("A game must have at least 2 players");
   }
 
-  // Handle case where custom rng is passed as second argument if any old tests/code do so:
-  let finalSettings: Partial<GameSettings> = {};
-  let finalRng = rng;
-  if (typeof settings === "function") {
-    finalRng = settings as any;
-  } else if (settings) {
-    finalSettings = settings;
-  }
-
   const mergedSettings: GameSettings = {
     ...DEFAULT_SETTINGS,
-    ...finalSettings,
+    ...(settings ?? {}),
   };
 
   const players: Player[] = playerIds.map((id, index) => ({
@@ -143,7 +157,7 @@ export function createGame(
     position: 0,
     inJail: false,
     jailTurns: 0,
-    getOutOfJailCards: 0,
+    jailCardSources: [],
     bankrupt: false,
     order: index,
   }));
@@ -159,8 +173,8 @@ export function createGame(
     }
   });
 
-  const chanceOrder = shuffle(CHANCE_CARDS.map((c) => c.id), finalRng);
-  const esusuOrder = shuffle(ESUSU_CARDS.map((c) => c.id), finalRng);
+  const chanceOrder = shuffle(CHANCE_CARDS.map((c) => c.id), rng);
+  const esusuOrder = shuffle(ESUSU_CARDS.map((c) => c.id), rng);
 
   return {
     players,
@@ -188,7 +202,7 @@ export function applyAction(
   rng: () => number = Math.random,
 ): GameState {
   // Deep copy state to maintain purity
-  const nextState: GameState = JSON.parse(JSON.stringify(state));
+  const nextState: GameState = structuredClone(state);
 
   const currentPlayer = nextState.players[nextState.currentPlayerIndex];
   if (!currentPlayer) {
@@ -200,8 +214,10 @@ export function applyAction(
   const isAuctionAction =
     action.type === "BID" || action.type === "PASS_BID" || action.type === "RESOLVE_AUCTION";
   const isTradeResponse = action.type === "RESPOND_TRADE";
+  // A disconnect can land on any player at any time, not just the active one.
+  const isForfeit = action.type === "FORFEIT";
 
-  if (playerId !== currentPlayer.id && !isAuctionAction && !isTradeResponse) {
+  if (playerId !== currentPlayer.id && !isAuctionAction && !isTradeResponse && !isForfeit) {
     const playerObj = nextState.players.find(p => p.id === playerId);
     const isDeclaringBankruptInDebt = action.type === "DECLARE_BANKRUPT" && playerObj && playerObj.cash < 0;
     if (!isDeclaringBankruptInDebt) {
@@ -569,16 +585,16 @@ export function applyAction(
       if (nextState.phase !== "awaiting-roll") {
         throw new Error("Can only use card in awaiting-roll phase");
       }
-      if (currentPlayer.getOutOfJailCards <= 0) {
+      if (currentPlayer.jailCardSources.length <= 0) {
         throw new Error("Player does not have a Get Out of Jail Free card");
       }
 
-      currentPlayer.getOutOfJailCards -= 1;
+      const source = currentPlayer.jailCardSources.pop()!;
       currentPlayer.inJail = false;
       currentPlayer.jailTurns = 0;
 
-      // Put card back in the deck. Check which card (Chance vs Esusu) is missing.
-      if (!nextState.chanceOrder.includes("ch07")) {
+      // Restore the card to whichever deck it originally came from.
+      if (source === "chance") {
         nextState.chanceOrder.push("ch07");
       } else {
         nextState.esusuOrder.push("es07");
@@ -869,6 +885,77 @@ export function applyAction(
       break;
     }
 
+    case "FORFEIT": {
+      // A player permanently left (disconnect/quit). Eliminate them like a
+      // bankruptcy to the bank, regardless of cash or whose turn it is, and
+      // keep the game in a consistent, playable state.
+      const player = nextState.players.find((p) => p.id === playerId);
+      // Idempotent / safe no-ops: unknown player, already out, or finished game.
+      if (!player || player.bankrupt || nextState.phase === "game-over") {
+        break;
+      }
+
+      player.bankrupt = true;
+      nextState.log.push(`${player.name} left the game and forfeited.`);
+
+      // Return all their holdings to the bank (demolish, clear ownership).
+      Object.keys(nextState.tiles).forEach((posStr) => {
+        const pos = parseInt(posStr, 10);
+        if (nextState.tiles[pos].ownerId === playerId) {
+          nextState.tiles[pos] = { ownerId: null, houses: 0, mortgaged: false };
+        }
+      });
+
+      // Cancel any pending trade they were part of.
+      if (
+        nextState.activeTrade &&
+        (nextState.activeTrade.fromId === playerId || nextState.activeTrade.toId === playerId)
+      ) {
+        nextState.activeTrade = null;
+        nextState.log.push(`A pending trade was cancelled because a player left.`);
+      }
+
+      // Pull them out of a live auction; resolve it if no contest remains.
+      if (nextState.phase === "auction" && nextState.auctionState) {
+        const a = nextState.auctionState;
+        a.participantIds = a.participantIds.filter((id) => id !== playerId);
+        a.passedIds = a.passedIds.filter((id) => id !== playerId);
+        if (a.highestBidderId === playerId) {
+          // Their leading bid is void; the tile is open again with no standing bid.
+          a.highestBidderId = null;
+          a.highestBid = 0;
+        }
+        a.deadline = null; // server re-arms the clock on the next broadcast
+        const stillIn = a.participantIds.filter((id) => !a.passedIds.includes(id));
+        const challengers =
+          a.highestBidderId !== null ? stillIn.filter((id) => id !== a.highestBidderId) : stillIn;
+        if (challengers.length === 0) {
+          finalizeAuction(nextState); // also advances turn if the decliner left
+        }
+      }
+
+      // Win condition: last player standing.
+      const remaining = nextState.players.filter((p) => !p.bankrupt);
+      if (remaining.length <= 1) {
+        nextState.winnerId = remaining.length === 1 ? remaining[0].id : null;
+        nextState.phase = "game-over";
+        if (remaining.length === 1) {
+          nextState.log.push(`${remaining[0].name} has won the game!`);
+        }
+        break;
+      }
+
+      // If it was their turn (and an auction didn't already hand it off),
+      // advance so play doesn't stall waiting on a player who is gone.
+      if (
+        nextState.phase !== "auction" &&
+        nextState.players[nextState.currentPlayerIndex].bankrupt
+      ) {
+        advanceTurnSkippingBankrupt(nextState);
+      }
+      break;
+    }
+
     case "DECLARE_BANKRUPT": {
       const bankruptPlayer = nextState.players.find((p) => p.id === playerId)!;
       if (bankruptPlayer.cash >= 0) {
@@ -1089,13 +1176,14 @@ function drawCard(
     state.esusuPtr = nextPtr;
   }
 
-  applyCardAction(state, player, card.action, rng);
+  applyCardAction(state, player, card.action, type, rng);
 }
 
 function applyCardAction(
   state: GameState,
   player: Player,
   action: typeof CHANCE_CARDS[0]["action"],
+  deckSource: "chance" | "esusu",
   rng: () => number,
 ): void {
   switch (action.kind) {
@@ -1148,7 +1236,7 @@ function applyCardAction(
     }
 
     case "getOutOfJailFree": {
-      player.getOutOfJailCards += 1;
+      player.jailCardSources.push(deckSource);
       state.log.push(`${player.name} received a Get Out of Jail Free card.`);
       state.phase = "awaiting-end-turn";
       break;
@@ -1159,7 +1247,7 @@ function applyCardAction(
       state.players.forEach((p) => {
         if (p.id !== player.id && !p.bankrupt) {
           p.cash -= action.amount;
-          if (p.cash < 0 && !state.owedToId) {
+          if (p.cash < 0) {
             state.owedToId = player.id;
           }
           totalCollected += action.amount;
@@ -1176,12 +1264,14 @@ function applyCardAction(
         if (p.id !== player.id && !p.bankrupt) {
           p.cash += action.amount;
           player.cash -= action.amount;
-          if (player.cash < 0 && !state.owedToId) {
-            state.owedToId = p.id;
-          }
           state.log.push(`${player.name} paid ₦${action.amount.toLocaleString("en-NG")} to ${p.name}.`);
         }
       });
+      // The player owes multiple creditors — route insolvency to the bank so
+      // bankruptcy resolution has a single, unambiguous creditor.
+      if (player.cash < 0) {
+        state.owedToId = "bank";
+      }
       state.phase = "awaiting-end-turn";
       break;
     }

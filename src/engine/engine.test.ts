@@ -190,14 +190,14 @@ describe("Game Engine", () => {
       const state = createGame(["p1", "p2"]);
       state.players[0].inJail = true;
       state.players[0].position = 10;
-      state.players[0].getOutOfJailCards = 1;
+      state.players[0].jailCardSources = ["chance"];
       // Remove ch07 to simulate having drawn it
       state.chanceOrder = state.chanceOrder.filter((id) => id !== "ch07");
 
       // Use card
       let nextState = applyAction(state, "p1", { type: "USE_JAIL_CARD" });
       expect(nextState.players[0].inJail).toBe(false);
-      expect(nextState.players[0].getOutOfJailCards).toBe(0);
+      expect(nextState.players[0].jailCardSources).toHaveLength(0);
       expect(nextState.phase).toBe("awaiting-roll");
       expect(nextState.chanceOrder).toContain("ch07"); // returned to deck
 
@@ -717,6 +717,106 @@ describe("Game Engine", () => {
       expect(finalState.phase).toBe("game-over");
       expect(finalState.winnerId).toBe("p1"); // p1 wins due to higher net worth
       expect(finalState.log[finalState.log.length - 1]).toContain("wins the game with a net worth of ₦1,505,000");
+    });
+  });
+
+  describe("FORFEIT action (player leaves mid-game)", () => {
+    it("eliminates a non-current player and returns their properties to the bank", () => {
+      const state = createGame(["p1", "p2", "p3"]);
+      state.tiles[1] = { ownerId: "p2", houses: 0, mortgaged: false };
+      state.tiles[3] = { ownerId: "p2", houses: 2, mortgaged: false };
+      state.currentPlayerIndex = 0; // p1's turn; p2 (not current) leaves
+
+      const next = applyAction(state, "p2", { type: "FORFEIT" });
+
+      expect(next.players[1].bankrupt).toBe(true);
+      expect(next.tiles[1].ownerId).toBeNull();
+      expect(next.tiles[3].ownerId).toBeNull();
+      expect(next.tiles[3].houses).toBe(0);
+      // Game continues; it's still p1's turn.
+      expect(next.phase).toBe("awaiting-roll");
+      expect(next.currentPlayerIndex).toBe(0);
+      expect(next.winnerId).toBeNull();
+    });
+
+    it("advances the turn when the current player forfeits", () => {
+      const state = createGame(["p1", "p2", "p3"]);
+      state.currentPlayerIndex = 0;
+      state.phase = "awaiting-roll";
+
+      const next = applyAction(state, "p1", { type: "FORFEIT" });
+
+      expect(next.players[0].bankrupt).toBe(true);
+      expect(next.currentPlayerIndex).toBe(1); // advanced to p2
+      expect(next.phase).toBe("awaiting-roll");
+    });
+
+    it("ends the game when only one player remains", () => {
+      const state = createGame(["p1", "p2"]);
+      state.currentPlayerIndex = 0;
+
+      const next = applyAction(state, "p2", { type: "FORFEIT" });
+
+      expect(next.players[1].bankrupt).toBe(true);
+      expect(next.winnerId).toBe("p1");
+      expect(next.phase).toBe("game-over");
+    });
+
+    it("cancels a pending trade involving the leaver", () => {
+      const state = createGame(["p1", "p2", "p3"]);
+      state.activeTrade = {
+        fromId: "p2",
+        toId: "p1",
+        giveCash: 0,
+        getCash: 50_000,
+        giveTiles: [],
+        getTiles: [],
+      };
+
+      const next = applyAction(state, "p2", { type: "FORFEIT" });
+
+      expect(next.activeTrade).toBeNull();
+    });
+
+    it("is a no-op when the player has already left", () => {
+      const state = createGame(["p1", "p2", "p3"]);
+      const once = applyAction(state, "p2", { type: "FORFEIT" });
+      const twice = applyAction(once, "p2", { type: "FORFEIT" });
+
+      // Second forfeit changes nothing meaningful (still bankrupt, same turn owner).
+      expect(twice.players[1].bankrupt).toBe(true);
+      expect(twice.currentPlayerIndex).toBe(once.currentPlayerIndex);
+    });
+
+    it("does not strand the turn when the decliner forfeits mid-auction", () => {
+      const state = createGame(["p1", "p2", "p3"]);
+      state.currentPlayerIndex = 0; // p1 declined and triggered the auction
+      state.phase = "auction";
+      state.auctionState = {
+        tilePos: 1,
+        highestBid: 0,
+        highestBidderId: null,
+        participantIds: ["p1", "p2", "p3"],
+        passedIds: [],
+        minIncrement: 10_000,
+        bidIncrements: [10_000, 50_000],
+        bidDurationMs: 12_000,
+        deadline: null,
+      };
+
+      // p1 (the current player) leaves during the auction.
+      let next = applyAction(state, "p1", { type: "FORFEIT" });
+      expect(next.players[0].bankrupt).toBe(true);
+      expect(next.auctionState?.participantIds).toEqual(["p2", "p3"]);
+      expect(next.phase).toBe("auction"); // contest continues among p2 & p3
+
+      // The remaining players fold; the auction must close AND hand the turn to a
+      // live player instead of stranding it on the departed decliner.
+      next = applyAction(next, "p2", { type: "PASS_BID" });
+      next = applyAction(next, "p3", { type: "PASS_BID" });
+
+      expect(next.phase).toBe("awaiting-roll");
+      expect(next.players[next.currentPlayerIndex].bankrupt).toBe(false);
     });
   });
 });
