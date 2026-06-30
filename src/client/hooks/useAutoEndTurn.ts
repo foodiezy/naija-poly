@@ -1,6 +1,26 @@
 import { useEffect, useRef } from "react";
 import { GameState, Player } from "../../engine/types";
 import { Room } from "colyseus.js";
+import { BOARD } from "../../data/board";
+import { canBuildOn, canUnmortgageAt } from "../../engine/queries";
+
+// Auto-end-turn waits this long after landing before sending END_TURN, so the
+// player has a moment to read what happened.
+const AUTO_END_DELAY_MS = 2500;
+
+// True when the local player has actionable property management to do right
+// now — they own a buildable monopoly, or they can redeem a mortgaged tile.
+// In either case, auto-end must pause so they don't lose their build window
+// to the 2.5-second timer.
+function hasPendingPropertyAction(state: GameState, playerId: string): boolean {
+  for (const tile of BOARD) {
+    if (!("price" in tile)) continue;
+    if (state.tiles[tile.pos]?.ownerId !== playerId) continue;
+    if (canBuildOn(state, playerId, tile.pos)) return true;
+    if (canUnmortgageAt(state, playerId, tile.pos)) return true;
+  }
+  return false;
+}
 
 export function useAutoEndTurn(
   engineState: GameState | null,
@@ -24,10 +44,18 @@ export function useAutoEndTurn(
     ) {
       const me = engineState.players?.find((p: Player) => p.id === mySessionId);
       const isMyTurn = engineState.players?.[engineState.currentPlayerIndex]?.id === mySessionId;
-      if (isMyTurn && me && me.cash >= 0 && !me.bankrupt && !engineState.activeTrade) {
+      const hasPending = hasPendingPropertyAction(engineState, mySessionId);
+      if (
+        isMyTurn &&
+        me &&
+        me.cash >= 0 &&
+        !me.bankrupt &&
+        !engineState.activeTrade &&
+        !hasPending
+      ) {
         autoEndTimerRef.current = setTimeout(() => {
           room.send("ACTION", { type: "END_TURN" });
-        }, 2500);
+        }, AUTO_END_DELAY_MS);
       }
     }
 
@@ -37,6 +65,6 @@ export function useAutoEndTurn(
         autoEndTimerRef.current = null;
       }
     };
-  }, [autoEndTurnEnabled, engineState?.phase, engineState?.currentPlayerIndex, engineState?.activeTrade, room, mySessionId, engineState?.players]);
+  }, [autoEndTurnEnabled, engineState?.phase, engineState?.currentPlayerIndex, engineState?.activeTrade, engineState?.tiles, room, mySessionId, engineState?.players, engineState]);
 
 }

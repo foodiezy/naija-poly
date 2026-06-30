@@ -130,6 +130,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Glassmorphism utility */
 .glass-panel {
   background: var(--bg-panel);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
@@ -151,6 +152,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0.6rem 1.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(11, 15, 25, 0.85);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   gap: 1rem;
   position: sticky;
@@ -688,6 +690,194 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* ──────────────────────────────────────────────────────────────────────
+   Mobile breakpoints — keep gameplay reachable on tablets and phones.
+   The board scales down with the viewport; the right-rail (player +
+   property cards) and left-rail (chat + settings) stack underneath and
+   remain scrollable. Tap targets stay >=44px high so they're usable
+   with a finger.
+   ────────────────────────────────────────────────────────────────────── */
+
+/* Tablet / large phone */
+@media (max-width: 768px) {
+  :root {
+    --board-size: min(calc(100vw - 1rem), 640px);
+  }
+  body {
+    font-size: 14px;
+  }
+  .app-header {
+    padding: 0.45rem 0.7rem;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .header-center {
+    display: none;
+  }
+  .header-right {
+    gap: 0.35rem;
+  }
+  .header-btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.72rem;
+  }
+  .logo-text {
+    font-size: 1.4rem;
+  }
+  .game-view {
+    padding: 0.6rem;
+    gap: 0.9rem;
+  }
+  /* Right column actions are the priority on mobile — keep them readable */
+  .sidebar-action-btn {
+    padding: 0.6rem 0.4rem;
+    font-size: 0.8rem;
+    min-height: 44px;
+  }
+  .holdings-card {
+    min-height: 56px;
+  }
+  .holdings-actions .holdings-btn {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+  }
+  /* Modals fit screen */
+  .buy-deed-card,
+  .tile-inspector-overlay .deed-card {
+    max-width: calc(100vw - 1.2rem);
+  }
+  .buy-deed-overlay {
+    padding: 0.6rem;
+  }
+  /* Board centerpiece scales down */
+  .dice-stage {
+    transform: scale(1.15);
+  }
+  .active-player-hero-name {
+    font-size: 1rem;
+  }
+  /* Chat / settings panels collapse padding */
+  .console-panel,
+  .assets-panel,
+  .settings-panel {
+    padding: 0.8rem;
+  }
+  /* Footer compact */
+  .app-footer {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.65rem;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .footer-left {
+    gap: 0.5rem;
+  }
+  .footer-right {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* Phone (narrow). The board shrinks but stays square; everything
+   stacks single-column and uses larger tap targets. */
+@media (max-width: 480px) {
+  :root {
+    --board-size: calc(100vw - 0.8rem);
+    --tile-size: calc(var(--board-size) / 11);
+  }
+  body {
+    font-size: 13px;
+  }
+  .app-header {
+    padding: 0.4rem 0.55rem;
+  }
+  .room-badge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+  }
+  .header-btn {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.68rem;
+  }
+  .game-view {
+    padding: 0.4rem;
+    gap: 0.7rem;
+  }
+  .monopoly-board {
+    border-width: 4px;
+  }
+  .tile-name {
+    font-size: clamp(0.5rem, 2.1vw, 0.7rem);
+  }
+  .tile-price {
+    font-size: 0.58rem;
+  }
+  .player-token {
+    width: 18px;
+    height: 18px;
+    font-size: 0.95rem;
+    border-width: 1.5px;
+  }
+  /* Board center HUD: smaller fonts so nothing overflows */
+  .board-center-logo {
+    font-size: 2.1rem !important;
+  }
+  .board-center {
+    padding: 0.7rem !important;
+  }
+  .dice-stage {
+    transform: scale(1);
+    margin: 0.25rem 0 0.9rem;
+  }
+  .active-player-hero {
+    padding: 0.45rem 0.7rem 0.45rem 0.5rem;
+    gap: 0.55rem;
+  }
+  .active-player-hero-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 1.5rem;
+  }
+  .active-player-hero-name {
+    font-size: 0.95rem;
+  }
+  /* Big modal cards: scale price + names down */
+  .buy-deed-name {
+    font-size: 1.4rem;
+  }
+  .buy-deed-price-value {
+    font-size: 1.9rem;
+  }
+  .buy-deed-actions {
+    grid-template-columns: 1fr;
+  }
+  .buy-deed-btn {
+    padding: 0.95rem 0.5rem;
+    font-size: 0.92rem;
+  }
+  /* Player + holdings cards stay readable */
+  .player-card {
+    padding: 0.5rem 0.55rem 0.45rem;
+  }
+  .player-card-name {
+    max-width: 80px;
+    font-size: 0.85rem;
+  }
+  .player-card-cash {
+    font-size: 0.9rem;
+  }
+  .holdings-name {
+    font-size: 0.78rem;
+  }
+  .holdings-rent-value {
+    font-size: 0.85rem;
+  }
+  /* Touch-friendly checkbox row */
+  .footer-toggle-item input[type="checkbox"] {
+    transform: scale(1.2);
+  }
+}
+
 /* Center Board Panel */
 .board-panel {
   display: flex;
@@ -788,6 +978,7 @@ h1, h2, h3, h4, h5, h6 {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 
@@ -879,6 +1070,7 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--radius-lg);
   border: 2px solid var(--color-gold);
   background: rgba(11, 13, 26, 0.97);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(245, 158, 11, 0.25);
   text-align: center;
@@ -2417,6 +2609,7 @@ html.high-contrast .glass-panel {
   right: 0;
   bottom: 0;
   background: rgba(8, 10, 16, 0.85);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 999;
@@ -2751,6 +2944,7 @@ html.high-contrast .glass-panel {
   position: fixed;
   inset: 0;
   background: rgba(8, 10, 16, 0.82);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   z-index: 1000;
@@ -2908,6 +3102,7 @@ html.high-contrast .glass-panel {
   inset: 0;
   z-index: 9000;
   background: rgba(2, 6, 16, 0.72);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
