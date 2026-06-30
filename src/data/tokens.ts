@@ -26,3 +26,8 @@ export const MAX_PLAYERS = TOKENS.length;
 export function tokenEmoji(tokenId: string | undefined | null): string {
   return TOKENS.find((t) => t.id === tokenId)?.emoji ?? "👤";
 }
+
+// Display name for a token id.
+export function tokenName(tokenId: string | undefined | null): string {
+  return TOKENS.find((t) => t.id === tokenId)?.name ?? "—";
+}

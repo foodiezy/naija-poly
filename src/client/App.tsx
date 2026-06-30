@@ -13,6 +13,7 @@ import SettingsPanel from "./components/SettingsPanel";
 import ControlPanel from "./components/ControlPanel";
 import TileInspector from "./components/TileInspector";
 import GameOverModal from "./components/GameOverModal";
+import BuyDeedModal from "./components/BuyDeedModal";
 
 // Hooks & Utilities
 import { useGameRoom } from "./hooks/useGameRoom";
@@ -301,6 +302,16 @@ export default function App() {
                 engineState={engineState}
                 roomState={roomState}
                 onClose={() => setSelectedTilePos(null)}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {mySessionId && (
+              <BuyDeedModal
+                engineState={engineState}
+                mySessionId={mySessionId}
+                onSendAction={sendAction}
               />
             )}
           </AnimatePresence>

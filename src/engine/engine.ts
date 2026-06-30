@@ -157,7 +157,7 @@ export function createGame(
     position: 0,
     inJail: false,
     jailTurns: 0,
-    getOutOfJailCards: 0,
+    jailCardSources: [],
     bankrupt: false,
     order: index,
   }));
@@ -585,16 +585,16 @@ export function applyAction(
       if (nextState.phase !== "awaiting-roll") {
         throw new Error("Can only use card in awaiting-roll phase");
       }
-      if (currentPlayer.getOutOfJailCards <= 0) {
+      if (currentPlayer.jailCardSources.length <= 0) {
         throw new Error("Player does not have a Get Out of Jail Free card");
       }
 
-      currentPlayer.getOutOfJailCards -= 1;
+      const source = currentPlayer.jailCardSources.pop()!;
       currentPlayer.inJail = false;
       currentPlayer.jailTurns = 0;
 
-      // Put card back in the deck. Check which card (Chance vs Esusu) is missing.
-      if (!nextState.chanceOrder.includes("ch07")) {
+      // Restore the card to whichever deck it originally came from.
+      if (source === "chance") {
         nextState.chanceOrder.push("ch07");
       } else {
         nextState.esusuOrder.push("es07");
@@ -1176,13 +1176,14 @@ function drawCard(
     state.esusuPtr = nextPtr;
   }
 
-  applyCardAction(state, player, card.action, rng);
+  applyCardAction(state, player, card.action, type, rng);
 }
 
 function applyCardAction(
   state: GameState,
   player: Player,
   action: typeof CHANCE_CARDS[0]["action"],
+  deckSource: "chance" | "esusu",
   rng: () => number,
 ): void {
   switch (action.kind) {
@@ -1235,7 +1236,7 @@ function applyCardAction(
     }
 
     case "getOutOfJailFree": {
-      player.getOutOfJailCards += 1;
+      player.jailCardSources.push(deckSource);
       state.log.push(`${player.name} received a Get Out of Jail Free card.`);
       state.phase = "awaiting-end-turn";
       break;
@@ -1263,12 +1264,14 @@ function applyCardAction(
         if (p.id !== player.id && !p.bankrupt) {
           p.cash += action.amount;
           player.cash -= action.amount;
-          if (player.cash < 0) {
-            state.owedToId = p.id;
-          }
           state.log.push(`${player.name} paid ₦${action.amount.toLocaleString("en-NG")} to ${p.name}.`);
         }
       });
+      // The player owes multiple creditors — route insolvency to the bank so
+      // bankruptcy resolution has a single, unambiguous creditor.
+      if (player.cash < 0) {
+        state.owedToId = "bank";
+      }
       state.phase = "awaiting-end-turn";
       break;
     }

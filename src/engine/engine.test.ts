@@ -190,14 +190,14 @@ describe("Game Engine", () => {
       const state = createGame(["p1", "p2"]);
       state.players[0].inJail = true;
       state.players[0].position = 10;
-      state.players[0].getOutOfJailCards = 1;
+      state.players[0].jailCardSources = ["chance"];
       // Remove ch07 to simulate having drawn it
       state.chanceOrder = state.chanceOrder.filter((id) => id !== "ch07");
 
       // Use card
       let nextState = applyAction(state, "p1", { type: "USE_JAIL_CARD" });
       expect(nextState.players[0].inJail).toBe(false);
-      expect(nextState.players[0].getOutOfJailCards).toBe(0);
+      expect(nextState.players[0].jailCardSources).toHaveLength(0);
       expect(nextState.phase).toBe("awaiting-roll");
       expect(nextState.chanceOrder).toContain("ch07"); // returned to deck
 

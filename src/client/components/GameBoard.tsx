@@ -5,6 +5,7 @@ import { getDevelopmentName } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
+import { useTokenWalker } from "../hooks/useTokenWalker";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
 // type, so drop the redundant "Airport"/"Corporation" suffix; the full name
@@ -100,9 +101,13 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   const tilesState = engineState.tiles || {};
   const lobbyPlayers = roomState?.lobbyPlayers || new Map();
 
+  // Smoothly walk tokens hop-by-hop toward their authoritative positions
+  const displayedPositions = useTokenWalker(players);
+  const getDisplayedPos = (p: Player) => displayedPositions.get(p.id) ?? p.position;
+
   // Identify the local player's position and the active turn player
   const myPlayer = mySessionId ? players.find((p: Player) => p.id === mySessionId) : null;
-  const myPosition = myPlayer ? myPlayer.position : -1;
+  const myPosition = myPlayer ? getDisplayedPos(myPlayer) : -1;
   const activePlayerIndex = engineState.currentPlayerIndex ?? -1;
   const activePlayerId = activePlayerIndex >= 0 && players[activePlayerIndex] ? players[activePlayerIndex].id : null;
   const isMyTurn = activePlayerId === mySessionId;
@@ -110,12 +115,26 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   const logsEndRef = useRef<HTMLDivElement>(null);
   // Whether the drawn-card banner is currently shown (auto-dismisses).
   const [cardVisible, setCardVisible] = useState(false);
+  // Shake the dice briefly when a new roll comes in, then settle.
+  const [diceShaking, setDiceShaking] = useState(false);
+  const prevDiceKey = useRef<string>("");
 
   useEffect(() => {
     if (logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [engineState.log?.length]);
+
+  // Trigger dice shake when the dice values change
+  useEffect(() => {
+    const key = engineState.dice ? `${engineState.dice[0]}-${engineState.dice[1]}-${engineState.currentTurn}` : "";
+    if (key && key !== prevDiceKey.current) {
+      prevDiceKey.current = key;
+      setDiceShaking(true);
+      const t = setTimeout(() => setDiceShaking(false), 380);
+      return () => clearTimeout(t);
+    }
+  }, [engineState.dice, engineState.currentTurn]);
 
   const getLogClass = (logLine: string) => {
     if (logLine.includes("rolled") || logLine.includes("START") || logLine.includes("Prison") || logLine.includes("escaped")) {
@@ -262,17 +281,16 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
 
         {/* Central Display: Dice + Active Player Status (Richup.io centerpiece) */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, margin: "1rem 0", zIndex: 10 }}>
-          {/* Dice */}
+          {/* Dice — bigger stage, shake-then-settle */}
           <AnimatePresence mode="wait">
             {engineState.dice && (
               <motion.div
                 key={`${engineState.dice[0]}-${engineState.dice[1]}-${engineState.currentTurn}`}
-                className="dice-container-center"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
+                className={`dice-stage${diceShaking ? " shaking" : ""}`}
+                initial={{ opacity: 0, scale: 0.6 }}
+                animate={{ opacity: 1, scale: 1.55 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
-                style={{ marginBottom: "1.5rem" }}
               >
                 {renderDie3D(engineState.dice[0], `die0-${engineState.dice[0]}-${engineState.currentTurn}`)}
                 {renderDie3D(engineState.dice[1], `die1-${engineState.dice[1]}-${engineState.currentTurn}`)}
@@ -280,11 +298,26 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             )}
           </AnimatePresence>
 
-          {/* Richup Active Player Announcement */}
-          <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem", textShadow: "0 2px 4px rgba(0,0,0,0.5)" }}>
-            {activePlayerId && <span>{getTokenEmoji(activePlayerId)}</span>}
-            <span>{activePlayerId ? `${players[activePlayerIndex]?.name} is playing...` : "Waiting for players..."}</span>
-          </div>
+          {/* Active Player Hero card */}
+          {activePlayerId ? (
+            <motion.div
+              key={activePlayerId}
+              className={`active-player-hero${activePlayerId === mySessionId ? " is-me" : ""}`}
+              initial={{ opacity: 0, y: 8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 22 }}
+            >
+              <div className="active-player-hero-avatar">{getTokenEmoji(activePlayerId)}</div>
+              <div className="active-player-hero-meta">
+                <div className="active-player-hero-name">{players[activePlayerIndex]?.name}</div>
+                <div className="active-player-hero-sub">
+                  {activePlayerId === mySessionId ? "Your turn" : "Now playing"}
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <div style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>Waiting for players...</div>
+          )}
 
           {/* End Turn button — prominently centered */}
           {canEndTurn && onEndTurn && (
@@ -342,8 +375,8 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
         const tileState = tilesState[tile.pos];
         const isCorner = tile.pos % 10 === 0;
 
-        // Find players on this tile
-        const playersOnTile = players.filter((p: Player) => p.position === tile.pos && !p.bankrupt);
+        // Find players on this tile (using their walking display position)
+        const playersOnTile = players.filter((p: Player) => getDisplayedPos(p) === tile.pos && !p.bankrupt);
         const hasMyToken = myPosition === tile.pos;
         const hasActivePlayer = playersOnTile.some((p: Player) => p.id === activePlayerId);
 

@@ -961,10 +961,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .tile-name {
-  font-size: clamp(0.55rem, 1.25vw, 0.7rem);
+  font-size: clamp(0.62rem, 0.9vw, 0.78rem);
   font-weight: 700;
   text-align: center;
-  line-height: 1.05;
+  line-height: 1.08;
   letter-spacing: 0.01em;
   color: var(--text-primary);
   word-break: normal;
@@ -976,14 +976,15 @@ h1, h2, h3, h4, h5, h6 {
 /* Richup.io signature bottom price stripe block */
 .tile-price {
   background: rgba(255, 255, 255, 0.08);
-  font-size: 0.58rem;
-  font-weight: 600;
+  font-size: 0.66rem;
+  font-weight: 700;
   color: #fff;
   width: 100%;
   text-align: center;
-  padding: 2px 0;
+  padding: 3px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   margin-top: 1px;
+  letter-spacing: 0.01em;
 }
 
 .tile-owner-indicator {
@@ -2873,6 +2874,922 @@ html.high-contrast .glass-panel {
 
 .panel-tab-btn.active:hover {
   background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Premium Buy-Deed Modal — appears when local player lands on an
+   unowned buyable tile. Replaces the silent inline buy button.
+   ────────────────────────────────────────────────────────────────────── */
+.buy-deed-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(2, 6, 16, 0.72);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem;
+  perspective: 1400px;
+}
+
+.buy-deed-card {
+  width: 100%;
+  max-width: 380px;
+  background: #0b1020;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 0 60px rgba(245, 158, 11, 0.12);
+  overflow: hidden;
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.buy-deed-landed-pill {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #1a0d00;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 0.3rem 1rem;
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.45);
+  z-index: 2;
+  white-space: nowrap;
+}
+
+.buy-deed-header {
+  padding: 1.7rem 1rem 1rem;
+  text-align: center;
+  border-bottom: 4px solid rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.buy-deed-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(0,0,0,0.18) 100%);
+  pointer-events: none;
+}
+
+.buy-deed-title {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(0, 0, 0, 0.7);
+  position: relative;
+  z-index: 1;
+}
+
+.buy-deed-name {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+  position: relative;
+  z-index: 1;
+}
+
+.buy-deed-body {
+  padding: 1.1rem 1.25rem 1.25rem;
+}
+
+.buy-deed-rent-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.buy-deed-rent-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.28rem 0.4rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  border-radius: 4px;
+}
+
+.buy-deed-rent-row.base {
+  color: #fff;
+  font-weight: 700;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.buy-deed-rent-row span:last-child {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gold);
+  font-weight: 600;
+}
+
+.buy-deed-rent-row.base span:last-child {
+  color: var(--color-gold);
+  font-size: 0.95rem;
+}
+
+.buy-deed-bonus-row {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--color-naira);
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  margin: 0.4rem 0;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.buy-deed-meta {
+  margin-top: 0.55rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.buy-deed-price-block {
+  margin-top: 1rem;
+  padding: 0.85rem 0.75rem;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.02) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.buy-deed-price-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+
+.buy-deed-price-value {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: var(--color-gold);
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  text-shadow: 0 0 22px rgba(245, 158, 11, 0.35);
+  margin: 4px 0 6px;
+}
+
+.buy-deed-cash-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  padding-top: 0.45rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.buy-deed-cash-row strong.ok {
+  color: var(--color-naira);
+  font-variant-numeric: tabular-nums;
+}
+
+.buy-deed-cash-row strong.short {
+  color: var(--color-danger);
+  font-variant-numeric: tabular-nums;
+}
+
+.buy-deed-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.buy-deed-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.85rem 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-sans);
+  transition: filter 0.15s ease;
+  letter-spacing: 0.01em;
+}
+
+.buy-deed-btn.buy {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+  box-shadow: 0 6px 22px rgba(16, 185, 129, 0.35);
+}
+
+.buy-deed-btn.buy:hover {
+  filter: brightness(1.08);
+}
+
+.buy-deed-btn.buy:disabled {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.buy-deed-btn.auction {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.buy-deed-btn.auction:hover {
+  background: rgba(255, 255, 255, 0.11);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Board-center upgrades — premium centerpiece
+   ────────────────────────────────────────────────────────────────────── */
+
+/* Bigger dice for the board center */
+.dice-stage {
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+  justify-content: center;
+  perspective: 800px;
+  transform: scale(1.55);
+  transform-origin: center;
+  margin: 0.5rem 0 1.6rem;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.6));
+}
+
+@keyframes diceShake {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  20% { transform: translate(-2px, -3px) rotate(-6deg); }
+  40% { transform: translate(2px, -2px) rotate(5deg); }
+  60% { transform: translate(-2px, 2px) rotate(-4deg); }
+  80% { transform: translate(2px, 3px) rotate(3deg); }
+}
+
+.dice-stage.shaking .die-3d-wrapper {
+  animation: diceShake 0.18s linear infinite;
+}
+
+/* Active-player hero card — replaces the plain "X is playing..." text */
+.active-player-hero {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.65rem 1.1rem 0.65rem 0.7rem;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(11, 16, 32, 0.5) 70%);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  border-radius: 999px;
+  box-shadow: 0 6px 24px rgba(245, 158, 11, 0.18);
+  margin-top: 0.25rem;
+  max-width: 100%;
+}
+
+.active-player-hero.is-me {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.18) 0%, rgba(11, 16, 32, 0.5) 70%);
+  border-color: rgba(34, 211, 238, 0.45);
+  box-shadow: 0 6px 26px rgba(34, 211, 238, 0.28);
+}
+
+.active-player-hero-avatar {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.9rem;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(245, 158, 11, 0.55);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.4);
+  flex-shrink: 0;
+}
+
+.active-player-hero.is-me .active-player-hero-avatar {
+  border-color: rgba(34, 211, 238, 0.7);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.5);
+}
+
+.active-player-hero-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.active-player-hero-name {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.active-player-hero-sub {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-gold);
+  font-weight: 700;
+}
+
+.active-player-hero.is-me .active-player-hero-sub {
+  color: #67e8f9;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Holdings panel — compact mini-deed cards for owned properties
+   ────────────────────────────────────────────────────────────────────── */
+.holdings-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.holdings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0.1rem 0 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.holdings-count {
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+}
+
+.holdings-empty {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 1rem 0.4rem;
+}
+
+.holdings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.holdings-card {
+  display: flex;
+  background: rgba(8, 12, 22, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  position: relative;
+}
+
+.holdings-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.holdings-card.full-set {
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.12), 0 4px 14px rgba(245, 158, 11, 0.12);
+}
+
+.holdings-card.mortgaged {
+  opacity: 0.6;
+  filter: grayscale(0.4);
+}
+
+.holdings-band {
+  width: 8px;
+  flex-shrink: 0;
+  position: relative;
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(0,0,0,0.22));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.holdings-body {
+  flex: 1;
+  padding: 0.5rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.holdings-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.holdings-name-block {
+  min-width: 0;
+  flex: 1;
+}
+
+.holdings-name {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.holdings-sub {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.holdings-set-pill {
+  font-size: 0.58rem;
+  font-weight: 800;
+  background: rgba(245, 158, 11, 0.18);
+  color: var(--color-gold);
+  padding: 1px 6px;
+  border-radius: 999px;
+  letter-spacing: 0.12em;
+}
+
+.holdings-rent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.holdings-rent-label {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.holdings-rent-value {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-gold);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.holdings-mortgage-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.holdings-dev-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding-top: 1px;
+}
+
+.dev-pip {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  display: inline-block;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.dev-pip.dev-house {
+  background: linear-gradient(to bottom, #34d399 0%, #059669 100%);
+  clip-path: polygon(50% 0%, 100% 38%, 100% 100%, 0% 100%, 0% 38%);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+
+.dev-pip.dev-empty {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.dev-pip.dev-hotel {
+  width: auto;
+  height: auto;
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+}
+
+.holdings-dev-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-left: 0.35rem;
+  font-weight: 600;
+}
+
+.holdings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 0.15rem;
+}
+
+.holdings-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: var(--font-sans);
+  transition: filter 0.12s ease, background 0.15s ease;
+  letter-spacing: 0.02em;
+}
+
+.holdings-btn.build {
+  background: rgba(16, 185, 129, 0.16);
+  color: var(--color-naira);
+  border-color: rgba(16, 185, 129, 0.32);
+}
+
+.holdings-btn.build:hover { background: rgba(16, 185, 129, 0.25); }
+
+.holdings-btn.sell {
+  background: rgba(239, 68, 68, 0.14);
+  color: var(--color-danger);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.holdings-btn.sell:hover { background: rgba(239, 68, 68, 0.22); }
+
+.holdings-btn.mortgage {
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--color-gold);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.holdings-btn.mortgage:hover { background: rgba(245, 158, 11, 0.24); }
+
+.holdings-btn.unmortgage {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-naira);
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+.holdings-btn.unmortgage:hover { background: rgba(16, 185, 129, 0.22); }
+
+/* ──────────────────────────────────────────────────────────────────────
+   Players panel — redesigned cards with stats + wealth bar
+   ────────────────────────────────────────────────────────────────────── */
+.players-panel {
+  background: linear-gradient(180deg, rgba(20, 18, 36, 0.85) 0%, rgba(11, 13, 24, 0.85) 100%);
+  padding: 0.85rem 0.85rem 0.95rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.players-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.7rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.players-panel-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+}
+
+.players-panel-round {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-display);
+}
+
+.players-panel-round .round-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.players-panel-round .round-number {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.players-panel-round .round-limit {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.players-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.player-card {
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem 0.5rem;
+  transition: background 0.15s ease, border-color 0.2s ease, box-shadow 0.25s ease;
+  position: relative;
+}
+
+.player-card.is-active {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(0, 0, 0, 0.3) 100%);
+  border-color: rgba(245, 158, 11, 0.4);
+  box-shadow: 0 4px 18px rgba(245, 158, 11, 0.18), inset 0 0 0 1px rgba(245, 158, 11, 0.06);
+}
+
+.player-card.is-me {
+  border-color: rgba(34, 211, 238, 0.35);
+}
+
+.player-card.is-me.is-active {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.16) 0%, rgba(0, 0, 0, 0.3) 100%);
+  border-color: rgba(34, 211, 238, 0.55);
+  box-shadow: 0 4px 22px rgba(34, 211, 238, 0.22);
+}
+
+.player-card.is-bankrupt {
+  opacity: 0.45;
+  filter: grayscale(0.5);
+}
+
+.player-card-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.player-card-avatar {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.player-card-avatar.tone-active {
+  border-color: rgba(245, 158, 11, 0.7);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.18), 0 0 14px rgba(245, 158, 11, 0.4);
+}
+
+.player-card.is-me .player-card-avatar.tone-active {
+  border-color: rgba(34, 211, 238, 0.8);
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.18), 0 0 14px rgba(34, 211, 238, 0.45);
+}
+
+.player-card-avatar.tone-jail {
+  border-color: rgba(239, 68, 68, 0.65);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+}
+
+.player-card-avatar.tone-bankrupt {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.player-card-avatar-emoji {
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.player-card-jail-badge {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.95);
+  border: 1.5px solid #0b0d18;
+  line-height: 1;
+}
+
+.player-card-middle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.player-card-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.player-card-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
+
+.player-card-you-tag {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  background: rgba(34, 211, 238, 0.18);
+  color: #67e8f9;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+}
+
+.player-card-ai-tag {
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.player-card-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.player-card-status {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.player-card-status.status-active {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--color-gold);
+}
+
+.player-card-status.status-waiting {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+}
+
+.player-card-status.status-jail {
+  background: rgba(239, 68, 68, 0.16);
+  color: var(--color-danger);
+}
+
+.player-card-status.status-bankrupt {
+  background: rgba(239, 68, 68, 0.16);
+  color: var(--color-danger);
+  text-decoration: line-through;
+}
+
+.player-card-chip {
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  padding: 1px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.player-card-chip.is-monopoly {
+  background: rgba(245, 158, 11, 0.16);
+  color: var(--color-gold);
+}
+
+.player-card-cash-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+  flex-shrink: 0;
+}
+
+.player-card-cash {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-naira);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.player-card.is-bankrupt .player-card-cash {
+  color: var(--color-danger);
+  text-decoration: line-through;
+}
+
+.player-card-networth {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
+}
+
+.player-card-wealthbar {
+  margin-top: 0.5rem;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.player-card-wealthbar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.55) 0%, rgba(245, 158, 11, 0.9) 100%);
+  transition: width 0.35s ease;
+  border-radius: 999px;
+}
+
+.player-card-wealthbar-fill.active {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.9) 0%, rgba(252, 211, 77, 1) 100%);
+}
+
+.player-card-wealthbar-fill.me {
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.55) 0%, rgba(34, 211, 238, 0.9) 100%);
+}
+
+.player-card-wealthbar-fill.me.active {
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.9) 0%, rgba(125, 211, 252, 1) 100%);
 }
 
 

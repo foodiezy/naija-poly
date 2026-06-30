@@ -5,10 +5,8 @@
 // randomness — the server drives pacing and applies the action via the engine.
 // =============================================================================
 
-import { BOARD, PropertyTile } from "../data/board";
+import { BOARD, PropertyTile, JAIL_FINE } from "../data/board";
 import type { GameState, PlayerId, Action } from "./types";
-
-const JAIL_FINE = 50_000;
 // Keep a little cash on hand rather than spending to zero.
 const CASH_BUFFER = 50_000;
 
@@ -117,7 +115,7 @@ export function getAIAction(state: GameState, playerId: PlayerId): Action | null
   switch (state.phase) {
     case "awaiting-roll": {
       if (me.inJail) {
-        if (me.getOutOfJailCards > 0) return { type: "USE_JAIL_CARD" };
+        if (me.jailCardSources.length > 0) return { type: "USE_JAIL_CARD" };
         if (me.cash >= 200_000 + CASH_BUFFER) return { type: "PAY_JAIL_FINE" };
         // Can't comfortably pay — roll for doubles (or pay if forced later).
         if (me.jailTurns >= 2 && me.cash >= JAIL_FINE) return { type: "PAY_JAIL_FINE" };

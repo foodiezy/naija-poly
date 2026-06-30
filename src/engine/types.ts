@@ -15,7 +15,7 @@ export interface Player {
   position: number; // 0–39
   inJail: boolean;
   jailTurns: number; // failed roll-out attempts
-  getOutOfJailCards: number;
+  jailCardSources: Array<"chance" | "esusu">; // which deck each held card came from
   bankrupt: boolean;
   order: number; // turn order
 }
