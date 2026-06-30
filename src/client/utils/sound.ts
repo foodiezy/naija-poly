@@ -31,14 +31,14 @@ export type SfxName =
 // Where each event's sample lives (served from public/sfx/). BASE_URL keeps
 // paths correct when the app is deployed under a sub-path.
 const SFX_FILES: Record<SfxName, string> = {
-  roll: "roll.ogg",
-  cash: "cash.ogg",
-  rent: "rent.ogg",
-  draw: "draw.ogg",
-  jail: "jail.ogg",
-  build: "build.ogg",
-  "your-turn": "your-turn.ogg",
-  "game-over": "game-over.ogg",
+  roll: "roll.wav",
+  cash: "cash.wav",
+  rent: "rent.wav",
+  draw: "draw.wav",
+  jail: "jail.wav",
+  build: "build.wav",
+  "your-turn": "your-turn.wav",
+  "game-over": "game-over.wav",
 };
 
 export function setMuted(muted: boolean) {

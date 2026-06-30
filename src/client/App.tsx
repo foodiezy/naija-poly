@@ -14,6 +14,7 @@ import ControlPanel from "./components/ControlPanel";
 import TileInspector from "./components/TileInspector";
 import GameOverModal from "./components/GameOverModal";
 import BuyDeedModal from "./components/BuyDeedModal";
+import OnboardingModal from "./components/OnboardingModal";
 
 // Hooks & Utilities
 import { useGameRoom } from "./hooks/useGameRoom";
@@ -52,6 +53,13 @@ export default function App() {
   const [selectedTilePos, setSelectedTilePos] = useState<number | null>(null);
   const [autoEndTurn, setAutoEndTurn] = useState(true);
   const [gameResultRecorded, setGameResultRecorded] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (typeof localStorage !== "undefined" && !localStorage.getItem("odogwu-tutorial-seen")) {
+      setShowOnboarding(true);
+    }
+  }, []);
 
   // Preload any sample SFX files once (synth fallback covers missing files).
   useEffect(() => {
@@ -203,11 +211,33 @@ export default function App() {
           exit={{ opacity: 0, y: -16 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
         >
-          <Lobby
-            onCreateRoom={createRoom}
-            onJoinRoom={joinRoom}
-            onQuickMatch={quickMatch}
-          />
+          {reconnecting ? (
+            <div className="reconnect-overlay" style={{ position: "relative", minHeight: "60vh", background: "transparent", backdropFilter: "none" }}>
+              <div className="reconnect-spinner"></div>
+              <h2 style={{ marginTop: "1rem" }}>Welcome Back</h2>
+              <p>Restoring your session...</p>
+            </div>
+          ) : (
+            <>
+              <Lobby
+                onCreateRoom={createRoom}
+                onJoinRoom={joinRoom}
+                onQuickMatch={quickMatch}
+              />
+              <AnimatePresence>
+                {showOnboarding && (
+                  <OnboardingModal
+                    onClose={() => {
+                      setShowOnboarding(false);
+                      if (typeof localStorage !== "undefined") {
+                        localStorage.setItem("odogwu-tutorial-seen", "1");
+                      }
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+            </>
+          )}
         </motion.div>
       ) : roomState?.status === "lobby" ? (
         <motion.div

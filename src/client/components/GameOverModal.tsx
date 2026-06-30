@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { motion } from "framer-motion";
+import confetti from "canvas-confetti";
 import { BOARD, Tile } from "../../data/board";
 import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player, TileState } from "../../engine/types";
@@ -35,6 +37,46 @@ export default function GameOverModal({ engineState, roomState, mySessionId, onR
     return netWorth;
   };
 
+  useEffect(() => {
+    if (engineState?.winnerId && engineState.winnerId === mySessionId) {
+      const duration = 3 * 1000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100000 };
+
+      const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+      const interval: any = setInterval(function() {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+          clearInterval(interval);
+          return;
+        }
+
+        const particleCount = 50 * (timeLeft / duration);
+        confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+        confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+      }, 250);
+      
+      return () => clearInterval(interval);
+    }
+    return undefined;
+  }, [engineState?.winnerId, mySessionId]);
+
+  const handleShare = async () => {
+    const text = `I just dominated Odogwu Empire as the Odogwu! 👑💵 Buy the land. Bankrupt your friends.`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Odogwu Empire", text, url: window.location.origin });
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      navigator.clipboard.writeText(text);
+      alert("Results copied to clipboard!");
+    }
+  };
+
   const getLeaderboard = () => {
     if (!engineState) return [];
     return [...engineState.players]
@@ -67,16 +109,16 @@ export default function GameOverModal({ engineState, roomState, mySessionId, onR
             const winner = engineState.players.find((p) => p.id === engineState.winnerId);
             return winner ? (
               <>
-                <motion.span
-                  style={{ display: "inline-block", fontSize: "3rem", margin: "1rem 0" }}
-                  animate={{ rotate: [0, -10, 10, -10, 10, 0] }}
-                  transition={{ delay: 0.7, duration: 1.0, ease: "easeInOut" }}
-                >👑</motion.span>
-                <div>
-                  <span className="winner-name" style={{ fontWeight: "bold", color: "var(--color-naira)" }}>{winner.name}</span>
-                  {winner.id === mySessionId ? " — You don hammer! " : " is the Odogwu! "}
-                </div>
-                <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", fontStyle: "italic", marginTop: "0.25rem" }}>
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", bounce: 0.5 }}
+                >
+                  <h1 style={{ fontSize: "3.5rem", color: "var(--color-gold)", textShadow: "0 0 20px rgba(245, 158, 11, 0.5)", margin: "0.5rem 0", textTransform: "uppercase", fontWeight: "900", lineHeight: 1.1 }}>
+                    {winner.id === mySessionId ? "You Are The Odogwu! 👑" : `${winner.name} is the Odogwu! 👑`}
+                  </h1>
+                </motion.div>
+                <div style={{ fontSize: "1.2rem", color: "var(--text-secondary)", fontStyle: "italic", marginBottom: "1.5rem" }}>
                   {winner.id === mySessionId
                     ? "You buy the land. You become the Odogwu. E no easy!"
                     : `${winner.name} chop all your money. Better luck next time!`}
@@ -148,11 +190,16 @@ export default function GameOverModal({ engineState, roomState, mySessionId, onR
           </div>
         </div>
 
-        {isHost && (
-          <button className="button-primary full-width-btn" style={{ padding: "1rem", marginTop: "1rem" }} onClick={onResetGame}>
-            🔄 Return to Lobby
+        <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
+          {isHost && (
+            <button className="button-primary full-width-btn" style={{ padding: "1rem", flex: 2 }} onClick={onResetGame}>
+              🔄 Return to Lobby
+            </button>
+          )}
+          <button className="button-primary full-width-btn" style={{ padding: "1rem", flex: 1, background: "var(--surface-3)", color: "var(--text-primary)" }} onClick={handleShare}>
+            📤 Share
           </button>
-        )}
+        </div>
       </motion.div>
     </div>
   );

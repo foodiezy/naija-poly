@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Client, Room } from "colyseus.js";
 import { toast } from "react-toastify";
 import { GameState, Action } from "../../engine/types";
@@ -139,10 +139,29 @@ export function useGameRoom() {
       setRoom(null);
       setRoomState(null);
       setEngineState(null);
+      sessionStorage.removeItem("odogwu-reconnection-token");
     });
 
     mySessionIdRef.current = joinedRoom.sessionId;
+    if (joinedRoom.reconnectionToken) {
+      sessionStorage.setItem("odogwu-reconnection-token", joinedRoom.reconnectionToken);
+    }
   }, []);
+
+  // Attempt to reconnect on page reload
+  useEffect(() => {
+    const token = sessionStorage.getItem("odogwu-reconnection-token");
+    if (token) {
+      setReconnecting(true);
+      colyseusClient.reconnect(token).then((rejoinedRoom) => {
+        handleRoomJoined(rejoinedRoom);
+        toast.success("✅ Restored game session!", { autoClose: 2000, toastId: "reconnected-mount" });
+      }).catch(() => {
+        setReconnecting(false);
+        sessionStorage.removeItem("odogwu-reconnection-token");
+      });
+    }
+  }, [handleRoomJoined]);
 
   const createRoom = async (name: string) => {
     try {
@@ -189,6 +208,7 @@ export function useGameRoom() {
       setRoomState(null);
       setEngineState(null);
       setChatMessages([]);
+      sessionStorage.removeItem("odogwu-reconnection-token");
     }
   };
 
