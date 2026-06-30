@@ -136,7 +136,11 @@ export default function PropertyList({ engineState, mySessionId, canManage, onSe
                         ))
                       )}
                       <span className="holdings-dev-label">
-                        {isHotel ? "Hotel" : houses > 0 ? getDevelopmentName(houses) : "Unimproved"}
+                        {isHotel
+                          ? "🏨 Hotel"
+                          : houses > 0
+                            ? `${getDevelopmentName(houses)} · ${houses}/4`
+                            : "Unimproved (0/4)"}
                       </span>
                     </div>
                   )}
@@ -147,9 +151,11 @@ export default function PropertyList({ engineState, mySessionId, canManage, onSe
                         <button
                           className="holdings-btn build"
                           onClick={() => onSendAction({ type: "BUILD", pos: tile.pos })}
-                          title={`Build ₦${((tile as PropertyTile).houseCost || 0).toLocaleString()}`}
+                          title={`Costs ₦${((tile as PropertyTile).houseCost || 0).toLocaleString()}`}
                         >
-                          <IconBuild size={13} /> Build
+                          <IconBuild size={13} />
+                          {houses === 4 ? "Build Hotel" : houses === 0 ? "Build 1st House" : `Build House ${houses + 1}`}
+                          {" "}<span style={{ opacity: 0.7 }}>₦{((tile as PropertyTile).houseCost / 1000).toFixed(0)}k</span>
                         </button>
                       )}
                       {sell && (

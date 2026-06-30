@@ -1,18 +1,36 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { BOARD } from "../../data/board";
+import { BOARD, PropertyTile } from "../../data/board";
 import type { Tile } from "../../data/board";
-import { GameState, Player, Action, TradeOffer, TileState } from "../../engine/types";
+import { GameState, Action, TradeOffer, TileState } from "../../engine/types";
 import { IconTrade } from "./icons";
+import { tokenEmoji } from "../../data/tokens";
+import { tileValue } from "../lib/holdings";
+import { RoomState } from "../../shared/room";
 
 interface Props {
   engineState: GameState;
   mySessionId: string;
   onSendAction: (action: Action) => void;
   onClose: () => void;
+  liveState?: RoomState | undefined;
 }
 
-export default function TradeBuilder({ engineState, mySessionId, onSendAction, onClose }: Props) {
+function groupColorVar(tile: Tile): string {
+  if (tile.type === "property") return `var(--color-${(tile as PropertyTile).group})`;
+  if (tile.type === "airport") return "#9ca3af";
+  if (tile.type === "utility") return "#64748b";
+  return "var(--text-muted)";
+}
+
+function tileSubLabel(tile: Tile): string {
+  if (tile.type === "property") return (tile as PropertyTile).group.replace(/^\w/, (c) => c.toUpperCase());
+  if (tile.type === "airport") return "Airport";
+  if (tile.type === "utility") return "Utility";
+  return "";
+}
+
+export default function TradeBuilder({ engineState, mySessionId, onSendAction, onClose, liveState }: Props) {
   const { players, tiles } = engineState;
   const me = players.find((p) => p.id === mySessionId);
 
@@ -22,18 +40,32 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
   const [tradeGiveTiles, setTradeGiveTiles] = useState<number[]>([]);
   const [tradeGetTiles, setTradeGetTiles] = useState<number[]>([]);
 
-  // Reset when target changes
   useEffect(() => { setTradeGetTiles([]); }, [tradeTargetId]);
 
-  const myProperties = BOARD.filter((t: Tile) => tiles[t.pos]?.ownerId === mySessionId && (tiles[t.pos] as TileState).houses === 0);
-  const targetProperties = tradeTargetId
-    ? BOARD.filter((t: Tile) => tiles[t.pos]?.ownerId === tradeTargetId && (tiles[t.pos] as TileState).houses === 0)
-    : [];
+  const getToken = (id: string) => tokenEmoji(liveState?.lobbyPlayers?.get(id)?.tokenId);
+
+  const tradeablePartners = players.filter((p) => p.id !== mySessionId && !p.bankrupt);
+
+  const myTradeableTiles = useMemo(
+    () => BOARD.filter((t: Tile) => tiles[t.pos]?.ownerId === mySessionId && (tiles[t.pos] as TileState).houses === 0),
+    [tiles, mySessionId]
+  );
+  const targetTradeableTiles = useMemo(
+    () => tradeTargetId
+      ? BOARD.filter((t: Tile) => tiles[t.pos]?.ownerId === tradeTargetId && (tiles[t.pos] as TileState).houses === 0)
+      : [],
+    [tiles, tradeTargetId]
+  );
 
   const target = players.find((p) => p.id === tradeTargetId);
 
   const toggle = (setter: React.Dispatch<React.SetStateAction<number[]>>, pos: number) =>
     setter((prev) => prev.includes(pos) ? prev.filter((p) => p !== pos) : [...prev, pos]);
+
+  // Bump-buttons for cash inputs
+  const cashSteps = (max: number): number[] => {
+    return [50_000, 100_000, 250_000, 500_000].filter((v) => v <= max);
+  };
 
   const handlePropose = () => {
     if (!tradeTargetId) return;
@@ -49,6 +81,19 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
     onClose();
   };
 
+  // Live deal-balance valuation: tile value (bank assessment) + cash.
+  const giveValue = tradeGiveCash + tradeGiveTiles.reduce((s, p) => s + tileValue(p, tiles), 0);
+  const getValue = tradeGetCash + tradeGetTiles.reduce((s, p) => s + tileValue(p, tiles), 0);
+  const balance = getValue - giveValue;
+  const balanceLabel =
+    !tradeTargetId || (giveValue === 0 && getValue === 0)
+      ? null
+      : Math.abs(balance) < Math.max(giveValue, getValue) * 0.08
+        ? { text: "Fair Deal", tone: "fair" }
+        : balance > 0
+          ? { text: "Favours You", tone: "you" }
+          : { text: "Favours Them", tone: "them" };
+
   const isEmpty = tradeGiveTiles.length === 0 && tradeGetTiles.length === 0 && tradeGiveCash === 0 && tradeGetCash === 0;
 
   return (
@@ -59,76 +104,216 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
       exit={{ opacity: 0, y: 40 }}
       transition={{ type: "spring", stiffness: 280, damping: 24 }}
     >
-      <div className="trade-card glass-panel" style={{ background: "#0e1525", maxWidth: "550px", overflowY: "auto", maxHeight: "90vh" }}>
-        <h3 className="auction-title" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-          <IconTrade size={22} /> Propose Trade Deal
-        </h3>
-
-        <div className="form-group">
-          <label>Select Player to Trade With:</label>
-          <select className="input-field" value={tradeTargetId} onChange={(e) => setTradeTargetId(e.target.value)}>
-            <option value="">-- Choose Player --</option>
-            {players.filter((p: Player) => p.id !== mySessionId && !p.bankrupt).map((p: Player) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
+      <motion.div
+        className="trade-card-premium"
+        initial={{ scale: 0.94 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 26 }}
+      >
+        <div className="trade-card-header">
+          <div className="trade-card-title">
+            <span className="trade-card-title-icon"><IconTrade size={20} /></span>
+            <span>Propose a Deal</span>
+          </div>
+          <button className="trade-card-close" onClick={onClose} aria-label="Close">×</button>
         </div>
 
-        {tradeTargetId && (
-          <>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginTop: "0.5rem" }}>
-              <div className="form-group">
-                <label>You Offer Cash (₦):</label>
-                <input type="number" className="input-field" min={0} max={me?.cash || 0} step={10000} value={tradeGiveCash} onChange={(e) => setTradeGiveCash(Math.max(0, Number(e.target.value)))} />
-                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Max: ₦{me?.cash.toLocaleString()}</span>
-              </div>
-              <div className="form-group">
-                <label>You Ask Cash (₦):</label>
-                <input type="number" className="input-field" min={0} max={target?.cash || 0} step={10000} value={tradeGetCash} onChange={(e) => setTradeGetCash(Math.max(0, Number(e.target.value)))} />
-                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Max: ₦{target?.cash.toLocaleString()}</span>
-              </div>
+        <div className="trade-card-body">
+          {/* 1. Player picker */}
+          <div className="trade-section">
+            <div className="trade-section-label">Trade with</div>
+            <div className="trade-player-grid">
+              {tradeablePartners.length === 0 && (
+                <div className="trade-empty-row">No other players to trade with.</div>
+              )}
+              {tradeablePartners.map((p) => {
+                const isSelected = p.id === tradeTargetId;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`trade-player-pick${isSelected ? " selected" : ""}`}
+                    onClick={() => setTradeTargetId(p.id)}
+                  >
+                    <span className="trade-player-pick-avatar">{getToken(p.id)}</span>
+                    <span className="trade-player-pick-meta">
+                      <span className="trade-player-pick-name">{p.name}</span>
+                      <span className="trade-player-pick-cash">₦{p.cash.toLocaleString()}</span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
+          </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginTop: "0.5rem" }}>
-              <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-secondary)" }}>Give Properties:</label>
-                <div style={{ maxHeight: "120px", overflowY: "auto", background: "rgba(0,0,0,0.3)", padding: "0.5rem", borderRadius: "6px", marginTop: "0.25rem" }}>
-                  {myProperties.length === 0
-                    ? <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontStyle: "italic" }}>No unimproved properties</div>
-                    : myProperties.map((t: Tile) => (
-                      <label key={t.pos} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", margin: "4px 0", cursor: "pointer" }}>
-                        <input type="checkbox" checked={tradeGiveTiles.includes(t.pos)} onChange={() => toggle(setTradeGiveTiles, t.pos)} />
-                        <span>{t.name}</span>
-                      </label>
-                    ))}
+          {tradeTargetId && target && (
+            <>
+              {/* 2. Two-column ledger: You offer / You want */}
+              <div className="trade-ledger">
+                {/* LEFT — what I give */}
+                <div className="trade-column">
+                  <div className="trade-column-head you">
+                    <span className="trade-column-head-avatar">{getToken(mySessionId)}</span>
+                    <span className="trade-column-head-meta">
+                      <span className="trade-column-head-name">You offer</span>
+                      <span className="trade-column-head-sub">{me?.name}</span>
+                    </span>
+                  </div>
+
+                  <label className="trade-cash-label">Cash</label>
+                  <div className="trade-cash-row">
+                    <input
+                      type="number"
+                      className="trade-cash-input"
+                      min={0}
+                      max={me?.cash || 0}
+                      step={10000}
+                      value={tradeGiveCash || ""}
+                      placeholder="0"
+                      onChange={(e) => setTradeGiveCash(Math.max(0, Math.min(me?.cash || 0, Number(e.target.value))))}
+                    />
+                    <div className="trade-bump-row">
+                      {cashSteps(me?.cash || 0).map((step) => (
+                        <button
+                          key={step}
+                          type="button"
+                          className="trade-bump"
+                          onClick={() => setTradeGiveCash((c) => Math.min(me?.cash || 0, c + step))}
+                        >
+                          +₦{step >= 1_000_000 ? `${step / 1_000_000}M` : `${step / 1000}k`}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className="trade-bump max"
+                        onClick={() => setTradeGiveCash(me?.cash || 0)}
+                      >Max</button>
+                    </div>
+                  </div>
+
+                  <label className="trade-cash-label">Properties</label>
+                  <div className="trade-tile-list">
+                    {myTradeableTiles.length === 0
+                      ? <div className="trade-empty-row">No unimproved properties.</div>
+                      : myTradeableTiles.map((t: Tile) => {
+                        const selected = tradeGiveTiles.includes(t.pos);
+                        return (
+                          <button
+                            key={t.pos}
+                            type="button"
+                            className={`trade-tile-pick${selected ? " selected" : ""}`}
+                            onClick={() => toggle(setTradeGiveTiles, t.pos)}
+                          >
+                            <span className="trade-tile-band" style={{ background: groupColorVar(t) }} />
+                            <span className="trade-tile-info">
+                              <span className="trade-tile-name">{t.name}</span>
+                              <span className="trade-tile-sub">{tileSubLabel(t)}</span>
+                            </span>
+                            <span className="trade-tile-value">₦{tileValue(t.pos, tiles).toLocaleString()}</span>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* RIGHT — what they give */}
+                <div className="trade-column">
+                  <div className="trade-column-head them">
+                    <span className="trade-column-head-avatar">{getToken(tradeTargetId)}</span>
+                    <span className="trade-column-head-meta">
+                      <span className="trade-column-head-name">You ask</span>
+                      <span className="trade-column-head-sub">{target.name}</span>
+                    </span>
+                  </div>
+
+                  <label className="trade-cash-label">Cash</label>
+                  <div className="trade-cash-row">
+                    <input
+                      type="number"
+                      className="trade-cash-input"
+                      min={0}
+                      max={target.cash || 0}
+                      step={10000}
+                      value={tradeGetCash || ""}
+                      placeholder="0"
+                      onChange={(e) => setTradeGetCash(Math.max(0, Math.min(target.cash || 0, Number(e.target.value))))}
+                    />
+                    <div className="trade-bump-row">
+                      {cashSteps(target.cash || 0).map((step) => (
+                        <button
+                          key={step}
+                          type="button"
+                          className="trade-bump"
+                          onClick={() => setTradeGetCash((c) => Math.min(target.cash || 0, c + step))}
+                        >
+                          +₦{step >= 1_000_000 ? `${step / 1_000_000}M` : `${step / 1000}k`}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className="trade-bump max"
+                        onClick={() => setTradeGetCash(target.cash || 0)}
+                      >Max</button>
+                    </div>
+                  </div>
+
+                  <label className="trade-cash-label">Properties</label>
+                  <div className="trade-tile-list">
+                    {targetTradeableTiles.length === 0
+                      ? <div className="trade-empty-row">They have no unimproved properties.</div>
+                      : targetTradeableTiles.map((t: Tile) => {
+                        const selected = tradeGetTiles.includes(t.pos);
+                        return (
+                          <button
+                            key={t.pos}
+                            type="button"
+                            className={`trade-tile-pick${selected ? " selected" : ""}`}
+                            onClick={() => toggle(setTradeGetTiles, t.pos)}
+                          >
+                            <span className="trade-tile-band" style={{ background: groupColorVar(t) }} />
+                            <span className="trade-tile-info">
+                              <span className="trade-tile-name">{t.name}</span>
+                              <span className="trade-tile-sub">{tileSubLabel(t)}</span>
+                            </span>
+                            <span className="trade-tile-value">₦{tileValue(t.pos, tiles).toLocaleString()}</span>
+                          </button>
+                        );
+                      })}
+                  </div>
                 </div>
               </div>
-              <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-secondary)" }}>Request Properties:</label>
-                <div style={{ maxHeight: "120px", overflowY: "auto", background: "rgba(0,0,0,0.3)", padding: "0.5rem", borderRadius: "6px", marginTop: "0.25rem" }}>
-                  {targetProperties.length === 0
-                    ? <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontStyle: "italic" }}>No unimproved properties</div>
-                    : targetProperties.map((t: Tile) => (
-                      <label key={t.pos} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", margin: "4px 0", cursor: "pointer" }}>
-                        <input type="checkbox" checked={tradeGetTiles.includes(t.pos)} onChange={() => toggle(setTradeGetTiles, t.pos)} />
-                        <span>{t.name}</span>
-                      </label>
-                    ))}
+
+              {/* 3. Live balance preview */}
+              <div className="trade-balance-row">
+                <div className="trade-balance-side">
+                  <span className="trade-balance-label">You offer</span>
+                  <span className="trade-balance-value">₦{giveValue.toLocaleString()}</span>
+                </div>
+                {balanceLabel && (
+                  <span className={`trade-balance-pill tone-${balanceLabel.tone}`}>{balanceLabel.text}</span>
+                )}
+                <div className="trade-balance-side right">
+                  <span className="trade-balance-label">You receive</span>
+                  <span className="trade-balance-value">₦{getValue.toLocaleString()}</span>
                 </div>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
 
-        <div style={{ display: "flex", gap: "1rem", marginTop: "1.5rem" }}>
-          <button className="button-primary" disabled={!tradeTargetId || isEmpty} onClick={handlePropose} style={{ flex: 1 }}>
-            Propose Deal
-          </button>
-          <button className="button-secondary" onClick={onClose} style={{ flex: 1 }}>
+        <div className="trade-card-actions">
+          <button className="trade-action-btn cancel" onClick={onClose}>
             Cancel
           </button>
+          <button
+            className="trade-action-btn propose"
+            disabled={!tradeTargetId || isEmpty}
+            onClick={handlePropose}
+          >
+            <IconTrade size={16} /> Send Offer
+          </button>
         </div>
-      </div>
+      </motion.div>
     </motion.div>
   );
 }

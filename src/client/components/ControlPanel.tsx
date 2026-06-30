@@ -70,6 +70,7 @@ export default function ControlPanel({
             tiles={engineState.tiles}
             mySessionId={mySessionId}
             onSendAction={onSendAction}
+            liveState={liveState}
           />
         )}
         {showTradeBuilder && (
@@ -79,6 +80,7 @@ export default function ControlPanel({
             mySessionId={mySessionId}
             onSendAction={onSendAction}
             onClose={() => setShowTradeBuilder(false)}
+            liveState={liveState}
           />
         )}
       </AnimatePresence>

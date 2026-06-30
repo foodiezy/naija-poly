@@ -1,7 +1,11 @@
 import { motion } from "framer-motion";
-import { BOARD } from "../../data/board";
+import { BOARD, PropertyTile } from "../../data/board";
+import type { Tile } from "../../data/board";
 import { TradeOffer, Player, Action, TileState } from "../../engine/types";
 import { IconTrade } from "./icons";
+import { tokenEmoji } from "../../data/tokens";
+import { tileValue } from "../lib/holdings";
+import { RoomState } from "../../shared/room";
 
 interface Props {
   activeTrade: TradeOffer;
@@ -9,75 +13,170 @@ interface Props {
   tiles: Record<number, TileState>;
   mySessionId: string;
   onSendAction: (action: Action) => void;
+  liveState?: RoomState | undefined;
 }
 
-function tileNamesStr(posArray: number[]): string {
-  if (posArray.length === 0) return "None";
-  return posArray.map((pos) => BOARD[pos].name).join(", ");
+function groupColorVar(tile: Tile): string {
+  if (tile.type === "property") return `var(--color-${(tile as PropertyTile).group})`;
+  if (tile.type === "airport") return "#9ca3af";
+  if (tile.type === "utility") return "#64748b";
+  return "var(--text-muted)";
 }
 
-export default function TradeOverlay({ activeTrade, players, tiles, mySessionId, onSendAction }: Props) {
+function tileSubLabel(tile: Tile): string {
+  if (tile.type === "property") return (tile as PropertyTile).group.replace(/^\w/, (c) => c.toUpperCase());
+  if (tile.type === "airport") return "Airport";
+  if (tile.type === "utility") return "Utility";
+  return "";
+}
+
+export default function TradeOverlay({ activeTrade, players, tiles, mySessionId, onSendAction, liveState }: Props) {
   if (activeTrade.toId !== mySessionId) return null;
 
   const proposer = players.find((p) => p.id === activeTrade.fromId);
+  const me = players.find((p) => p.id === mySessionId);
+  const getToken = (id: string) => tokenEmoji(liveState?.lobbyPlayers?.get(id)?.tokenId);
 
-  const summary = `You RECEIVE: ₦${activeTrade.giveCash.toLocaleString()} + ${tileNamesStr(activeTrade.giveTiles)}\nYou GIVE: ₦${activeTrade.getCash.toLocaleString()} + ${tileNamesStr(activeTrade.getTiles)}`;
+  // From your POV: giveCash/giveTiles is what THEY are sending you; getCash/getTiles is what they want FROM you.
+  const incomingCash = activeTrade.giveCash;
+  const incomingTilesPositions = activeTrade.giveTiles;
+  const outgoingCash = activeTrade.getCash;
+  const outgoingTilesPositions = activeTrade.getTiles;
 
-  // suppress unused lint for tiles (available for future detail display)
-  void tiles;
+  const incomingValue =
+    incomingCash + incomingTilesPositions.reduce((s, p) => s + tileValue(p, tiles), 0);
+  const outgoingValue =
+    outgoingCash + outgoingTilesPositions.reduce((s, p) => s + tileValue(p, tiles), 0);
+  const balance = incomingValue - outgoingValue;
+  const balanceTone =
+    Math.abs(balance) < Math.max(incomingValue, outgoingValue) * 0.08
+      ? "fair"
+      : balance > 0
+        ? "you"
+        : "them";
+  const balanceLabel = balanceTone === "fair" ? "Fair Deal" : balanceTone === "you" ? "Favours You" : "Favours Them";
+
+  const canAfford = (me?.cash ?? 0) >= outgoingCash;
+
+  const renderTile = (pos: number) => {
+    const t = BOARD[pos];
+    return (
+      <div key={pos} className="trade-tile-pick selected static">
+        <span className="trade-tile-band" style={{ background: groupColorVar(t) }} />
+        <span className="trade-tile-info">
+          <span className="trade-tile-name">{t.name}</span>
+          <span className="trade-tile-sub">{tileSubLabel(t)}</span>
+        </span>
+        <span className="trade-tile-value">₦{tileValue(pos, tiles).toLocaleString()}</span>
+      </div>
+    );
+  };
 
   return (
     <motion.div
       className="trade-overlay"
-      initial={{ opacity: 0, x: 60 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 60 }}
-      transition={{ type: "spring", stiffness: 300, damping: 26 }}
+      initial={{ opacity: 0, y: 60 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 40 }}
+      transition={{ type: "spring", stiffness: 280, damping: 24 }}
     >
-      <div className="trade-card glass-panel" style={{ border: "2px solid var(--color-gold)", background: "#0e1525" }}>
-        <h3 className="auction-title" style={{ color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-          <IconTrade size={22} /> Incoming Trade Offer
-        </h3>
-        <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", textAlign: "center" }}>
-          <strong>{proposer?.name}</strong> proposed a trade deal to you!
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", background: "rgba(0,0,0,0.3)", padding: "1rem", borderRadius: "8px" }}>
-          <div>
-            <strong style={{ color: "var(--color-naira)" }}>You will receive:</strong>
-            <div style={{ fontSize: "0.85rem", marginTop: "0.5rem" }}>
-              <div>Cash: ₦{activeTrade.giveCash.toLocaleString()}</div>
-              <div style={{ color: "var(--text-secondary)" }}>Properties: {tileNamesStr(activeTrade.giveTiles)}</div>
-            </div>
-          </div>
-          <div>
-            <strong style={{ color: "var(--color-danger)" }}>You will give:</strong>
-            <div style={{ fontSize: "0.85rem", marginTop: "0.5rem" }}>
-              <div>Cash: ₦{activeTrade.getCash.toLocaleString()}</div>
-              <div style={{ color: "var(--text-secondary)" }}>Properties: {tileNamesStr(activeTrade.getTiles)}</div>
-            </div>
+      <motion.div
+        className="trade-card-premium incoming"
+        initial={{ scale: 0.94 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 26 }}
+      >
+        <div className="trade-card-header">
+          <div className="trade-card-title">
+            <span className="trade-card-title-icon"><IconTrade size={20} /></span>
+            <span>Incoming Trade</span>
           </div>
         </div>
-        <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
+
+        <div className="trade-card-body">
+          <div className="trade-incoming-from">
+            <span className="trade-incoming-from-avatar">{getToken(activeTrade.fromId)}</span>
+            <div className="trade-incoming-from-meta">
+              <span className="trade-incoming-from-name">{proposer?.name}</span>
+              <span className="trade-incoming-from-sub">sent you a deal</span>
+            </div>
+          </div>
+
+          <div className="trade-ledger">
+            <div className="trade-column">
+              <div className="trade-column-head you">
+                <span className="trade-column-head-avatar">📥</span>
+                <span className="trade-column-head-meta">
+                  <span className="trade-column-head-name">You receive</span>
+                </span>
+              </div>
+              <div className="trade-cash-display">
+                <span>Cash</span>
+                <strong>₦{incomingCash.toLocaleString()}</strong>
+              </div>
+              <label className="trade-cash-label">Properties</label>
+              <div className="trade-tile-list">
+                {incomingTilesPositions.length === 0
+                  ? <div className="trade-empty-row">No properties.</div>
+                  : incomingTilesPositions.map(renderTile)}
+              </div>
+            </div>
+
+            <div className="trade-column">
+              <div className="trade-column-head them">
+                <span className="trade-column-head-avatar">📤</span>
+                <span className="trade-column-head-meta">
+                  <span className="trade-column-head-name">You give</span>
+                </span>
+              </div>
+              <div className="trade-cash-display">
+                <span>Cash</span>
+                <strong className={canAfford ? "" : "short"}>₦{outgoingCash.toLocaleString()}</strong>
+              </div>
+              <label className="trade-cash-label">Properties</label>
+              <div className="trade-tile-list">
+                {outgoingTilesPositions.length === 0
+                  ? <div className="trade-empty-row">No properties.</div>
+                  : outgoingTilesPositions.map(renderTile)}
+              </div>
+            </div>
+          </div>
+
+          <div className="trade-balance-row">
+            <div className="trade-balance-side">
+              <span className="trade-balance-label">Incoming value</span>
+              <span className="trade-balance-value">₦{incomingValue.toLocaleString()}</span>
+            </div>
+            <span className={`trade-balance-pill tone-${balanceTone}`}>{balanceLabel}</span>
+            <div className="trade-balance-side right">
+              <span className="trade-balance-label">Outgoing value</span>
+              <span className="trade-balance-value">₦{outgoingValue.toLocaleString()}</span>
+            </div>
+          </div>
+
+          {!canAfford && (
+            <div className="trade-cant-afford">
+              You can't cover the ₦{outgoingCash.toLocaleString()} cash — current balance ₦{(me?.cash ?? 0).toLocaleString()}.
+            </div>
+          )}
+        </div>
+
+        <div className="trade-card-actions">
           <button
-            className="button-primary"
-            style={{ flex: 1, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}
-            onClick={() => {
-              if (window.confirm(`Accept this trade?\n\n${summary}`)) {
-                onSendAction({ type: "RESPOND_TRADE", accept: true });
-              }
-            }}
-          >
-            Accept Offer
-          </button>
-          <button
-            className="button-secondary"
-            style={{ flex: 1, background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)" }}
+            className="trade-action-btn cancel danger"
             onClick={() => onSendAction({ type: "RESPOND_TRADE", accept: false })}
           >
-            Decline Offer
+            Decline
+          </button>
+          <button
+            className="trade-action-btn propose"
+            disabled={!canAfford}
+            onClick={() => onSendAction({ type: "RESPOND_TRADE", accept: true })}
+          >
+            Accept Deal
           </button>
         </div>
-      </div>
+      </motion.div>
     </motion.div>
   );
 }
