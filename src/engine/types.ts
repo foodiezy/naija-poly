@@ -15,7 +15,7 @@ export interface Player {
   position: number; // 0–39
   inJail: boolean;
   jailTurns: number; // failed roll-out attempts
-  jailCardSources: Array<"chance" | "esusu">; // which deck each held card came from
+  jailCardSources: Array<"chance" | "hustle">; // which deck each held card came from
   bankrupt: boolean;
   order: number; // turn order
 }
@@ -66,9 +66,9 @@ export interface GameState {
   dice: [number, number] | null;
   doublesCount: number; // consecutive doubles this turn
   chanceOrder: string[]; // shuffled card ids
-  esusuOrder: string[];
+  hustleOrder: string[];
   chancePtr: number;
-  esusuPtr: number;
+  hustlePtr: number;
   log: string[]; // human-readable event log (great for the UI feed)
   winnerId: PlayerId | null;
   auctionState?: AuctionState | null;
@@ -76,7 +76,7 @@ export interface GameState {
   owedToId?: PlayerId | "bank" | null;
   settings: GameSettings;
   currentTurn: number; // current round number
-  freeParkingPot: number; // Bukka Rest Stop jackpot pot
+  freeParkingPot: number; // Mama Put Rest Stop jackpot pot
 }
 
 // ---- Actions the reducer will accept -------------------------------------

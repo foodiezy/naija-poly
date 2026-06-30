@@ -20,11 +20,11 @@ export function useSoundEffects(engineState: GameState | null, mySessionId: stri
         // Sounds
         if (logLine.includes("rolled")) {
           sound.playRoll();
-        } else if (logLine.includes("bought") || logLine.includes("passed START") || logLine.includes("collected the Bukka Pot")) {
+        } else if (logLine.includes("bought") || logLine.includes("passed START") || logLine.includes("collected the Mama Put Pot")) {
           sound.playCash();
         } else if (logLine.includes("paid ₦") || logLine.includes("lost ₦") || logLine.includes("tax")) {
           sound.playRentPay();
-        } else if (logLine.includes("drew Chance") || logLine.includes("drew Esusu")) {
+        } else if (logLine.includes("drew Chance") || logLine.includes("drew Hustle")) {
           sound.playDraw();
         } else if (logLine.includes("Kirikiri Prison")) {
           sound.playJail();
@@ -59,9 +59,9 @@ export function useSoundEffects(engineState: GameState | null, mySessionId: stri
               } else if (logLine.includes("drew Chance")) {
                 const cardMatch = logLine.match(/Chance: "([^"]+)"/);
                 if (cardMatch) toast.info(`🃏 Chance: ${cardMatch[1]}`, { autoClose: 5000 });
-              } else if (logLine.includes("drew Esusu")) {
-                const cardMatch = logLine.match(/Esusu: "([^"]+)"/);
-                if (cardMatch) toast.info(`💳 Esusu: ${cardMatch[1]}`, { autoClose: 5000 });
+              } else if (logLine.includes("drew Hustle")) {
+                const cardMatch = logLine.match(/Hustle: "([^"]+)"/);
+                if (cardMatch) toast.info(`💼 Hustle: ${cardMatch[1]}`, { autoClose: 5000 });
               }
             } else {
               // Events caused by others that affect me

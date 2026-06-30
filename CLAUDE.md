@@ -4,10 +4,12 @@ Project context for Claude Code. This file is read automatically at the start
 of every session — keep it accurate and it steers the agent's work.
 
 ## What this is
-**Odogwu Empire** — A Nigerian-themed, property-trading **online multiplayer** board game.
-Players roll dice, buy Nigerian properties (Ajegunle → Banana Island), build
-houses/hotels, pay rent in Naira, draw Chance/Esusu cards (written in Pidgin),
-and try to bankrupt each other.
+**Odogwu Empire** — A pan-Nigerian, property-trading **online multiplayer** board game.
+The board spans eight zones (Borno, Kwara, Enugu, Kaduna, Edo, Rivers, Abuja, Lagos)
+so every Nigerian sees a city they recognise. Players roll dice, buy properties
+(Maiduguri → Ikoyi), build houses/hotels, pay rent in Naira, draw Chance / Hustle
+cards (written in Pidgin), and try to bankrupt each other. "Free parking" is the
+**Mama Put Rest Stop**; the optional jackpot is the **Mama Put Pot**.
 
 ## Non-negotiable architecture rules
 - **Authoritative server.** The server owns the true game state. Clients send

@@ -61,7 +61,7 @@ function getSpecialTileIcon(tile: Tile): string {
     case "free":    return "🍲";
     case "gotojail": return "👮";
     case "chance":  return "❓";
-    case "esusu":   return "🤲";
+    case "hustle":  return "💼";
     case "airport": return "✈️";
     case "utility":
       return (tile.name.toLowerCase().includes("power") || tile.name.toLowerCase().includes("nepa") || tile.name.toLowerCase().includes("ecg"))
@@ -76,7 +76,7 @@ function getTileGridCoords(pos: number): { row: number; col: number } {
     // Bottom edge: Go (0) is bottom-right, Jail (10) is bottom-left
     return { row: 11, col: 11 - pos };
   } else if (pos > 10 && pos <= 20) {
-    // Left edge: pos 11 is row 10, pos 20 is row 1 (Bukka Rest Stop)
+    // Left edge: pos 11 is row 10, pos 20 is row 1 (Mama Put Rest Stop)
     return { row: 11 - (pos - 10), col: 1 };
   } else if (pos > 20 && pos <= 30) {
     // Top edge: pos 21 is col 2, pos 30 is col 11 (Go to Jail)
@@ -134,6 +134,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
       const t = setTimeout(() => setDiceShaking(false), 380);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [engineState.dice, engineState.currentTurn]);
 
   const getLogClass = (logLine: string) => {
@@ -205,7 +206,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
 
   // Helper to extract the last card draw text from logs
   const lastLog = engineState.log && engineState.log.length > 0 ? engineState.log[engineState.log.length - 1] : "";
-  const cardDrawMatch = lastLog.match(/(.+) drew (Chance|Esusu): "(.+)"/);
+  const cardDrawMatch = lastLog.match(/(.+) drew (Chance|Hustle): "(.+)"/);
   
   const activeCardDraw = cardDrawMatch ? {
     player: cardDrawMatch[1],
@@ -232,16 +233,16 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
     <div className="monopoly-board">
       {/* Board Center (Richup.io Style) */}
       <div className="board-center" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", background: "linear-gradient(135deg, #120e24 0%, #0a0814 100%)", padding: "1.5rem", borderRadius: "2px" }}>
-        {/* Top Row: Logo, Bukka Pot and Game Phase/Turn HUD */}
+        {/* Top Row: Logo, Mama Put Pot and Game Phase/Turn HUD */}
         <div className="board-center-top-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 5, width: "100%" }}>
           <div className="board-center-logo" style={{ margin: 0, fontSize: "1.2rem", letterSpacing: "0.2em", background: "linear-gradient(135deg, var(--color-gold) 0%, #f97316 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             ODOGWU EMPIRE
           </div>
           
-          {/* Bukka Pot Display */}
+          {/* Mama Put Pot Display */}
           {engineState.settings?.freeParkingJackpot && (
             <motion.div
-              className="bukka-pot-display"
+              className="mama-put-pot-display"
               style={{ margin: 0, padding: "0.35rem 0.75rem", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "2px", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", color: "var(--color-naira)", boxShadow: "0 0 10px rgba(16, 185, 129, 0.15)", zIndex: 5 }}
               key={engineState.freeParkingPot}
               animate={engineState.freeParkingPot > 0 ? {
@@ -249,7 +250,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
               } : {}}
               transition={{ duration: 1.5, repeat: Infinity }}
             >
-              <span>🍲 Bukka Pot:</span>
+              <span>🍲 Mama Put Pot:</span>
               <motion.span
                 key={engineState.freeParkingPot}
                 initial={{ scale: 1.3, color: "#10b981" }}

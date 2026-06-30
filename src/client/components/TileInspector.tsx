@@ -200,17 +200,17 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
   const renderSpecialDeed = () => {
     const iconMap: Record<string, string> = {
       go: "🚀", jail: "🔒", free: "🍲", gotojail: "👮",
-      chance: "❓", esusu: "🤲", tax: "💰"
+      chance: "❓", hustle: "💼", tax: "💰"
     };
     const descMap: Record<string, string> = {
       go: "Collect ₦200,000 salary each time you pass or land here.",
       jail: "Just visiting! Unless you're sent here by the law.",
       free: engineState?.settings?.freeParkingJackpot
-        ? `Land here to collect the Bukka Pot (currently ₦${(engineState?.freeParkingPot ?? 0).toLocaleString()}).`
+        ? `Land here to collect the Mama Put Pot (currently ₦${(engineState?.freeParkingPot ?? 0).toLocaleString()}).`
         : "Take a rest. Nothing happens here.",
       gotojail: "Go directly to Kirikiri Prison. Do not pass START. Do not collect ₦200,000.",
       chance: "Draw a Chance card — could be fortune or misfortune!",
-      esusu: "Draw an Esusu (Community) card — communal savings and surprises.",
+      hustle: "Pick a Hustle card — bank errors, fees, side gigs, and twists of fate.",
     };
 
     return (
@@ -222,7 +222,7 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
         <div className="deed-body">
           <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.5, textAlign: "center", padding: "0.5rem 0" }}>
             {tile.type === "tax"
-              ? `Pay ₦${(tile as TaxTile).amount.toLocaleString()} to the bank${engineState?.settings?.freeParkingJackpot ? " (added to Bukka Pot)" : ""}.`
+              ? `Pay ₦${(tile as TaxTile).amount.toLocaleString()} to the bank${engineState?.settings?.freeParkingJackpot ? " (added to Mama Put Pot)" : ""}.`
               : descMap[tile.type] || "A special board space."
             }
           </p>

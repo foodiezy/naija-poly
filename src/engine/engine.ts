@@ -8,7 +8,7 @@
 import {
   BOARD,
   CHANCE_CARDS,
-  ESUSU_CARDS,
+  HUSTLE_CARDS,
   STARTING_CASH,
   GO_SALARY,
   JAIL_POSITION,
@@ -174,7 +174,7 @@ export function createGame(
   });
 
   const chanceOrder = shuffle(CHANCE_CARDS.map((c) => c.id), rng);
-  const esusuOrder = shuffle(ESUSU_CARDS.map((c) => c.id), rng);
+  const hustleOrder = shuffle(HUSTLE_CARDS.map((c) => c.id), rng);
 
   return {
     players,
@@ -184,9 +184,9 @@ export function createGame(
     dice: null,
     doublesCount: 0,
     chanceOrder,
-    esusuOrder,
+    hustleOrder,
     chancePtr: 0,
-    esusuPtr: 0,
+    hustlePtr: 0,
     log: ["Game started."],
     winnerId: null,
     settings: mergedSettings,
@@ -253,7 +253,7 @@ export function applyAction(
             if (nextState.settings.freeParkingJackpot) {
               nextState.freeParkingPot += JAIL_FINE;
               nextState.log.push(
-                `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine (added to Bukka Rest Stop Pot) and moved.`
+                `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine (added to Mama Put Pot) and moved.`
               );
             } else {
               nextState.log.push(
@@ -570,7 +570,7 @@ export function applyAction(
       currentPlayer.jailTurns = 0;
       if (nextState.settings.freeParkingJackpot) {
         nextState.freeParkingPot += JAIL_FINE;
-        nextState.log.push(`${currentPlayer.name} paid ₦50,000 fine (added to Bukka Rest Stop Pot) and was released from Jail.`);
+        nextState.log.push(`${currentPlayer.name} paid ₦50,000 fine (added to Mama Put Pot) and was released from Jail.`);
       } else {
         nextState.log.push(`${currentPlayer.name} paid ₦50,000 fine and was released from Jail.`);
       }
@@ -597,7 +597,7 @@ export function applyAction(
       if (source === "chance") {
         nextState.chanceOrder.push("ch07");
       } else {
-        nextState.esusuOrder.push("es07");
+        nextState.hustleOrder.push("es07");
       }
 
       nextState.log.push(`${currentPlayer.name} used a Get Out of Jail Free card and was released from Jail.`);
@@ -1101,7 +1101,7 @@ function resolveLanding(
     }
     if (state.settings.freeParkingJackpot) {
       state.freeParkingPot += tile.amount;
-      state.log.push(`${player.name} paid ₦${tile.amount.toLocaleString("en-NG")} for ${tile.name} (added to Bukka Rest Stop Pot).`);
+      state.log.push(`${player.name} paid ₦${tile.amount.toLocaleString("en-NG")} for ${tile.name} (added to Mama Put Pot).`);
     } else {
       state.log.push(`${player.name} paid ₦${tile.amount.toLocaleString("en-NG")} for ${tile.name}.`);
     }
@@ -1112,10 +1112,10 @@ function resolveLanding(
   } else if (tile.type === "free") {
     if (state.settings.freeParkingJackpot && state.freeParkingPot > 0) {
       player.cash += state.freeParkingPot;
-      state.log.push(`${player.name} landed on Bukka Rest Stop (Free Parking) and collected the Bukka Pot of ₦${state.freeParkingPot.toLocaleString("en-NG")}!`);
+      state.log.push(`${player.name} landed on Mama Put Rest Stop (Free Parking) and collected the Mama Put Pot of ₦${state.freeParkingPot.toLocaleString("en-NG")}!`);
       state.freeParkingPot = 0;
     } else {
-      state.log.push(`${player.name} landed on Bukka Rest Stop (Free Parking).`);
+      state.log.push(`${player.name} landed on Mama Put Rest Stop (Free Parking).`);
     }
     state.phase = "awaiting-end-turn";
   } else if (tile.type === "gotojail") {
@@ -1125,7 +1125,7 @@ function resolveLanding(
     state.doublesCount = 0;
     state.log.push(`${player.name} was sent to Kirikiri Prison!`);
     state.phase = "awaiting-end-turn";
-  } else if (tile.type === "chance" || tile.type === "esusu") {
+  } else if (tile.type === "chance" || tile.type === "hustle") {
     drawCard(state, player, tile.type, rng);
   } else if (tile.type === "go") {
     state.log.push(`${player.name} landed on START.`);
@@ -1136,13 +1136,13 @@ function resolveLanding(
 function drawCard(
   state: GameState,
   player: Player,
-  type: "chance" | "esusu",
+  type: "chance" | "hustle",
   rng: () => number,
 ): void {
   const isChance = type === "chance";
-  const order = isChance ? state.chanceOrder : state.esusuOrder;
-  const ptr = isChance ? state.chancePtr : state.esusuPtr;
-  const deck = isChance ? CHANCE_CARDS : ESUSU_CARDS;
+  const order = isChance ? state.chanceOrder : state.hustleOrder;
+  const ptr = isChance ? state.chancePtr : state.hustlePtr;
+  const deck = isChance ? CHANCE_CARDS : HUSTLE_CARDS;
 
   if (order.length === 0) {
     throw new Error(`The ${type} deck is empty`);
@@ -1154,7 +1154,7 @@ function drawCard(
     throw new Error(`Card not found in deck: ${cardId}`);
   }
 
-  state.log.push(`${player.name} drew ${isChance ? "Chance" : "Esusu"}: "${card.text}"`);
+  state.log.push(`${player.name} drew ${isChance ? "Chance" : "Hustle"}: "${card.text}"`);
 
   // Manage pointer and deck arrays
   let nextPtr = ptr;
@@ -1163,7 +1163,7 @@ function drawCard(
     if (isChance) {
       state.chanceOrder = nextOrder;
     } else {
-      state.esusuOrder = nextOrder;
+      state.hustleOrder = nextOrder;
     }
     nextPtr = nextOrder.length > 0 ? ptr % nextOrder.length : 0;
   } else {
@@ -1173,7 +1173,7 @@ function drawCard(
   if (isChance) {
     state.chancePtr = nextPtr;
   } else {
-    state.esusuPtr = nextPtr;
+    state.hustlePtr = nextPtr;
   }
 
   applyCardAction(state, player, card.action, type, rng);
@@ -1183,7 +1183,7 @@ function applyCardAction(
   state: GameState,
   player: Player,
   action: typeof CHANCE_CARDS[0]["action"],
-  deckSource: "chance" | "esusu",
+  deckSource: "chance" | "hustle",
   rng: () => number,
 ): void {
   switch (action.kind) {
@@ -1196,7 +1196,7 @@ function applyCardAction(
       const amtAbs = Math.abs(action.amount);
       if (action.amount < 0 && state.settings.freeParkingJackpot) {
         state.freeParkingPot += amtAbs;
-        state.log.push(`${player.name} lost ₦${amtAbs.toLocaleString("en-NG")} (added to Bukka Rest Stop Pot).`);
+        state.log.push(`${player.name} lost ₦${amtAbs.toLocaleString("en-NG")} (added to Mama Put Pot).`);
       } else {
         state.log.push(`${player.name} ${verb} ₦${amtAbs.toLocaleString("en-NG")}.`);
       }
@@ -1298,7 +1298,7 @@ function applyCardAction(
       if (state.settings.freeParkingJackpot) {
         state.freeParkingPot += totalCost;
         state.log.push(
-          `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} Bungalow/Duplex/Mansion/Estate(s), ${hotelsCount} Hotel(s)) (added to Bukka Rest Stop Pot).`
+          `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} Bungalow/Duplex/Mansion/Estate(s), ${hotelsCount} Hotel(s)) (added to Mama Put Pot).`
         );
       } else {
         state.log.push(

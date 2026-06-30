@@ -200,7 +200,7 @@ function synthRentPay() {
   }
 }
 
-/** Ascending arpeggio for drawing Chance or Esusu cards */
+/** Ascending arpeggio for drawing Chance or Hustle cards */
 function synthDraw() {
   try {
     const ctx = getAudioContext();

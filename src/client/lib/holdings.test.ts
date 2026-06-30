@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { TileState } from "../../engine/types";
 import { tileValue, ownedTiles, netWorth, ownsFullGroup, developmentPips } from "./holdings";
 
-// Board fixtures: the "brown" group is pos 1 (Ajegunle) and pos 3 (Mushin),
-// each price 60_000, houseCost 50_000, mortgage 30_000. Pos 2 is an Esusu card
+// Board fixtures: the "brown" group is pos 1 (Maiduguri) and pos 3 (Bama),
+// each price 60_000, houseCost 50_000, mortgage 30_000. Pos 2 is a Hustle card
 // tile (unownable, no price).
 const own = (overrides: Partial<TileState> = {}): TileState => ({
   ownerId: "p1",

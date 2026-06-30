@@ -117,7 +117,7 @@ export default function RoomLobbyView({
                 checked={roomState?.freeParkingJackpot || false}
                 onChange={(e) => onUpdateSettings({ freeParkingJackpot: e.target.checked })}
               />
-              Bukka Rest Stop Jackpot
+              Mama Put Rest Stop Jackpot
             </label>
 
             <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", cursor: "pointer", marginBottom: "0.5rem" }}>

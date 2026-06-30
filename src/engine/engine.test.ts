@@ -50,9 +50,9 @@ describe("Game Engine", () => {
       expect(state.dice).toBeNull();
       expect(state.doublesCount).toBe(0);
       expect(state.chanceOrder).toHaveLength(16);
-      expect(state.esusuOrder).toHaveLength(16);
+      expect(state.hustleOrder).toHaveLength(16);
       expect(state.chancePtr).toBe(0);
-      expect(state.esusuPtr).toBe(0);
+      expect(state.hustlePtr).toBe(0);
       expect(state.log[0]).toBe("Game started.");
     });
 
@@ -283,7 +283,7 @@ describe("Game Engine", () => {
     });
   });
 
-  describe("Chance and Esusu Cards", () => {
+  describe("Chance and Hustle Cards", () => {
     it("handles money cards", () => {
       const state = createGame(["p1", "p2"]);
       // force CHANCE_CARDS ch02 ("Opay pay you POS dividend. Collect ₦50,000") to be on top
@@ -664,7 +664,7 @@ describe("Game Engine", () => {
 
     it("redirects tax payments to freeParkingPot when enabled", () => {
       const state = createGame(["p1", "p2"], { freeParkingJackpot: true });
-      state.players[0].position = 2; // Esusu Box
+      state.players[0].position = 2; // Hustle Box
       state.currentPlayerIndex = 0;
 
       const mockRng = MockRNG.makeRoll(1, 1); // roll 2 -> lands on pos 4 (FIRS Income Tax, 200k)
@@ -672,21 +672,21 @@ describe("Game Engine", () => {
 
       expect(nextState.freeParkingPot).toBe(200_000);
       expect(nextState.players[0].cash).toBe(STARTING_CASH - 200_000);
-      expect(nextState.log[nextState.log.length - 1]).toContain("added to Bukka Rest Stop Pot");
+      expect(nextState.log[nextState.log.length - 1]).toContain("added to Mama Put Pot");
     });
 
-    it("pays out freeParkingPot on Bukka Rest Stop landing", () => {
+    it("pays out freeParkingPot on Mama Put Rest Stop landing", () => {
       const state = createGame(["p1", "p2"], { freeParkingJackpot: true });
       state.freeParkingPot = 350_000;
       state.players[0].position = 18; // Calabar (pos 18)
       state.currentPlayerIndex = 0;
 
-      const mockRng = MockRNG.makeRoll(1, 1); // roll 2 -> lands on pos 20 (Bukka Rest Stop)
+      const mockRng = MockRNG.makeRoll(1, 1); // roll 2 -> lands on pos 20 (Mama Put Rest Stop)
       const nextState = applyAction(state, "p1", { type: "ROLL" }, mockRng.getRNG());
 
       expect(nextState.players[0].cash).toBe(STARTING_CASH + 350_000);
       expect(nextState.freeParkingPot).toBe(0);
-      expect(nextState.log[nextState.log.length - 1]).toContain("collected the Bukka Pot of ₦350,000");
+      expect(nextState.log[nextState.log.length - 1]).toContain("collected the Mama Put Pot of ₦350,000");
     });
 
     it("ends game and calculates winner by net worth when turn limit is reached", () => {

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   BOARD,
   CHANCE_CARDS,
-  ESUSU_CARDS,
+  HUSTLE_CARDS,
   AIRPORT_COUNT,
   UTILITY_COUNT,
   type PropertyTile,
@@ -37,8 +37,8 @@ describe("Nigerian board data", () => {
 
   it("has full 16-card decks with unique ids", () => {
     expect(CHANCE_CARDS).toHaveLength(16);
-    expect(ESUSU_CARDS).toHaveLength(16);
-    const ids = [...CHANCE_CARDS, ...ESUSU_CARDS].map((c) => c.id);
+    expect(HUSTLE_CARDS).toHaveLength(16);
+    const ids = [...CHANCE_CARDS, ...HUSTLE_CARDS].map((c) => c.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 });
