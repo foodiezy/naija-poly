@@ -4,6 +4,7 @@ import { getDevelopmentName } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
+import { getFactForTile } from "../../data/facts";
 
 interface TileInspectorProps {
   tilePos: number;
@@ -134,6 +135,19 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
               </div>
             )}
           </div>
+
+          {/* Fun fact */}
+          {getFactForTile(tilePos) && (
+            <motion.div
+              className="deed-fact-box"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
+            >
+              <span className="deed-fact-label">💡 Did you know?</span>
+              <p className="deed-fact-text">{getFactForTile(tilePos)}</p>
+            </motion.div>
+          )}
         </div>
       </>
     );
@@ -163,6 +177,17 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
           <div>Mortgage Value: <strong>₦{t.mortgage.toLocaleString()}</strong></div>
         </div>
         {renderOwnerStatus()}
+        {getFactForTile(tilePos) && (
+          <motion.div
+            className="deed-fact-box"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
+          >
+            <span className="deed-fact-label">💡 Did you know?</span>
+            <p className="deed-fact-text">{getFactForTile(tilePos)}</p>
+          </motion.div>
+        )}
       </div>
     </>
   );
@@ -192,6 +217,17 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
             <div>Mortgage Value: <strong>₦{t.mortgage.toLocaleString()}</strong></div>
           </div>
           {renderOwnerStatus()}
+          {getFactForTile(tilePos) && (
+            <motion.div
+              className="deed-fact-box"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
+            >
+              <span className="deed-fact-label">💡 Did you know?</span>
+              <p className="deed-fact-text">{getFactForTile(tilePos)}</p>
+            </motion.div>
+          )}
         </div>
       </>
     );

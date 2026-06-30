@@ -11,7 +11,7 @@
 
   --border-glow: rgba(99, 102, 241, 0.18);
   --border-glow-active: rgba(99, 102, 241, 0.5);
-  
+
   --color-gold: #f59e0b;
   --color-gold-hover: #d97706;
   --color-naira: #10b981;
@@ -110,13 +110,19 @@ body {
   scrollbar-color: rgba(99, 102, 241, 0.28) transparent;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-display);
 }
 
 /* Honor the OS "reduce motion" preference: kill the infinite CSS pulses/glows
    and collapse transitions. Pairs with <MotionConfig reducedMotion="user">. */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -402,7 +408,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   gap: 1rem;
   padding: 1.25rem;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   transition: border-color 0.2s, box-shadow 0.3s, transform 0.2s;
   cursor: default;
 }
@@ -626,12 +632,21 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
   gap: 1.25rem;
   width: 100%;
-  min-width: 0; /* Prevent flex/grid blowouts */
+  min-width: 0;
+  /* Prevent flex/grid blowouts */
 }
 
-.game-col-left { order: 1; }
-.board-panel { order: 2; }
-.game-col-right { order: 3; }
+.game-col-left {
+  order: 1;
+}
+
+.board-panel {
+  order: 2;
+}
+
+.game-col-right {
+  order: 3;
+}
 
 @media (max-width: 1350px) {
   .game-view {
@@ -639,16 +654,19 @@ h1, h2, h3, h4, h5, h6 {
     gap: 1.5rem 1.25rem;
     padding: 1.25rem;
   }
+
   .game-col-left {
     grid-column: 2;
     grid-row: 2;
     width: 100%;
   }
+
   .board-panel {
     grid-column: 1;
     grid-row: 1 / span 2;
     align-self: start;
   }
+
   .game-col-right {
     grid-column: 2;
     grid-row: 1;
@@ -661,16 +679,19 @@ h1, h2, h3, h4, h5, h6 {
   :root {
     --board-size: min(calc(100vw - 2rem), 750px);
   }
+
   .game-view {
     grid-template-columns: 1fr;
     gap: 1.5rem;
     padding: 1rem;
     width: 100%;
   }
+
   .game-col {
     width: 100%;
     max-width: 100%;
   }
+
   .board-panel {
     grid-column: 1;
     grid-row: 1;
@@ -678,11 +699,13 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     justify-content: center;
   }
+
   .game-col-right {
     grid-column: 1;
     grid-row: 2;
     width: 100%;
   }
+
   .game-col-left {
     grid-column: 1;
     grid-row: 3;
@@ -703,65 +726,81 @@ h1, h2, h3, h4, h5, h6 {
   :root {
     --board-size: min(calc(100vw - 1rem), 640px);
   }
+
   body {
     font-size: 14px;
   }
+
   .app-header {
     padding: 0.45rem 0.7rem;
     flex-wrap: wrap;
     gap: 0.4rem;
   }
+
   .header-center {
     display: none;
   }
+
   .header-right {
     gap: 0.35rem;
   }
+
   .header-btn {
     padding: 0.35rem 0.6rem;
     font-size: 0.72rem;
   }
+
   .logo-text {
     font-size: 1.4rem;
   }
+
   .game-view {
     padding: 0.6rem;
     gap: 0.9rem;
   }
+
   /* Right column actions are the priority on mobile — keep them readable */
   .sidebar-action-btn {
     padding: 0.6rem 0.4rem;
     font-size: 0.8rem;
     min-height: 44px;
   }
+
   .holdings-card {
     min-height: 56px;
   }
+
   .holdings-actions .holdings-btn {
     padding: 6px 10px;
     font-size: 0.72rem;
   }
+
   /* Modals fit screen */
   .buy-deed-card,
   .tile-inspector-overlay .deed-card {
     max-width: calc(100vw - 1.2rem);
   }
+
   .buy-deed-overlay {
     padding: 0.6rem;
   }
+
   /* Board centerpiece scales down */
   .dice-stage {
     transform: scale(1.15);
   }
+
   .active-player-hero-name {
     font-size: 1rem;
   }
+
   /* Chat / settings panels collapse padding */
   .console-panel,
   .assets-panel,
   .settings-panel {
     padding: 0.8rem;
   }
+
   /* Footer compact */
   .app-footer {
     padding: 0.4rem 0.7rem;
@@ -769,9 +808,11 @@ h1, h2, h3, h4, h5, h6 {
     flex-wrap: wrap;
     gap: 0.4rem;
   }
+
   .footer-left {
     gap: 0.5rem;
   }
+
   .footer-right {
     width: 100%;
     text-align: center;
@@ -785,93 +826,118 @@ h1, h2, h3, h4, h5, h6 {
     --board-size: calc(100vw - 0.8rem);
     --tile-size: calc(var(--board-size) / 11);
   }
+
   body {
     font-size: 13px;
   }
+
   .app-header {
     padding: 0.4rem 0.55rem;
   }
+
   .room-badge {
     padding: 0.25rem 0.5rem;
     font-size: 0.7rem;
   }
+
   .header-btn {
     padding: 0.3rem 0.5rem;
     font-size: 0.68rem;
   }
+
   .game-view {
     padding: 0.4rem;
     gap: 0.7rem;
   }
+
   .monopoly-board {
     border-width: 4px;
   }
+
   .tile-name {
     font-size: clamp(0.5rem, 2.1vw, 0.7rem);
   }
+
   .tile-price {
     font-size: 0.58rem;
   }
+
   .player-token {
     width: 18px;
     height: 18px;
     font-size: 0.95rem;
     border-width: 1.5px;
   }
+
   /* Board center HUD: smaller fonts so nothing overflows */
   .board-center-logo {
     font-size: 2.1rem !important;
   }
+
   .board-center {
     padding: 0.7rem !important;
   }
+
   .dice-stage {
     transform: scale(1);
     margin: 0.25rem 0 0.9rem;
   }
+
   .active-player-hero {
     padding: 0.45rem 0.7rem 0.45rem 0.5rem;
     gap: 0.55rem;
   }
+
   .active-player-hero-avatar {
     width: 36px;
     height: 36px;
     font-size: 1.5rem;
   }
+
   .active-player-hero-name {
     font-size: 0.95rem;
   }
+
   /* Big modal cards: scale price + names down */
   .buy-deed-name {
     font-size: 1.4rem;
   }
+
   .buy-deed-price-value {
     font-size: 1.9rem;
   }
+
   .buy-deed-actions {
     grid-template-columns: 1fr;
   }
+
   .buy-deed-btn {
     padding: 0.95rem 0.5rem;
     font-size: 0.92rem;
   }
+
   /* Player + holdings cards stay readable */
   .player-card {
     padding: 0.5rem 0.55rem 0.45rem;
   }
+
   .player-card-name {
     max-width: 80px;
     font-size: 0.85rem;
   }
+
   .player-card-cash {
     font-size: 0.9rem;
   }
+
   .holdings-name {
     font-size: 0.78rem;
   }
+
   .holdings-rent-value {
     font-size: 0.85rem;
   }
+
   /* Touch-friendly checkbox row */
   .footer-toggle-item input[type="checkbox"] {
     transform: scale(1.2);
@@ -884,7 +950,8 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
   align-items: center;
   width: 100%;
-  min-width: 0; /* Prevent grid overflow */
+  min-width: 0;
+  /* Prevent grid overflow */
 }
 
 .monopoly-board {
@@ -901,7 +968,8 @@ h1, h2, h3, h4, h5, h6 {
     #0f172a;
   border: 6px solid rgba(245, 158, 11, 0.25);
   box-shadow: 0 25px 65px rgba(0, 0, 0, 0.75), 0 0 40px rgba(16, 185, 129, 0.15), inset 0 0 80px rgba(0, 0, 0, 0.8);
-  border-radius: 2px; /* Authentic sharp tabletop boxes */
+  border-radius: 2px;
+  /* Authentic sharp tabletop boxes */
   position: relative;
   overflow: hidden;
 }
@@ -921,7 +989,8 @@ h1, h2, h3, h4, h5, h6 {
   position: relative;
   border: 2px solid rgba(245, 158, 11, 0.2);
   box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.8), 0 0 25px rgba(16, 185, 129, 0.12);
-  border-radius: 0; /* Perfectly flush with inner square tile circuit */
+  border-radius: 0;
+  /* Perfectly flush with inner square tile circuit */
   overflow: hidden;
 }
 
@@ -1047,14 +1116,22 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 1.75rem;
   font-weight: 800;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-  border: 2px solid rgba(0,0,0,0.1);
+  border: 2px solid rgba(0, 0, 0, 0.1);
   animation: dieRoll 0.4s ease-out;
 }
 
 @keyframes dieRoll {
-  0% { transform: rotate(0deg) scale(0.6); }
-  50% { transform: rotate(180deg) scale(1.1); }
-  100% { transform: rotate(360deg) scale(1.0); }
+  0% {
+    transform: rotate(0deg) scale(0.6);
+  }
+
+  50% {
+    transform: rotate(180deg) scale(1.1);
+  }
+
+  100% {
+    transform: rotate(360deg) scale(1.0);
+  }
 }
 
 /* Draw Deck Overlay — sits low (near the dice) so it never covers the feed */
@@ -1082,8 +1159,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @keyframes cardFadeIn {
-  from { opacity: 0; transform: translate(-50%, -40%); }
-  to { opacity: 1; transform: translate(-50%, -50%); }
+  from {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
 }
 
 .card-deck-title {
@@ -1126,11 +1210,11 @@ h1, h2, h3, h4, h5, h6 {
 /* Center area between the color band and the price stripe — name + icon
    share this slot. flex:1 lets the name expand and centre regardless of
    length so the price stripe always sits flush at the bottom edge. */
-.tile > .tile-type-icon {
+.tile>.tile-type-icon {
   flex-shrink: 0;
 }
 
-.tile > .tile-name {
+.tile>.tile-name {
   flex: 1 1 auto;
   width: 100%;
   padding: 2px 3px;
@@ -1300,7 +1384,7 @@ h1, h2, h3, h4, h5, h6 {
   height: 8px;
   background: linear-gradient(to bottom, #34d399 0%, #10b981 100%);
   clip-path: polygon(50% 0%, 100% 38%, 100% 100%, 0% 100%, 0% 38%);
-  filter: drop-shadow(0 1px 1.5px rgba(0,0,0,0.55));
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.55));
 }
 
 /* Hotel shape — taller red building with flat roof accent */
@@ -1308,19 +1392,22 @@ h1, h2, h3, h4, h5, h6 {
   width: 10px;
   height: 10px;
   background: linear-gradient(to bottom, #dc2626 0%, #ef4444 100%);
-  clip-path: polygon(
-    15% 0%, 85% 0%,
-    85% 15%, 100% 15%,
-    100% 100%, 0% 100%,
-    0% 15%, 15% 15%
-  );
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+  clip-path: polygon(15% 0%, 85% 0%,
+      85% 15%, 100% 15%,
+      100% 100%, 0% 100%,
+      0% 15%, 15% 15%);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
   animation: hotelGlow 2s ease-in-out infinite alternate;
 }
 
 @keyframes hotelGlow {
-  0% { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); }
-  100% { filter: drop-shadow(0 0 4px rgba(239,68,68,0.6)); }
+  0% {
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
+  }
 }
 
 /* Tokens positioned inside Tile */
@@ -1346,7 +1433,7 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.6);
   border: 2px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.6), 0 0 8px rgba(255,255,255,0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 8px rgba(255, 255, 255, 0.15);
   z-index: 10;
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -1354,27 +1441,49 @@ h1, h2, h3, h4, h5, h6 {
 /* Your own token — bright cyan ring */
 .player-token-me {
   border-color: #22d3ee;
-  box-shadow: 0 0 8px rgba(34, 211, 238, 0.6), 0 0 16px rgba(34, 211, 238, 0.3), 0 2px 6px rgba(0,0,0,0.6);
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.6), 0 0 16px rgba(34, 211, 238, 0.3), 0 2px 6px rgba(0, 0, 0, 0.6);
   animation: myTokenPulse 1.5s ease-in-out infinite;
 }
 
 @keyframes myTokenPulse {
-  0% { box-shadow: 0 0 8px rgba(34,211,238,0.6), 0 0 16px rgba(34,211,238,0.3), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1); }
-  50% { box-shadow: 0 0 14px rgba(34,211,238,0.8), 0 0 28px rgba(34,211,238,0.4), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1.12); }
-  100% { box-shadow: 0 0 8px rgba(34,211,238,0.6), 0 0 16px rgba(34,211,238,0.3), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1); }
+  0% {
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.6), 0 0 16px rgba(34, 211, 238, 0.3), 0 2px 6px rgba(0, 0, 0, 0.6);
+    transform: scale(1);
+  }
+
+  50% {
+    box-shadow: 0 0 14px rgba(34, 211, 238, 0.8), 0 0 28px rgba(34, 211, 238, 0.4), 0 2px 6px rgba(0, 0, 0, 0.6);
+    transform: scale(1.12);
+  }
+
+  100% {
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.6), 0 0 16px rgba(34, 211, 238, 0.3), 0 2px 6px rgba(0, 0, 0, 0.6);
+    transform: scale(1);
+  }
 }
 
 /* Active turn player's token — gold ring */
 .player-token-active {
   border-color: #f59e0b;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.7), 0 0 18px rgba(245, 158, 11, 0.35), 0 2px 6px rgba(0,0,0,0.6);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.7), 0 0 18px rgba(245, 158, 11, 0.35), 0 2px 6px rgba(0, 0, 0, 0.6);
   animation: activeTokenPulse 1.2s ease-in-out infinite;
 }
 
 @keyframes activeTokenPulse {
-  0% { box-shadow: 0 0 8px rgba(245,158,11,0.7), 0 0 18px rgba(245,158,11,0.35), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1); }
-  50% { box-shadow: 0 0 14px rgba(245,158,11,0.9), 0 0 30px rgba(245,158,11,0.5), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1.15); }
-  100% { box-shadow: 0 0 8px rgba(245,158,11,0.7), 0 0 18px rgba(245,158,11,0.35), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1); }
+  0% {
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.7), 0 0 18px rgba(245, 158, 11, 0.35), 0 2px 6px rgba(0, 0, 0, 0.6);
+    transform: scale(1);
+  }
+
+  50% {
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.9), 0 0 30px rgba(245, 158, 11, 0.5), 0 2px 6px rgba(0, 0, 0, 0.6);
+    transform: scale(1.15);
+  }
+
+  100% {
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.7), 0 0 18px rgba(245, 158, 11, 0.35), 0 2px 6px rgba(0, 0, 0, 0.6);
+    transform: scale(1);
+  }
 }
 
 /* Both me AND active — layered cyan + gold */
@@ -1384,9 +1493,20 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @keyframes myActiveTokenPulse {
-  0% { box-shadow: 0 0 8px rgba(34,211,238,0.7), 0 0 20px rgba(245,158,11,0.4), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1); }
-  50% { box-shadow: 0 0 16px rgba(34,211,238,0.9), 0 0 32px rgba(245,158,11,0.6), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1.18); }
-  100% { box-shadow: 0 0 8px rgba(34,211,238,0.7), 0 0 20px rgba(245,158,11,0.4), 0 2px 6px rgba(0,0,0,0.6); transform: scale(1); }
+  0% {
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.7), 0 0 20px rgba(245, 158, 11, 0.4), 0 2px 6px rgba(0, 0, 0, 0.6);
+    transform: scale(1);
+  }
+
+  50% {
+    box-shadow: 0 0 16px rgba(34, 211, 238, 0.9), 0 0 32px rgba(245, 158, 11, 0.6), 0 2px 6px rgba(0, 0, 0, 0.6);
+    transform: scale(1.18);
+  }
+
+  100% {
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.7), 0 0 20px rgba(245, 158, 11, 0.4), 0 2px 6px rgba(0, 0, 0, 0.6);
+    transform: scale(1);
+  }
 }
 
 /* Tile highlights — any tile with a player gets a subtle highlight */
@@ -1604,8 +1724,15 @@ h1, h2, h3, h4, h5, h6 {
   text-transform: none;
   letter-spacing: 0;
 }
-.assets-round-badge strong { color: var(--color-gold); }
-.assets-round-limit { color: var(--text-muted); margin-left: 2px; }
+
+.assets-round-badge strong {
+  color: var(--color-gold);
+}
+
+.assets-round-limit {
+  color: var(--text-muted);
+  margin-left: 2px;
+}
 
 .assets-timer-row {
   display: flex;
@@ -1621,7 +1748,10 @@ h1, h2, h3, h4, h5, h6 {
   font-variant-numeric: tabular-nums;
   color: var(--color-naira);
 }
-.assets-timer-secs.urgent { color: var(--color-danger); }
+
+.assets-timer-secs.urgent {
+  color: var(--color-danger);
+}
 
 .assets-timer-track {
   height: 4px;
@@ -1636,7 +1766,10 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 999px;
   transition: width 0.25s linear;
 }
-.assets-timer-fill.urgent { background: var(--color-danger); }
+
+.assets-timer-fill.urgent {
+  background: var(--color-danger);
+}
 
 .assets-total {
   display: flex;
@@ -1649,7 +1782,11 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.72rem;
   color: var(--text-secondary);
 }
-.assets-total strong { font-size: 0.95rem; color: var(--color-naira); }
+
+.assets-total strong {
+  font-size: 0.95rem;
+  color: var(--color-naira);
+}
 
 .assets-list {
   max-height: 240px;
@@ -1676,6 +1813,7 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(245, 158, 11, 0.07);
   border-radius: var(--radius-sm);
 }
+
 .sidebar-prop-row.assets-monopoly .sidebar-prop-dot {
   box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.45);
 }
@@ -1720,7 +1858,11 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
-.settings-row:hover { background: var(--surface-2); border-color: var(--border-strong); }
+
+.settings-row:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
 
 .settings-pill {
   font-size: 0.65rem;
@@ -1732,6 +1874,7 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(0, 0, 0, 0.35);
   color: var(--text-muted);
 }
+
 .settings-pill.on {
   background: rgba(16, 185, 129, 0.16);
   color: var(--color-naira);
@@ -1740,19 +1883,23 @@ h1, h2, h3, h4, h5, h6 {
 .settings-slider-row {
   cursor: default;
 }
+
 .settings-slider-row:hover {
   background: var(--surface-1);
   border-color: var(--border-subtle);
 }
+
 .settings-slider-row.muted-dim {
   opacity: 0.4;
   pointer-events: none;
 }
+
 .settings-slider-container {
   display: flex;
   align-items: center;
   gap: 0.4rem;
 }
+
 .volume-slider {
   width: 70px;
   height: 4px;
@@ -1762,6 +1909,7 @@ h1, h2, h3, h4, h5, h6 {
   outline: none;
   cursor: pointer;
 }
+
 .volume-slider::-webkit-slider-thumb {
   appearance: none;
   width: 12px;
@@ -1771,9 +1919,11 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
   transition: transform 0.1s ease;
 }
+
 .volume-slider::-webkit-slider-thumb:hover {
   transform: scale(1.2);
 }
+
 .volume-slider::-moz-range-thumb {
   width: 12px;
   height: 12px;
@@ -1783,9 +1933,11 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
   transition: transform 0.1s ease;
 }
+
 .volume-slider::-moz-range-thumb:hover {
   transform: scale(1.2);
 }
+
 .settings-slider-val {
   font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
@@ -1802,6 +1954,7 @@ html.high-contrast {
   --border-strong: rgba(255, 255, 255, 0.42);
   --bg-panel: rgba(13, 18, 32, 0.94);
 }
+
 html.high-contrast .glass-panel {
   border-color: var(--border-strong);
 }
@@ -1962,7 +2115,7 @@ html.high-contrast .glass-panel {
   font-weight: 700;
   text-transform: uppercase;
   color: var(--text-secondary);
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   padding-bottom: 0.5rem;
   margin-bottom: 0.75rem;
 }
@@ -2192,8 +2345,8 @@ html.high-contrast .glass-panel {
 
 .bid-input {
   width: 80px;
-  background: rgba(0,0,0,0.4);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: #fff;
   padding: 0.4rem;
   border-radius: 4px;
@@ -2207,8 +2360,15 @@ html.high-contrast .glass-panel {
 }
 
 @keyframes auction-pulse {
-  0%, 100% { box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
-  50% { box-shadow: 0 0 16px rgba(239, 68, 68, 0.55); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(239, 68, 68, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.55);
+  }
 }
 
 .auction-timer {
@@ -2324,8 +2484,11 @@ html.high-contrast .glass-panel {
 .trade-overlay {
   z-index: 100;
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.8);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2363,8 +2526,15 @@ html.high-contrast .glass-panel {
 }
 
 @keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* Supplemental Tiny Viewport Adjustments */
@@ -2372,27 +2542,34 @@ html.high-contrast .glass-panel {
   .dashboard-view {
     padding: 0.5rem;
   }
+
   .app-header {
     padding: 0.6rem 0.8rem;
     flex-wrap: wrap;
     gap: 0.5rem;
   }
+
   .logo-text {
     font-size: 1.3rem;
   }
+
   .room-badge {
     font-size: 0.7rem;
   }
+
   .players-hud,
   .console-panel {
     padding: 0.85rem;
   }
+
   .board-center-logo {
     font-size: 2.4rem;
   }
+
   .board-center-feed-logs {
     max-height: 110px;
   }
+
   .tile-tooltip {
     display: none;
   }
@@ -2404,13 +2581,16 @@ html.high-contrast .glass-panel {
     height: 18px;
     font-size: 0.85rem;
   }
+
   .game-over-overlay {
     padding: 0.5rem;
   }
+
   .game-over-modal {
     max-height: 92vh;
     overflow-y: auto;
   }
+
   .lobby-action-card,
   .lobby-card {
     padding: 1.5rem 1.25rem;
@@ -2457,16 +2637,33 @@ html.high-contrast .glass-panel {
   padding: 3px;
   box-sizing: border-box;
   backface-visibility: hidden;
-  box-shadow: inset 0 0 4px rgba(0,0,0,0.15), 0 3px 6px rgba(0,0,0,0.3);
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* Position faces in 3D space */
-.face.front  { transform: rotateY(0deg) translateZ(22px); }
-.face.back   { transform: rotateY(180deg) translateZ(22px); }
-.face.top    { transform: rotateX(90deg) translateZ(22px); }
-.face.bottom { transform: rotateX(-90deg) translateZ(22px); }
-.face.left   { transform: rotateY(-90deg) translateZ(22px); }
-.face.right  { transform: rotateY(90deg) translateZ(22px); }
+.face.front {
+  transform: rotateY(0deg) translateZ(22px);
+}
+
+.face.back {
+  transform: rotateY(180deg) translateZ(22px);
+}
+
+.face.top {
+  transform: rotateX(90deg) translateZ(22px);
+}
+
+.face.bottom {
+  transform: rotateX(-90deg) translateZ(22px);
+}
+
+.face.left {
+  transform: rotateY(-90deg) translateZ(22px);
+}
+
+.face.right {
+  transform: rotateY(90deg) translateZ(22px);
+}
 
 /* Pips rendering & grid alignment */
 .pip {
@@ -2475,7 +2672,7 @@ html.high-contrast .glass-panel {
   height: 6px;
   background: #111827;
   border-radius: 50%;
-  box-shadow: inset 0 1px 1px rgba(0,0,0,0.5);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5);
 }
 
 .front {
@@ -2483,43 +2680,114 @@ html.high-contrast .glass-panel {
   justify-content: center;
   align-items: center;
 }
+
 .front .pip {
   width: 8px;
   height: 8px;
-  background: #dc2626; /* red center dot for face 1 */
+  background: #dc2626;
+  /* red center dot for face 1 */
 }
 
-.top .pip:nth-child(1) { grid-area: 1 / 1; }
-.top .pip:nth-child(2) { grid-area: 3 / 3; }
+.top .pip:nth-child(1) {
+  grid-area: 1 / 1;
+}
 
-.left .pip:nth-child(1) { grid-area: 1 / 1; }
-.left .pip:nth-child(2) { grid-area: 2 / 2; }
-.left .pip:nth-child(3) { grid-area: 3 / 3; }
+.top .pip:nth-child(2) {
+  grid-area: 3 / 3;
+}
 
-.right .pip:nth-child(1) { grid-area: 1 / 1; }
-.right .pip:nth-child(2) { grid-area: 1 / 3; }
-.right .pip:nth-child(3) { grid-area: 3 / 1; }
-.right .pip:nth-child(4) { grid-area: 3 / 3; }
+.left .pip:nth-child(1) {
+  grid-area: 1 / 1;
+}
 
-.bottom .pip:nth-child(1) { grid-area: 1 / 1; }
-.bottom .pip:nth-child(2) { grid-area: 1 / 3; }
-.bottom .pip:nth-child(3) { grid-area: 2 / 2; }
-.bottom .pip:nth-child(4) { grid-area: 3 / 1; }
-.bottom .pip:nth-child(5) { grid-area: 3 / 3; }
+.left .pip:nth-child(2) {
+  grid-area: 2 / 2;
+}
 
-.back .pip:nth-child(1) { grid-area: 1 / 1; }
-.back .pip:nth-child(2) { grid-area: 1 / 3; }
-.back .pip:nth-child(3) { grid-area: 2 / 1; }
-.back .pip:nth-child(4) { grid-area: 2 / 3; }
-.back .pip:nth-child(5) { grid-area: 3 / 1; }
-.back .pip:nth-child(6) { grid-area: 3 / 3; }
+.left .pip:nth-child(3) {
+  grid-area: 3 / 3;
+}
+
+.right .pip:nth-child(1) {
+  grid-area: 1 / 1;
+}
+
+.right .pip:nth-child(2) {
+  grid-area: 1 / 3;
+}
+
+.right .pip:nth-child(3) {
+  grid-area: 3 / 1;
+}
+
+.right .pip:nth-child(4) {
+  grid-area: 3 / 3;
+}
+
+.bottom .pip:nth-child(1) {
+  grid-area: 1 / 1;
+}
+
+.bottom .pip:nth-child(2) {
+  grid-area: 1 / 3;
+}
+
+.bottom .pip:nth-child(3) {
+  grid-area: 2 / 2;
+}
+
+.bottom .pip:nth-child(4) {
+  grid-area: 3 / 1;
+}
+
+.bottom .pip:nth-child(5) {
+  grid-area: 3 / 3;
+}
+
+.back .pip:nth-child(1) {
+  grid-area: 1 / 1;
+}
+
+.back .pip:nth-child(2) {
+  grid-area: 1 / 3;
+}
+
+.back .pip:nth-child(3) {
+  grid-area: 2 / 1;
+}
+
+.back .pip:nth-child(4) {
+  grid-area: 2 / 3;
+}
+
+.back .pip:nth-child(5) {
+  grid-area: 3 / 1;
+}
+
+.back .pip:nth-child(6) {
+  grid-area: 3 / 3;
+}
 
 @keyframes tumbleDie {
-  0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.7); }
-  25% { transform: rotateX(180deg) rotateY(270deg) rotateZ(120deg) scale(1.15); }
-  50% { transform: rotateX(360deg) rotateY(180deg) rotateZ(240deg) scale(0.9); }
-  75% { transform: rotateX(270deg) rotateY(360deg) rotateZ(300deg) scale(1.05); }
-  100% { /* Settle on the style-provided rotation */ }
+  0% {
+    transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.7);
+  }
+
+  25% {
+    transform: rotateX(180deg) rotateY(270deg) rotateZ(120deg) scale(1.15);
+  }
+
+  50% {
+    transform: rotateX(360deg) rotateY(180deg) rotateZ(240deg) scale(0.9);
+  }
+
+  75% {
+    transform: rotateX(270deg) rotateY(360deg) rotateZ(300deg) scale(1.05);
+  }
+
+  100% {
+    /* Settle on the style-provided rotation */
+  }
 }
 
 /* Players HUD Hover Asset Popover */
@@ -2575,10 +2843,10 @@ html.high-contrast .glass-panel {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255,255,255,0.01);
+  background: rgba(255, 255, 255, 0.01);
   padding: 0.25rem 0.4rem;
   border-radius: 4px;
-  border-bottom: 1px solid rgba(255,255,255,0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
 }
 
 .popover-tile-name {
@@ -2761,7 +3029,8 @@ html.high-contrast .glass-panel {
   font-size: 0.8rem;
 }
 
-.player-cash, .player-assets {
+.player-cash,
+.player-assets {
   font-size: 0.85rem;
   color: var(--text-secondary);
 }
@@ -2796,23 +3065,49 @@ html.high-contrast .glass-panel {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scaleUp {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
-  50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.7); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.7);
+  }
 }
 
 /* Responsive adjustments for game over table */
@@ -2820,12 +3115,16 @@ html.high-contrast .glass-panel {
   .game-over-modal {
     padding: 1.5rem;
   }
+
   .game-over-title {
     font-size: 1.6rem;
   }
-  .leaderboard-header, .leaderboard-row {
+
+  .leaderboard-header,
+  .leaderboard-row {
     grid-template-columns: 0.6fr 1.6fr 1.6fr;
   }
+
   /* Hide cash and assets details on mobile to fit screen */
   .leaderboard-header span:nth-child(3),
   .leaderboard-header span:nth-child(4),
@@ -3157,7 +3456,7 @@ html.high-contrast .glass-panel {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(0,0,0,0.18) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(0, 0, 0, 0.18) 100%);
   pointer-events: none;
 }
 
@@ -3360,11 +3659,27 @@ html.high-contrast .glass-panel {
 }
 
 @keyframes diceShake {
-  0%, 100% { transform: translate(0, 0) rotate(0); }
-  20% { transform: translate(-2px, -3px) rotate(-6deg); }
-  40% { transform: translate(2px, -2px) rotate(5deg); }
-  60% { transform: translate(-2px, 2px) rotate(-4deg); }
-  80% { transform: translate(2px, 3px) rotate(3deg); }
+
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0);
+  }
+
+  20% {
+    transform: translate(-2px, -3px) rotate(-6deg);
+  }
+
+  40% {
+    transform: translate(2px, -2px) rotate(5deg);
+  }
+
+  60% {
+    transform: translate(-2px, 2px) rotate(-4deg);
+  }
+
+  80% {
+    transform: translate(2px, 3px) rotate(3deg);
+  }
 }
 
 .dice-stage.shaking .die-3d-wrapper {
@@ -3389,6 +3704,40 @@ html.high-contrast .glass-panel {
   background: linear-gradient(135deg, rgba(34, 211, 238, 0.18) 0%, rgba(11, 16, 32, 0.5) 70%);
   border-color: rgba(34, 211, 238, 0.45);
   box-shadow: 0 6px 26px rgba(34, 211, 238, 0.28);
+}
+
+/* ── Lobby trivia ticker ── */
+.lobby-trivia-ticker {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 1rem 1.5rem;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  min-height: 4.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  grid-column: 1 / -1;
+}
+
+.trivia-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #10b981;
+}
+
+.trivia-text {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 420px;
 }
 
 .active-player-hero-avatar {
@@ -3435,6 +3784,32 @@ html.high-contrast .glass-panel {
 
 .active-player-hero.is-me .active-player-hero-sub {
   color: #67e8f9;
+}
+
+/* ── In-game board trivia (during other players' turns) ── */
+.board-trivia-box {
+  margin-top: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  max-width: 380px;
+  min-height: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.board-trivia-box .trivia-label {
+  font-size: 0.6rem;
+}
+
+.board-trivia-box .trivia-text {
+  font-size: 0.72rem;
+  max-width: 340px;
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -3515,7 +3890,7 @@ html.high-contrast .glass-panel {
   width: 8px;
   flex-shrink: 0;
   position: relative;
-  background-image: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(0,0,0,0.22));
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(0, 0, 0, 0.22));
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
 }
 
@@ -3626,7 +4001,7 @@ html.high-contrast .glass-panel {
 .dev-pip.dev-house {
   background: linear-gradient(to bottom, #34d399 0%, #059669 100%);
   clip-path: polygon(50% 0%, 100% 38%, 100% 100%, 0% 100%, 0% 38%);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .dev-pip.dev-empty {
@@ -3679,7 +4054,9 @@ html.high-contrast .glass-panel {
   border-color: rgba(16, 185, 129, 0.32);
 }
 
-.holdings-btn.build:hover { background: rgba(16, 185, 129, 0.25); }
+.holdings-btn.build:hover {
+  background: rgba(16, 185, 129, 0.25);
+}
 
 .holdings-btn.sell {
   background: rgba(239, 68, 68, 0.14);
@@ -3687,7 +4064,9 @@ html.high-contrast .glass-panel {
   border-color: rgba(239, 68, 68, 0.3);
 }
 
-.holdings-btn.sell:hover { background: rgba(239, 68, 68, 0.22); }
+.holdings-btn.sell:hover {
+  background: rgba(239, 68, 68, 0.22);
+}
 
 .holdings-btn.mortgage {
   background: rgba(245, 158, 11, 0.14);
@@ -3695,7 +4074,9 @@ html.high-contrast .glass-panel {
   border-color: rgba(245, 158, 11, 0.3);
 }
 
-.holdings-btn.mortgage:hover { background: rgba(245, 158, 11, 0.24); }
+.holdings-btn.mortgage:hover {
+  background: rgba(245, 158, 11, 0.24);
+}
 
 .holdings-btn.unmortgage {
   background: rgba(16, 185, 129, 0.12);
@@ -3703,7 +4084,9 @@ html.high-contrast .glass-panel {
   border-color: rgba(16, 185, 129, 0.28);
 }
 
-.holdings-btn.unmortgage:hover { background: rgba(16, 185, 129, 0.22); }
+.holdings-btn.unmortgage:hover {
+  background: rgba(16, 185, 129, 0.22);
+}
 
 /* ──────────────────────────────────────────────────────────────────────
    Players panel — redesigned cards with stats + wealth bar
@@ -4237,8 +4620,13 @@ html.high-contrast .glass-panel {
   margin-bottom: 0.55rem;
 }
 
-.trade-column-head.you { color: #67e8f9; }
-.trade-column-head.them { color: var(--color-gold); }
+.trade-column-head.you {
+  color: #67e8f9;
+}
+
+.trade-column-head.them {
+  color: var(--color-gold);
+}
 
 .trade-column-head-avatar {
   width: 28px;
@@ -4402,7 +4790,7 @@ html.high-contrast .glass-panel {
 .trade-tile-band {
   width: 6px;
   flex-shrink: 0;
-  background-image: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(0,0,0,0.22));
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(0, 0, 0, 0.22));
 }
 
 .trade-tile-info {
@@ -4629,18 +5017,19 @@ html.high-contrast .glass-panel {
   .trade-ledger {
     grid-template-columns: 1fr;
   }
+
   .trade-balance-row {
     grid-template-columns: 1fr;
     text-align: center;
     gap: 0.5rem;
   }
+
   .trade-balance-side.right {
     align-items: center;
     text-align: center;
   }
+
   .trade-card-actions {
     padding: 0.75rem 0.9rem;
   }
 }
-
-

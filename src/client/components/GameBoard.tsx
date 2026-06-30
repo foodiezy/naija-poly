@@ -6,6 +6,7 @@ import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
 import { useTokenWalker } from "../hooks/useTokenWalker";
+import { ALL_TRIVIA } from "../../data/facts";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
 // type, so drop the redundant "Airport"/"Corporation" suffix; the full name
@@ -118,6 +119,16 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   // Shake the dice briefly when a new roll comes in, then settle.
   const [diceShaking, setDiceShaking] = useState(false);
   const prevDiceKey = useRef<string>("");
+
+  // In-game trivia rotation — shown during other players' turns
+  const [boardTriviaIdx, setBoardTriviaIdx] = useState(() => Math.floor(Math.random() * ALL_TRIVIA.length));
+  useEffect(() => {
+    if (isMyTurn) return; // no trivia during your own turn
+    const interval = setInterval(() => {
+      setBoardTriviaIdx(prev => (prev + 1) % ALL_TRIVIA.length);
+    }, 7000);
+    return () => clearInterval(interval);
+  }, [isMyTurn]);
 
   useEffect(() => {
     if (logsEndRef.current) {
@@ -334,6 +345,25 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             >
               End Turn
             </motion.button>
+          )}
+
+          {/* In-game trivia — shown during OTHER players' turns */}
+          {!isMyTurn && activePlayerId && (
+            <div className="board-trivia-box">
+              <span className="trivia-label">🇳🇬 Did you know?</span>
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={boardTriviaIdx}
+                  className="trivia-text"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.35 }}
+                >
+                  {ALL_TRIVIA[boardTriviaIdx]}
+                </motion.p>
+              </AnimatePresence>
+            </div>
           )}
         </div>
 
