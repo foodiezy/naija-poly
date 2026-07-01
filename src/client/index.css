@@ -1341,7 +1341,7 @@ h6 {
 
 .tile-houses {
   display: flex;
-  gap: 2px;
+  gap: 3px;
   position: absolute;
   z-index: 3;
 }
@@ -1378,25 +1378,31 @@ h6 {
   transform: translateY(-50%);
 }
 
-/* House shape — small pentagon (house with roof) */
+/* House shape — classic little peaked-roof house, sized to read clearly
+   even on the smallest board tiles and over photo backgrounds. */
 .house-dot {
-  width: 7px;
-  height: 8px;
+  width: 12px;
+  height: 14px;
   background: linear-gradient(to bottom, #34d399 0%, #10b981 100%);
-  clip-path: polygon(50% 0%, 100% 38%, 100% 100%, 0% 100%, 0% 38%);
-  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.55));
+  clip-path: polygon(50% 0%, 100% 40%, 100% 100%, 0% 100%, 0% 40%);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+  outline: 1px solid rgba(255, 255, 255, 0.35);
+  outline-offset: -1px;
 }
 
-/* Hotel shape — taller red building with flat roof accent */
+/* Hotel shape — bigger red building with a flat roof accent, clearly
+   distinct in silhouette from the houses it replaces. */
 .hotel-dot {
-  width: 10px;
-  height: 10px;
+  width: 16px;
+  height: 16px;
   background: linear-gradient(to bottom, #dc2626 0%, #ef4444 100%);
   clip-path: polygon(15% 0%, 85% 0%,
       85% 15%, 100% 15%,
       100% 100%, 0% 100%,
       0% 15%, 15% 15%);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.75));
+  outline: 1px solid rgba(255, 255, 255, 0.4);
+  outline-offset: -1px;
   animation: hotelGlow 2s ease-in-out infinite alternate;
 }
 
@@ -1408,6 +1414,43 @@ h6 {
   100% {
     filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
   }
+}
+
+/* Deed inspector — bigger house/hotel icons showing build progression at a
+   glance, alongside the existing text status. */
+.deed-dev-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  padding: 0.35rem 0 0.15rem;
+}
+
+.deed-dev-icon {
+  width: 22px;
+  height: 26px;
+  flex-shrink: 0;
+  background: linear-gradient(to bottom, #34d399 0%, #10b981 100%);
+  clip-path: polygon(50% 0%, 100% 40%, 100% 100%, 0% 100%, 0% 40%);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+  outline: 1px solid rgba(255, 255, 255, 0.35);
+  outline-offset: -1px;
+}
+
+.deed-dev-icon.empty {
+  background: rgba(255, 255, 255, 0.05);
+  filter: none;
+  outline: 1.5px dashed rgba(255, 255, 255, 0.15);
+}
+
+.deed-dev-icon.hotel {
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(to bottom, #dc2626 0%, #ef4444 100%);
+  clip-path: polygon(15% 0%, 85% 0%,
+      85% 15%, 100% 15%,
+      100% 100%, 0% 100%,
+      0% 15%, 15% 15%);
+  outline-color: rgba(255, 255, 255, 0.4);
 }
 
 /* Tokens positioned inside Tile */
@@ -2478,36 +2521,6 @@ html.high-contrast .glass-panel {
   min-width: 14px;
   display: inline-block;
   text-align: center;
-}
-
-/* Trade Modal / Section */
-.trade-overlay {
-  z-index: 100;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-}
-
-.trade-card {
-  width: 100%;
-  max-width: 500px;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.trade-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.9rem;
 }
 
 /* Error message notification */

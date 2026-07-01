@@ -38,6 +38,7 @@ export const TILE_IMAGES: Record<number, string> = {
 
   // ── Enugu ──────────────────────────────────────────────────────────────
   11: ENUGU, // Enugu
+  12: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/River_Niger_at_Kainji_Dam_Niger_State.jpg/330px-River_Niger_at_Kainji_Dam_Niger_State.jpg", // NEPA (utility)
   13: ENUGU, // Udi (zone photo)
   14: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Ariel_view_of_Nsukka_from_the_mountains.jpg/330px-Ariel_view_of_Nsukka_from_the_mountains.jpg", // Nsukka
 
@@ -60,6 +61,7 @@ export const TILE_IMAGES: Record<number, string> = {
   // ── Rivers ─────────────────────────────────────────────────────────────
   26: PORT_HARCOURT, // Port Harcourt
   27: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Bonny_City_-_panoramio.jpg/330px-Bonny_City_-_panoramio.jpg", // Bonny Island
+  28: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/NAFDAC_emblem.svg/330px-NAFDAC_emblem.svg.png", // NAFDAC (utility)
   29: PORT_HARCOURT, // Oyigbo (zone photo)
 
   // ── Abuja ──────────────────────────────────────────────────────────────

@@ -112,6 +112,23 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
             </div>
           </div>
 
+          {/* Development — classic house(1-4) / hotel(5th) icons at a glance */}
+          {owner && !isMortgaged && (
+            <div className="deed-dev-row">
+              {houses === 5 ? (
+                <div className="deed-dev-icon hotel" title="Hotel" />
+              ) : (
+                [1, 2, 3, 4].map((n) => (
+                  <div
+                    key={n}
+                    className={`deed-dev-icon${n <= houses ? "" : " empty"}`}
+                    title={n <= houses ? getDevelopmentName(n) : "Not built"}
+                  />
+                ))
+              )}
+            </div>
+          )}
+
           {/* Current status */}
           <div className="deed-status-box">
             {owner ? (

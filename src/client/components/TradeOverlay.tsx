@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { BOARD, PropertyTile } from "../../data/board";
 import type { Tile } from "../../data/board";
@@ -72,7 +73,11 @@ export default function TradeOverlay({ activeTrade, players, tiles, mySessionId,
     );
   };
 
-  return (
+  // Portal to <body>: the sidebar ancestor has backdrop-filter + overflow:hidden,
+  // which creates a new containing block for position:fixed descendants and
+  // clips this "full-screen" overlay to the sidebar's small box instead of the
+  // viewport. Rendering at the body root sidesteps that entirely.
+  return createPortal(
     <motion.div
       className="trade-overlay"
       initial={{ opacity: 0, y: 60 }}
@@ -177,6 +182,7 @@ export default function TradeOverlay({ activeTrade, players, tiles, mySessionId,
           </button>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
