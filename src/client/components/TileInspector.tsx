@@ -5,6 +5,7 @@ import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
 import { getFactForTile } from "../../data/facts";
+import TileImage from "./TileImage";
 
 interface TileInspectorProps {
   tilePos: number;
@@ -310,6 +311,14 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
         >
           ✕
         </button>
+
+        {(tile.type === "property" || tile.type === "airport" || tile.type === "utility") && (
+          <div className="deed-photo-wrap">
+            <TileImage pos={tilePos} className="deed-photo" />
+            <div className="deed-photo-scrim" />
+            <div className="deed-photo-caption">{tile.name}</div>
+          </div>
+        )}
 
         {tile.type === "property" && renderPropertyDeed(tile as PropertyTile)}
         {tile.type === "airport" && renderAirportDeed(tile as AirportTile)}

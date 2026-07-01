@@ -7,6 +7,8 @@ import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
 import { useTokenWalker } from "../hooks/useTokenWalker";
 import { ALL_TRIVIA } from "../../data/facts";
+import TileImage from "./TileImage";
+import { tileImageUrl } from "../tileImages";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
 // type, so drop the redundant "Airport"/"Corporation" suffix; the full name
@@ -130,10 +132,13 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
     return () => clearInterval(interval);
   }, [isMyTurn]);
 
+  // Keep the game feed pinned to the newest line WITHOUT scrolling the page.
+  // scrollIntoView() walks every scrollable ancestor (including the window),
+  // so on shorter viewports each new log line yanked the whole page downward.
+  // Scroll only the feed's own container instead.
   useEffect(() => {
-    if (logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    const container = logsEndRef.current?.parentElement;
+    if (container) container.scrollTop = container.scrollHeight;
   }, [engineState.log?.length]);
 
   // Trigger dice shake when the dice values change
@@ -476,6 +481,14 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             onClick={() => onTileClick?.(tile.pos)}
             title={getTileTitle()}
           >
+            {/* Real-place photo behind the tile content (purchasable tiles) */}
+            {tileImageUrl(tile.pos) && (
+              <div className="tile-photo-layer">
+                <TileImage pos={tile.pos} />
+                <div className="tile-photo-scrim" />
+              </div>
+            )}
+
             {/* Edge-aware color bar */}
             {hasColorBar && groupColor && (
               <div
