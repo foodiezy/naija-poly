@@ -4,11 +4,13 @@
 import { useState } from "react";
 import ReactDOM from "react-dom/client";
 import { MotionConfig } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import GameBoard from "./components/GameBoard";
 import ControlPanel from "./components/ControlPanel";
 import AssetsPanel from "./components/AssetsPanel";
 import ChatPanel from "./components/ChatPanel";
 import SettingsPanel from "./components/SettingsPanel";
+import TileInspector from "./components/TileInspector";
 import { BOARD } from "../data/board";
 import { TOKENS } from "../data/tokens";
 import { RoomState } from "../shared/room";
@@ -88,6 +90,7 @@ const roomState: RoomState = {
 function PreviewApp() {
   const [muted, setMuted] = useState(false);
   const [autoEndTurn, setAutoEndTurn] = useState(true);
+  const [selectedTilePos, setSelectedTilePos] = useState<number | null>(null);
   const mockRoom = { sessionId: "p1", state: roomState } as any;
 
   return (
@@ -125,7 +128,7 @@ function PreviewApp() {
             engineState={engineState as any}
             roomState={roomState}
             mySessionId="p1"
-            onTileClick={() => {}}
+            onTileClick={(pos) => setSelectedTilePos(pos)}
           />
         </div>
 
@@ -143,6 +146,17 @@ function PreviewApp() {
           />
         </div>
       </div>
+
+      <AnimatePresence>
+        {selectedTilePos !== null && (
+          <TileInspector
+            tilePos={selectedTilePos}
+            engineState={engineState as any}
+            roomState={roomState}
+            onClose={() => setSelectedTilePos(null)}
+          />
+        )}
+      </AnimatePresence>
 
       <footer className="app-footer">
         <div className="footer-left">

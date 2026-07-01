@@ -5,6 +5,7 @@ import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
 import { getFactForTile } from "../../data/facts";
+import TileImage from "./TileImage";
 
 interface TileInspectorProps {
   tilePos: number;
@@ -110,6 +111,23 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
               })}
             </div>
           </div>
+
+          {/* Development — classic house(1-4) / hotel(5th) icons at a glance */}
+          {owner && !isMortgaged && (
+            <div className="deed-dev-row">
+              {houses === 5 ? (
+                <div className="deed-dev-icon hotel" title="Hotel" />
+              ) : (
+                [1, 2, 3, 4].map((n) => (
+                  <div
+                    key={n}
+                    className={`deed-dev-icon${n <= houses ? "" : " empty"}`}
+                    title={n <= houses ? getDevelopmentName(n) : "Not built"}
+                  />
+                ))
+              )}
+            </div>
+          )}
 
           {/* Current status */}
           <div className="deed-status-box">
@@ -310,6 +328,14 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
         >
           ✕
         </button>
+
+        {(tile.type === "property" || tile.type === "airport" || tile.type === "utility") && (
+          <div className="deed-photo-wrap">
+            <TileImage pos={tilePos} className="deed-photo" />
+            <div className="deed-photo-scrim" />
+            <div className="deed-photo-caption">{tile.name}</div>
+          </div>
+        )}
 
         {tile.type === "property" && renderPropertyDeed(tile as PropertyTile)}
         {tile.type === "airport" && renderAirportDeed(tile as AirportTile)}

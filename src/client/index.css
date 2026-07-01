@@ -1341,7 +1341,7 @@ h6 {
 
 .tile-houses {
   display: flex;
-  gap: 2px;
+  gap: 3px;
   position: absolute;
   z-index: 3;
 }
@@ -1378,25 +1378,31 @@ h6 {
   transform: translateY(-50%);
 }
 
-/* House shape — small pentagon (house with roof) */
+/* House shape — classic little peaked-roof house, sized to read clearly
+   even on the smallest board tiles and over photo backgrounds. */
 .house-dot {
-  width: 7px;
-  height: 8px;
+  width: 12px;
+  height: 14px;
   background: linear-gradient(to bottom, #34d399 0%, #10b981 100%);
-  clip-path: polygon(50% 0%, 100% 38%, 100% 100%, 0% 100%, 0% 38%);
-  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.55));
+  clip-path: polygon(50% 0%, 100% 40%, 100% 100%, 0% 100%, 0% 40%);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+  outline: 1px solid rgba(255, 255, 255, 0.35);
+  outline-offset: -1px;
 }
 
-/* Hotel shape — taller red building with flat roof accent */
+/* Hotel shape — bigger red building with a flat roof accent, clearly
+   distinct in silhouette from the houses it replaces. */
 .hotel-dot {
-  width: 10px;
-  height: 10px;
+  width: 16px;
+  height: 16px;
   background: linear-gradient(to bottom, #dc2626 0%, #ef4444 100%);
   clip-path: polygon(15% 0%, 85% 0%,
       85% 15%, 100% 15%,
       100% 100%, 0% 100%,
       0% 15%, 15% 15%);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.75));
+  outline: 1px solid rgba(255, 255, 255, 0.4);
+  outline-offset: -1px;
   animation: hotelGlow 2s ease-in-out infinite alternate;
 }
 
@@ -1408,6 +1414,43 @@ h6 {
   100% {
     filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
   }
+}
+
+/* Deed inspector — bigger house/hotel icons showing build progression at a
+   glance, alongside the existing text status. */
+.deed-dev-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  padding: 0.35rem 0 0.15rem;
+}
+
+.deed-dev-icon {
+  width: 22px;
+  height: 26px;
+  flex-shrink: 0;
+  background: linear-gradient(to bottom, #34d399 0%, #10b981 100%);
+  clip-path: polygon(50% 0%, 100% 40%, 100% 100%, 0% 100%, 0% 40%);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+  outline: 1px solid rgba(255, 255, 255, 0.35);
+  outline-offset: -1px;
+}
+
+.deed-dev-icon.empty {
+  background: rgba(255, 255, 255, 0.05);
+  filter: none;
+  outline: 1.5px dashed rgba(255, 255, 255, 0.15);
+}
+
+.deed-dev-icon.hotel {
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(to bottom, #dc2626 0%, #ef4444 100%);
+  clip-path: polygon(15% 0%, 85% 0%,
+      85% 15%, 100% 15%,
+      100% 100%, 0% 100%,
+      0% 15%, 15% 15%);
+  outline-color: rgba(255, 255, 255, 0.4);
 }
 
 /* Tokens positioned inside Tile */
@@ -2478,36 +2521,6 @@ html.high-contrast .glass-panel {
   min-width: 14px;
   display: inline-block;
   text-align: center;
-}
-
-/* Trade Modal / Section */
-.trade-overlay {
-  z-index: 100;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-}
-
-.trade-card {
-  width: 100%;
-  max-width: 500px;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.trade-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.9rem;
 }
 
 /* Error message notification */
@@ -5032,4 +5045,107 @@ html.high-contrast .glass-panel {
   .trade-card-actions {
     padding: 0.75rem 0.9rem;
   }
+}
+
+/* =========================================================================
+   Tile photos — real-place imagery on deed cards + board tiles
+   ========================================================================= */
+
+/* Shared base for both the <img> and the themed fallback <div>. */
+.tile-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tile-image-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tile-image-fallback-emoji {
+  font-size: 2.4rem;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+  opacity: 0.92;
+}
+
+/* --- Buy-decision modal banner --- */
+.buy-deed-photo-wrap {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  overflow: hidden;
+}
+
+.buy-deed-photo-wrap .tile-image-fallback-emoji {
+  font-size: 3rem;
+}
+
+.buy-deed-photo-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(2, 6, 16, 0.12) 0%, rgba(2, 6, 16, 0.6) 100%);
+  pointer-events: none;
+}
+
+/* --- Deed inspector banner --- */
+.deed-photo-wrap {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  overflow: hidden;
+}
+
+.deed-photo-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(2, 6, 16, 0.05) 0%, rgba(15, 23, 42, 0.9) 100%);
+  pointer-events: none;
+}
+
+.deed-photo-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.5rem 0.9rem;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+  z-index: 1;
+}
+
+/* --- Small board-tile thumbnails --- */
+.tile-photo-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tile-photo-layer .tile-image-fallback-emoji {
+  font-size: 1.15rem;
+  opacity: 0.45;
+}
+
+.tile-photo-scrim {
+  position: absolute;
+  inset: 0;
+  /* Strong darkening so the white tile name + price stripe stay legible. */
+  background: linear-gradient(180deg, rgba(12, 10, 26, 0.58) 0%, rgba(12, 10, 26, 0.8) 100%);
+}
+
+/* Lift the static tile content above the z-index:0 photo layer. The
+   absolutely-positioned bits (color bar, houses, tokens, owner badge,
+   tooltip) already paint above it thanks to DOM order. */
+.tile > .tile-type-icon,
+.tile > .tile-name,
+.tile > .tile-price {
+  position: relative;
+  z-index: 1;
 }
