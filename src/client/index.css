@@ -1260,30 +1260,50 @@ h6 {
 }
 
 .tile-name {
-  font-size: clamp(0.62rem, 0.9vw, 0.78rem);
+  font-size: clamp(0.58rem, 0.9vw, 0.78rem);
   font-weight: 700;
   text-align: center;
   line-height: 1.08;
   letter-spacing: 0.01em;
   color: var(--text-primary);
   word-break: normal;
-  overflow-wrap: break-word;
+  /* `anywhere` (unlike break-word) shrinks min-content width, so long names
+     like "Kafanchan" wrap on narrow side tiles instead of clipping mid-word. */
+  overflow-wrap: anywhere;
   max-width: 100%;
   padding: 0 2px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
 
 /* Richup.io signature bottom price stripe block */
 .tile-price {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(8, 6, 18, 0.72);
   font-size: 0.66rem;
   font-weight: 700;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.92);
   width: 100%;
   text-align: center;
   padding: 3px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   margin-top: 1px;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Mortgaged: grey the photo + colour band so the tile visibly "sleeps";
+   the price stripe keeps a lock and muted text instead of overflowing the
+   word "Mortgaged" across neighbouring tiles. */
+.tile.tile-mortgaged .tile-photo-layer .tile-image {
+  filter: grayscale(1) brightness(0.55);
+}
+
+.tile-mortgaged .tile-color-bar {
+  opacity: 0.4;
+}
+
+.tile-mortgaged .tile-price {
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .tile-owner-indicator {
@@ -1341,9 +1361,15 @@ h6 {
 
 .tile-houses {
   display: flex;
-  gap: 3px;
+  gap: 2px;
   position: absolute;
   z-index: 3;
+  /* Group the pips in one dark pill so they read as a single development
+     indicator instead of loose shapes floating over the photo. */
+  background: rgba(8, 6, 18, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  padding: 2px 3px;
 }
 
 /* Bottom edge tiles: houses sit along the top (next to color bar) */
@@ -1381,28 +1407,24 @@ h6 {
 /* House shape — classic little peaked-roof house, sized to read clearly
    even on the smallest board tiles and over photo backgrounds. */
 .house-dot {
-  width: 12px;
-  height: 14px;
+  width: 9px;
+  height: 11px;
   background: linear-gradient(to bottom, #34d399 0%, #10b981 100%);
   clip-path: polygon(50% 0%, 100% 40%, 100% 100%, 0% 100%, 0% 40%);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
-  outline: 1px solid rgba(255, 255, 255, 0.35);
-  outline-offset: -1px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
 }
 
 /* Hotel shape — bigger red building with a flat roof accent, clearly
    distinct in silhouette from the houses it replaces. */
 .hotel-dot {
-  width: 16px;
-  height: 16px;
+  width: 13px;
+  height: 13px;
   background: linear-gradient(to bottom, #dc2626 0%, #ef4444 100%);
   clip-path: polygon(15% 0%, 85% 0%,
       85% 15%, 100% 15%,
       100% 100%, 0% 100%,
       0% 15%, 15% 15%);
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.75));
-  outline: 1px solid rgba(255, 255, 255, 0.4);
-  outline-offset: -1px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
   animation: hotelGlow 2s ease-in-out infinite alternate;
 }
 
@@ -5128,6 +5150,13 @@ html.high-contrast .glass-panel {
   pointer-events: none;
 }
 
+/* Mute the photos toward the board's palette — 22 fully-saturated photos at
+   tile size read as noise; slightly desaturated + darkened they read as one
+   cohesive textured surface. */
+.tile-photo-layer .tile-image {
+  filter: saturate(0.72) brightness(0.88) contrast(0.95);
+}
+
 .tile-photo-layer .tile-image-fallback-emoji {
   font-size: 1.15rem;
   opacity: 0.45;
@@ -5137,7 +5166,7 @@ html.high-contrast .glass-panel {
   position: absolute;
   inset: 0;
   /* Strong darkening so the white tile name + price stripe stay legible. */
-  background: linear-gradient(180deg, rgba(12, 10, 26, 0.58) 0%, rgba(12, 10, 26, 0.8) 100%);
+  background: linear-gradient(180deg, rgba(12, 10, 26, 0.66) 0%, rgba(12, 10, 26, 0.86) 100%);
 }
 
 /* Lift the static tile content above the z-index:0 photo layer. The

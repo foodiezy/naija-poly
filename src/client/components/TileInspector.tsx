@@ -112,24 +112,8 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
             </div>
           </div>
 
-          {/* Development — classic house(1-4) / hotel(5th) icons at a glance */}
-          {owner && !isMortgaged && (
-            <div className="deed-dev-row">
-              {houses === 5 ? (
-                <div className="deed-dev-icon hotel" title="Hotel" />
-              ) : (
-                [1, 2, 3, 4].map((n) => (
-                  <div
-                    key={n}
-                    className={`deed-dev-icon${n <= houses ? "" : " empty"}`}
-                    title={n <= houses ? getDevelopmentName(n) : "Not built"}
-                  />
-                ))
-              )}
-            </div>
-          )}
-
-          {/* Current status */}
+          {/* Current status (also states the development level, so no separate
+              icon row — a bare unlabeled pip looked broken) */}
           <div className="deed-status-box">
             {owner ? (
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem", background: "rgba(255,255,255,0.03)", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -333,7 +317,7 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
           <div className="deed-photo-wrap">
             <TileImage pos={tilePos} className="deed-photo" />
             <div className="deed-photo-scrim" />
-            <div className="deed-photo-caption">{tile.name}</div>
+            {/* No caption — the deed band right below already names the tile. */}
           </div>
         )}
 

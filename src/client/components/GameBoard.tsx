@@ -485,7 +485,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
         return (
           <div
             key={tile.pos}
-            className={`tile ${isCorner ? "tile-corner" : ""} edge-${getTileEdge(tile.pos)}${hasMyToken ? " tile-has-me" : ""}${playersOnTile.length > 0 ? " tile-has-player" : ""}${hasActivePlayer ? " tile-active-player" : ""}`}
+            className={`tile ${isCorner ? "tile-corner" : ""} edge-${getTileEdge(tile.pos)}${hasMyToken ? " tile-has-me" : ""}${playersOnTile.length > 0 ? " tile-has-player" : ""}${hasActivePlayer ? " tile-active-player" : ""}${isMortgaged ? " tile-mortgaged" : ""}`}
             style={{
               gridColumn: coords.col,
               gridRow: coords.row,
@@ -524,13 +524,12 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             {/* Tile Name */}
             <span className="tile-name">{boardLabel(tile)}</span>
 
-            {/* Richup.io permanent bottom price stripe */}
+            {/* Richup.io permanent bottom price stripe. Mortgaged tiles keep the
+                price (the word "Mortgaged" overflows narrow side tiles); state is
+                shown by the greyed photo + 🔒 in the stripe and owner badge. */}
             {priceLabel && (
-              <span
-                className="tile-price"
-                style={isMortgaged ? { color: "var(--color-danger)", textDecoration: "line-through" } : {}}
-              >
-                {isMortgaged ? "Mortgaged" : priceLabel}
+              <span className="tile-price">
+                {isMortgaged ? <>🔒 {priceLabel}</> : priceLabel}
               </span>
             )}
 
