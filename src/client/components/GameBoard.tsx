@@ -7,6 +7,9 @@ import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
 import { useTokenWalker } from "../hooks/useTokenWalker";
 import { ALL_TRIVIA } from "../../data/facts";
+import TileImage from "./TileImage";
+import { tileImageUrl } from "../tileImages";
+import { IconHouse, IconHotel } from "./icons";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
 // type, so drop the redundant "Airport"/"Corporation" suffix; the full name
@@ -130,10 +133,13 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
     return () => clearInterval(interval);
   }, [isMyTurn]);
 
+  // Keep the game feed pinned to the newest line WITHOUT scrolling the page.
+  // scrollIntoView() walks every scrollable ancestor (including the window),
+  // so on shorter viewports each new log line yanked the whole page downward.
+  // Scroll only the feed's own container instead.
   useEffect(() => {
-    if (logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    const container = logsEndRef.current?.parentElement;
+    if (container) container.scrollTop = container.scrollHeight;
   }, [engineState.log?.length]);
 
   // Trigger dice shake when the dice values change
@@ -273,6 +279,20 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             </motion.div>
           )}
 
+          {/* NEPA blackout indicator (chaos mode) */}
+          {engineState.blackout && (
+            <motion.div
+              className="blackout-display"
+              style={{ margin: 0, padding: "0.35rem 0.75rem", background: "rgba(245, 158, 11, 0.12)", border: "1px solid rgba(245, 158, 11, 0.4)", borderRadius: "2px", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", color: "var(--color-gold, #f59e0b)", zIndex: 5 }}
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0, boxShadow: ["0 0 8px rgba(245,158,11,0.15)", "0 0 20px rgba(245,158,11,0.5)", "0 0 8px rgba(245,158,11,0.15)"] }}
+              transition={{ boxShadow: { duration: 1.4, repeat: Infinity } }}
+              title="NEPA don take light — rent is frozen until the round comes back around."
+            >
+              ⚡ NEPA don take light — rent frozen!
+            </motion.div>
+          )}
+
           {/* Game Phase / Turn Indicator */}
           <motion.div
             key={engineState.phase}
@@ -386,8 +406,8 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             )}
           </AnimatePresence>
 
-          {/* Center: Game Feed */}
-          <div className="board-center-feed" style={{ width: "100%", maxWidth: "550px", margin: 0, background: "rgba(0, 0, 0, 0.4)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "2px", maxHeight: "110px" }}>
+          {/* Center: Game Feed — blends into the board-center background (no boxed panel) */}
+          <div className="board-center-feed" style={{ width: "100%", maxWidth: "550px", margin: 0, background: "transparent", border: "none", maxHeight: "110px" }}>
             <div className="board-center-feed-logs" style={{ padding: "0.5rem 1rem" }}>
               {engineState.log?.map((logLine: string, idx: number) => (
                 <div key={idx} className={getLogClass(logLine)} style={{ fontSize: "0.78rem", padding: "2px 0", textAlign: "center" }}>
@@ -422,7 +442,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
         const houseDots = [];
         if (showHouses && !isHotel) {
           for (let i = 0; i < tileState.houses; i++) {
-            houseDots.push(<div key={i} className="house-dot" />);
+            houseDots.push(<IconHouse key={i} className="house-dot" />);
           }
         }
 
@@ -466,7 +486,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
         return (
           <div
             key={tile.pos}
-            className={`tile ${isCorner ? "tile-corner" : ""} edge-${getTileEdge(tile.pos)}${hasMyToken ? " tile-has-me" : ""}${playersOnTile.length > 0 ? " tile-has-player" : ""}${hasActivePlayer ? " tile-active-player" : ""}`}
+            className={`tile ${isCorner ? "tile-corner" : ""} edge-${getTileEdge(tile.pos)}${hasMyToken ? " tile-has-me" : ""}${playersOnTile.length > 0 ? " tile-has-player" : ""}${hasActivePlayer ? " tile-active-player" : ""}${isMortgaged ? " tile-mortgaged" : ""}`}
             style={{
               gridColumn: coords.col,
               gridRow: coords.row,
@@ -476,6 +496,14 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             onClick={() => onTileClick?.(tile.pos)}
             title={getTileTitle()}
           >
+            {/* Real-place photo behind the tile content (purchasable tiles) */}
+            {tileImageUrl(tile.pos) && (
+              <div className="tile-photo-layer">
+                <TileImage pos={tile.pos} />
+                <div className="tile-photo-scrim" />
+              </div>
+            )}
+
             {/* Edge-aware color bar */}
             {hasColorBar && groupColor && (
               <div
@@ -487,7 +515,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             {/* House dots container */}
             {showHouses && (
               <div className="tile-houses">
-                {isHotel ? <div className="hotel-dot" /> : houseDots}
+                {isHotel ? <IconHotel className="hotel-dot" /> : houseDots}
               </div>
             )}
 
@@ -497,13 +525,12 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             {/* Tile Name */}
             <span className="tile-name">{boardLabel(tile)}</span>
 
-            {/* Richup.io permanent bottom price stripe */}
+            {/* Richup.io permanent bottom price stripe. Mortgaged tiles keep the
+                price (the word "Mortgaged" overflows narrow side tiles); state is
+                shown by the greyed photo + 🔒 in the stripe and owner badge. */}
             {priceLabel && (
-              <span
-                className="tile-price"
-                style={isMortgaged ? { color: "var(--color-danger)", textDecoration: "line-through" } : {}}
-              >
-                {isMortgaged ? "Mortgaged" : priceLabel}
+              <span className="tile-price">
+                {isMortgaged ? <>🔒 {priceLabel}</> : priceLabel}
               </span>
             )}
 

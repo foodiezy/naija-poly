@@ -18,7 +18,16 @@ const clientBuildPath = path.resolve(__dirname, "../../dist");
 // Express app: CORS, JSON, health check, and serving the built client.
 const app = express();
 
-// Configure CORS with dynamic origin matching to support credentials
+// Configure CORS. In production we pin the exact allowed origin(s) via the
+// ALLOWED_ORIGINS env var (comma-separated) rather than trusting every
+// *.onrender.com app — combined with credentials:true, a suffix match would
+// let any other Render-hosted site make credentialed requests to us. Local
+// dev origins are always allowed.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -26,10 +35,10 @@ app.use(
         callback(null, true);
         return;
       }
-      const isAllowed =
+      const isLocalDev =
         origin.startsWith("http://localhost:") ||
-        origin.startsWith("http://127.0.0.1:") ||
-        origin.endsWith(".onrender.com");
+        origin.startsWith("http://127.0.0.1:");
+      const isAllowed = isLocalDev || allowedOrigins.includes(origin);
 
       if (isAllowed) {
         callback(null, true);

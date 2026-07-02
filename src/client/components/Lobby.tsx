@@ -6,6 +6,8 @@ interface LobbyProps {
   onCreateRoom: (name: string) => Promise<void>;
   onJoinRoom: (name: string, roomId: string) => Promise<void>;
   onQuickMatch?: (name: string) => Promise<void>;
+  // Room code from an invite link (?room=CODE); prefills the join field.
+  initialRoomId?: string;
 }
 
 const HOW_TO_PLAY = [
@@ -47,12 +49,13 @@ const HOW_TO_PLAY = [
   },
 ];
 
-export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch }: LobbyProps) {
+export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch, initialRoomId }: LobbyProps) {
   const [name, setName] = useState("");
-  const [roomId, setRoomId] = useState("");
+  const [roomId, setRoomId] = useState(initialRoomId ?? "");
   const [loading, setLoading] = useState(false);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const stats = getStats();
+  const invited = !!initialRoomId;
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,6 +106,31 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch }: LobbyP
         </motion.p>
       </motion.div>
 
+      {/* Invite banner — shown when arriving via a shared ?room= link */}
+      {invited && (
+        <motion.div
+          className="glass-panel"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 220, damping: 22, delay: 0.15 }}
+          style={{
+            width: "100%",
+            marginBottom: "1rem",
+            padding: "1rem 1.25rem",
+            textAlign: "center",
+            border: "1px solid var(--color-gold, #f59e0b)",
+            background: "rgba(245, 158, 11, 0.08)",
+          }}
+        >
+          <div style={{ fontWeight: 800, color: "var(--color-gold, #f59e0b)" }}>
+            🎉 You've been invited to Room {initialRoomId}
+          </div>
+          <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+            Enter your name below and tap Join Room to play.
+          </div>
+        </motion.div>
+      )}
+
       {/* Main Action Card */}
       <motion.div
         className="lobby-card glass-panel lobby-action-card"
@@ -121,6 +149,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch }: LobbyP
             onChange={(e) => setName(e.target.value)}
             disabled={loading}
             maxLength={15}
+            autoFocus={invited}
             required
           />
         </form>
@@ -177,7 +206,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch }: LobbyP
             />
             <motion.button
               type="submit"
-              className="button-secondary"
+              className={invited ? "button-primary" : "button-secondary"}
               style={{ marginTop: "0.5rem" }}
               disabled={loading || !name.trim() || !roomId.trim()}
               whileHover={{ scale: 1.02 }}

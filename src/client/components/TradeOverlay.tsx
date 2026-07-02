@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { BOARD, PropertyTile } from "../../data/board";
 import type { Tile } from "../../data/board";
@@ -47,15 +48,6 @@ export default function TradeOverlay({ activeTrade, players, tiles, mySessionId,
     incomingCash + incomingTilesPositions.reduce((s, p) => s + tileValue(p, tiles), 0);
   const outgoingValue =
     outgoingCash + outgoingTilesPositions.reduce((s, p) => s + tileValue(p, tiles), 0);
-  const balance = incomingValue - outgoingValue;
-  const balanceTone =
-    Math.abs(balance) < Math.max(incomingValue, outgoingValue) * 0.08
-      ? "fair"
-      : balance > 0
-        ? "you"
-        : "them";
-  const balanceLabel = balanceTone === "fair" ? "Fair Deal" : balanceTone === "you" ? "Favours You" : "Favours Them";
-
   const canAfford = (me?.cash ?? 0) >= outgoingCash;
 
   const renderTile = (pos: number) => {
@@ -72,7 +64,11 @@ export default function TradeOverlay({ activeTrade, players, tiles, mySessionId,
     );
   };
 
-  return (
+  // Portal to <body>: the sidebar ancestor has backdrop-filter + overflow:hidden,
+  // which creates a new containing block for position:fixed descendants and
+  // clips this "full-screen" overlay to the sidebar's small box instead of the
+  // viewport. Rendering at the body root sidesteps that entirely.
+  return createPortal(
     <motion.div
       className="trade-overlay"
       initial={{ opacity: 0, y: 60 }}
@@ -147,7 +143,6 @@ export default function TradeOverlay({ activeTrade, players, tiles, mySessionId,
               <span className="trade-balance-label">Incoming value</span>
               <span className="trade-balance-value">₦{incomingValue.toLocaleString()}</span>
             </div>
-            <span className={`trade-balance-pill tone-${balanceTone}`}>{balanceLabel}</span>
             <div className="trade-balance-side right">
               <span className="trade-balance-label">Outgoing value</span>
               <span className="trade-balance-value">₦{outgoingValue.toLocaleString()}</span>
@@ -177,6 +172,7 @@ export default function TradeOverlay({ activeTrade, players, tiles, mySessionId,
           </button>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }

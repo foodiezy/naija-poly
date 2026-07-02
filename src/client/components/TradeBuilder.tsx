@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { BOARD, PropertyTile } from "../../data/board";
 import type { Tile } from "../../data/board";
@@ -81,22 +82,17 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
     onClose();
   };
 
-  // Live deal-balance valuation: tile value (bank assessment) + cash.
+  // Live valuation of each side: tile value (bank assessment) + cash.
   const giveValue = tradeGiveCash + tradeGiveTiles.reduce((s, p) => s + tileValue(p, tiles), 0);
   const getValue = tradeGetCash + tradeGetTiles.reduce((s, p) => s + tileValue(p, tiles), 0);
-  const balance = getValue - giveValue;
-  const balanceLabel =
-    !tradeTargetId || (giveValue === 0 && getValue === 0)
-      ? null
-      : Math.abs(balance) < Math.max(giveValue, getValue) * 0.08
-        ? { text: "Fair Deal", tone: "fair" }
-        : balance > 0
-          ? { text: "Favours You", tone: "you" }
-          : { text: "Favours Them", tone: "them" };
 
   const isEmpty = tradeGiveTiles.length === 0 && tradeGetTiles.length === 0 && tradeGiveCash === 0 && tradeGetCash === 0;
 
-  return (
+  // Portal to <body>: the sidebar ancestor has backdrop-filter + overflow:hidden,
+  // which creates a new containing block for position:fixed descendants and
+  // clips this "full-screen" overlay to the sidebar's small box instead of the
+  // viewport. Rendering at the body root sidesteps that entirely.
+  return createPortal(
     <motion.div
       className="trade-overlay"
       initial={{ opacity: 0, y: 60 }}
@@ -289,9 +285,6 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
                   <span className="trade-balance-label">You offer</span>
                   <span className="trade-balance-value">₦{giveValue.toLocaleString()}</span>
                 </div>
-                {balanceLabel && (
-                  <span className={`trade-balance-pill tone-${balanceLabel.tone}`}>{balanceLabel.text}</span>
-                )}
                 <div className="trade-balance-side right">
                   <span className="trade-balance-label">You receive</span>
                   <span className="trade-balance-value">₦{getValue.toLocaleString()}</span>
@@ -314,6 +307,7 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
           </button>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }

@@ -8,6 +8,8 @@
 import {
   BOARD,
   CHANCE_CARDS,
+  CHAOS_CHANCE_CARDS,
+  ALL_CHANCE_CARDS,
   HUSTLE_CARDS,
   STARTING_CASH,
   GO_SALARY,
@@ -134,6 +136,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   startingCash: STARTING_CASH,
   turnLimit: 0,
   freeParkingJackpot: false,
+  chaosMode: false,
 };
 
 export function createGame(
@@ -173,7 +176,11 @@ export function createGame(
     }
   });
 
-  const chanceOrder = shuffle(CHANCE_CARDS.map((c) => c.id), rng);
+  // Chaos mode mixes the chaos cards (e.g. NEPA blackout) into the Chance deck.
+  const chancePool = mergedSettings.chaosMode
+    ? [...CHANCE_CARDS, ...CHAOS_CHANCE_CARDS]
+    : CHANCE_CARDS;
+  const chanceOrder = shuffle(chancePool.map((c) => c.id), rng);
   const hustleOrder = shuffle(HUSTLE_CARDS.map((c) => c.id), rng);
 
   return {
@@ -192,6 +199,7 @@ export function createGame(
     settings: mergedSettings,
     currentTurn: 1,
     freeParkingPot: 0,
+    blackout: null,
   };
 }
 
@@ -480,7 +488,9 @@ export function applyAction(
         }
       }
 
-      const refund = tile.houseCost / 2;
+      // Sell back to the bank at half price. Floor keeps money an exact integer
+      // of Naira even if a retheme sets an odd houseCost (data is data).
+      const refund = Math.floor(tile.houseCost / 2);
       currentPlayer.cash += refund;
       tileState.houses -= 1;
 
@@ -682,6 +692,12 @@ export function applyAction(
 
           nextState.currentTurn += 1;
           nextState.log.push(`--- Round ${nextState.currentTurn} ---`);
+
+          // NEPA restores light once the round has wrapped past the blackout.
+          if (nextState.blackout && nextState.currentTurn >= nextState.blackout.untilRound) {
+            nextState.blackout = null;
+            nextState.log.push(`💡 Light don restore! Rent dey collect again.`);
+          }
         }
 
         nextState.currentPlayerIndex = nextIndex;
@@ -711,6 +727,9 @@ export function applyAction(
 
       // Bids must raise the top bid by exactly one of the set increments.
       const amount = action.amount;
+      if (!Number.isInteger(amount)) {
+        throw new Error("Bid amount must be a whole number");
+      }
       const raise = amount - auction.highestBid;
       if (!auction.bidIncrements.includes(raise)) {
         throw new Error(
@@ -794,6 +813,19 @@ export function applyAction(
       }
 
       const trade = action.trade;
+      // Shape validation: the wire payload is attacker-controlled, so reject
+      // anything that isn't a well-formed trade before touching money/tiles.
+      // NaN/undefined cash would slip past every `<` comparison below (all
+      // comparisons with NaN are false) and permanently poison a player's cash.
+      if (!trade || typeof trade !== "object") {
+        throw new Error("Malformed trade offer");
+      }
+      if (!Number.isInteger(trade.giveCash) || !Number.isInteger(trade.getCash)) {
+        throw new Error("Trade cash values must be whole numbers");
+      }
+      if (!Array.isArray(trade.giveTiles) || !Array.isArray(trade.getTiles)) {
+        throw new Error("Trade tile lists must be arrays");
+      }
       if (trade.fromId !== playerId) {
         throw new Error("Proposer ID must match active player");
       }
@@ -802,6 +834,9 @@ export function applyAction(
       const recipient = nextState.players.find((p) => p.id === trade.toId);
       if (!recipient || recipient.bankrupt) {
         throw new Error("Recipient player not found or bankrupt");
+      }
+      if (recipient.id === proposer.id) {
+        throw new Error("Cannot trade with yourself");
       }
 
       // Cash checks
@@ -1075,6 +1110,10 @@ function resolveLanding(
       if (tileState.mortgaged) {
         state.log.push(`${player.name} landed on ${tile.name} (owned by ${tileState.ownerId}), but it is mortgaged.`);
         state.phase = "awaiting-end-turn";
+      } else if (state.blackout) {
+        // NEPA don take light — no light, no rent.
+        state.log.push(`⚡ Blackout! ${player.name} landed on ${tile.name} but NEPA don take light — no rent collected.`);
+        state.phase = "awaiting-end-turn";
       } else {
         let rent = getRent(state, pos, state.dice ? (state.dice[0] + state.dice[1]) : 0);
         if (tile.type === "airport" && rentMultiplier === 2) {
@@ -1142,7 +1181,9 @@ function drawCard(
   const isChance = type === "chance";
   const order = isChance ? state.chanceOrder : state.hustleOrder;
   const ptr = isChance ? state.chancePtr : state.hustlePtr;
-  const deck = isChance ? CHANCE_CARDS : HUSTLE_CARDS;
+  // ALL_CHANCE_CARDS so chaos-mode card ids resolve too (they're only in the
+  // shuffled order when chaos mode is on, but must always be findable by id).
+  const deck = isChance ? ALL_CHANCE_CARDS : HUSTLE_CARDS;
 
   if (order.length === 0) {
     throw new Error(`The ${type} deck is empty`);
@@ -1345,7 +1386,11 @@ function applyCardAction(
       state.log.push(`${player.name} moved to nearest Utility: ${BOARD[targetPos].name}.`);
 
       const tileState = state.tiles[targetPos];
-      if (tileState.ownerId !== null && tileState.ownerId !== player.id && !tileState.mortgaged) {
+      if (state.blackout && tileState.ownerId !== null && tileState.ownerId !== player.id && !tileState.mortgaged) {
+        // NEPA blackout — utility owner can't charge either.
+        state.log.push(`⚡ Blackout! ${player.name} reached ${BOARD[targetPos].name} but NEPA don take light — no rent collected.`);
+        state.phase = "awaiting-end-turn";
+      } else if (tileState.ownerId !== null && tileState.ownerId !== player.id && !tileState.mortgaged) {
         // Roll dice and pay 10x roll
         const rd1 = Math.floor(rng() * 6) + 1;
         const rd2 = Math.floor(rng() * 6) + 1;
@@ -1366,6 +1411,16 @@ function applyCardAction(
       } else {
         resolveLanding(state, player, targetPos, 1, rng);
       }
+      break;
+    }
+
+    case "blackout": {
+      // NEPA takes light: rent is waived until the round wraps back around
+      // (currentTurn increments once). Drawing again while already dark just
+      // refreshes the window.
+      state.blackout = { untilRound: state.currentTurn + 1 };
+      state.log.push(`⚡ NEPA don take light! Total blackout — no rent until the round waka back around.`);
+      state.phase = "awaiting-end-turn";
       break;
     }
 

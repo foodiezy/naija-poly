@@ -49,6 +49,31 @@ function patchClientForV017(client: Client) {
 const colyseusClient = new Client(endpoint);
 patchClientForV017(colyseusClient);
 
+// Mirrors GameRoom.onLeave's `allowReconnection(client, 60)` on the server —
+// the seat stays reserved for 60s after a drop, so the client must keep
+// retrying across that whole window instead of giving up after a few
+// seconds (which used to abandon reconnectable sessions early on brief
+// wifi drops or backgrounded tabs).
+const RECONNECT_WINDOW_MS = 60_000;
+const RECONNECT_RETRY_DELAYS_MS = [0, 1000, 2000, 3000, 5000]; // then steady 5s cadence
+
+async function reconnectWithRetry(token: string): Promise<Room> {
+  const deadline = Date.now() + RECONNECT_WINDOW_MS;
+  let attempt = 0;
+  for (;;) {
+    const delay = RECONNECT_RETRY_DELAYS_MS[attempt] ?? 5000;
+    attempt++;
+    if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+    if (Date.now() >= deadline) throw new Error("Reconnect window expired");
+    try {
+      return await colyseusClient.reconnect(token);
+    } catch (e) {
+      if (Date.now() >= deadline) throw e;
+      // keep trying until the deadline
+    }
+  }
+}
+
 // Pull a human-readable message off an unknown thrown value.
 function errText(e: unknown, fallback: string): string {
   return e instanceof Error && e.message ? e.message : fallback;
@@ -90,6 +115,7 @@ export function useGameRoom() {
         startingCash: state.startingCash,
         turnLimit: state.turnLimit,
         freeParkingJackpot: state.freeParkingJackpot,
+        chaosMode: state.chaosMode,
         turnTimerEnabled: state.turnTimerEnabled,
         turnTimeoutSecs: state.turnTimeoutSecs,
         turnDeadline: state.turnDeadline,
@@ -123,23 +149,18 @@ export function useGameRoom() {
       const token = joinedRoom.reconnectionToken;
       if (!token) return;
       setReconnecting(true);
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          await new Promise((r) => setTimeout(r, attempt === 0 ? 600 : 1200 * attempt));
-          const rejoined = await colyseusClient.reconnect(token);
-          handleRoomJoined(rejoined);
-          toast.success("✅ Reconnected!", { autoClose: 2000, toastId: "reconnected" });
-          return;
-        } catch {
-          // keep trying
-        }
+      try {
+        const rejoined = await reconnectWithRetry(token);
+        handleRoomJoined(rejoined);
+        toast.success("✅ Reconnected!", { autoClose: 2000, toastId: "reconnected" });
+      } catch {
+        setReconnecting(false);
+        toast.error("❌ Lost connection to the game. Please rejoin.", { autoClose: 6000 });
+        setRoom(null);
+        setRoomState(null);
+        setEngineState(null);
+        sessionStorage.removeItem("odogwu-reconnection-token");
       }
-      setReconnecting(false);
-      toast.error("❌ Lost connection to the game. Please rejoin.", { autoClose: 6000 });
-      setRoom(null);
-      setRoomState(null);
-      setEngineState(null);
-      sessionStorage.removeItem("odogwu-reconnection-token");
     });
 
     mySessionIdRef.current = joinedRoom.sessionId;
@@ -153,7 +174,7 @@ export function useGameRoom() {
     const token = sessionStorage.getItem("odogwu-reconnection-token");
     if (token) {
       setReconnecting(true);
-      colyseusClient.reconnect(token).then((rejoinedRoom) => {
+      reconnectWithRetry(token).then((rejoinedRoom) => {
         handleRoomJoined(rejoinedRoom);
         toast.success("✅ Restored game session!", { autoClose: 2000, toastId: "reconnected-mount" });
       }).catch(() => {

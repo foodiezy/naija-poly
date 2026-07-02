@@ -5,6 +5,7 @@ import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
 import { getFactForTile } from "../../data/facts";
+import TileImage from "./TileImage";
 
 interface TileInspectorProps {
   tilePos: number;
@@ -111,7 +112,8 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
             </div>
           </div>
 
-          {/* Current status */}
+          {/* Current status (also states the development level, so no separate
+              icon row — a bare unlabeled pip looked broken) */}
           <div className="deed-status-box">
             {owner ? (
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem", background: "rgba(255,255,255,0.03)", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -310,6 +312,14 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
         >
           ✕
         </button>
+
+        {(tile.type === "property" || tile.type === "airport" || tile.type === "utility") && (
+          <div className="deed-photo-wrap">
+            <TileImage pos={tilePos} className="deed-photo" />
+            <div className="deed-photo-scrim" />
+            {/* No caption — the deed band right below already names the tile. */}
+          </div>
+        )}
 
         {tile.type === "property" && renderPropertyDeed(tile as PropertyTile)}
         {tile.type === "airport" && renderAirportDeed(tile as AirportTile)}
