@@ -365,6 +365,41 @@ describe("Game Engine", () => {
       expect(nextState.players[0].cash).toBe(STARTING_CASH - 70);
       expect(nextState.players[1].cash).toBe(STARTING_CASH + 70);
     });
+
+    it("drawing the NEPA chaos card triggers a blackout", () => {
+      const state = createGame(["p1", "p2"], { chaosMode: true });
+      state.chanceOrder = ["cx01"]; // force NEPA blackout on top of the deck
+      state.players[0].position = 5; // MM Airport
+
+      const mockRng = MockRNG.makeRoll(1, 1); // roll 2 -> lands on pos 7 (Chance)
+      const nextState = applyAction(state, "p1", { type: "ROLL" }, mockRng.getRNG());
+
+      expect(nextState.blackout).not.toBeNull();
+      expect(nextState.blackout?.untilRound).toBe(2); // currentTurn (1) + 1
+      expect(nextState.phase).toBe("awaiting-end-turn");
+    });
+
+    it("waives all rent during a blackout, then restores it when the round wraps", () => {
+      const state = createGame(["p1", "p2"]);
+      state.tiles[3] = { ownerId: "p1", houses: 0, mortgaged: false }; // p1 owns Mushin (pos 3)
+      state.blackout = { untilRound: 2 };
+      state.currentTurn = 1;
+      state.currentPlayerIndex = 1; // p2's turn
+      state.players[1].position = 0;
+
+      // p2 rolls 3 -> lands on p1's Mushin. Blackout: no rent changes hands.
+      const roll = MockRNG.makeRoll(1, 2);
+      let s = applyAction(state, "p2", { type: "ROLL" }, roll.getRNG());
+      expect(s.players[1].position).toBe(3);
+      expect(s.players[1].cash).toBe(STARTING_CASH); // paid nothing
+      expect(s.players[0].cash).toBe(STARTING_CASH); // collected nothing
+      expect(s.blackout).not.toBeNull();
+
+      // p2 ends turn -> wraps back to p1, round -> 2, light restored.
+      s = applyAction(s, "p2", { type: "END_TURN" });
+      expect(s.currentTurn).toBe(2);
+      expect(s.blackout).toBeNull();
+    });
   });
 
   describe("Building and Mortgaging", () => {

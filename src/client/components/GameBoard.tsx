@@ -278,6 +278,20 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             </motion.div>
           )}
 
+          {/* NEPA blackout indicator (chaos mode) */}
+          {engineState.blackout && (
+            <motion.div
+              className="blackout-display"
+              style={{ margin: 0, padding: "0.35rem 0.75rem", background: "rgba(245, 158, 11, 0.12)", border: "1px solid rgba(245, 158, 11, 0.4)", borderRadius: "2px", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", color: "var(--color-gold, #f59e0b)", zIndex: 5 }}
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0, boxShadow: ["0 0 8px rgba(245,158,11,0.15)", "0 0 20px rgba(245,158,11,0.5)", "0 0 8px rgba(245,158,11,0.15)"] }}
+              transition={{ boxShadow: { duration: 1.4, repeat: Infinity } }}
+              title="NEPA don take light — rent is frozen until the round comes back around."
+            >
+              ⚡ NEPA don take light — rent frozen!
+            </motion.div>
+          )}
+
           {/* Game Phase / Turn Indicator */}
           <motion.div
             key={engineState.phase}

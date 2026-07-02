@@ -115,6 +115,7 @@ export function useGameRoom() {
         startingCash: state.startingCash,
         turnLimit: state.turnLimit,
         freeParkingJackpot: state.freeParkingJackpot,
+        chaosMode: state.chaosMode,
         turnTimerEnabled: state.turnTimerEnabled,
         turnTimeoutSecs: state.turnTimeoutSecs,
         turnDeadline: state.turnDeadline,

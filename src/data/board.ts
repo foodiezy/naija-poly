@@ -107,7 +107,8 @@ export type CardAction =
   | { kind: "payEach"; amount: number }
   | { kind: "repairs"; perHouse: number; perHotel: number }
   | { kind: "nearestAirport" } // advance to next airport; rent payable is 2x
-  | { kind: "nearestUtility" }; // advance to next utility
+  | { kind: "nearestUtility" } // advance to next utility
+  | { kind: "blackout" }; // chaos mode: NEPA takes light — no rent for a round
 
 export interface Card {
   id: string;
@@ -365,3 +366,14 @@ export const HUSTLE_CARDS: Card[] = [
   { id: "hs16", text: "Inheritance: family land for village. Collect ₦100,000.",
     action: { kind: "money", amount: 100_000 } },
 ];
+
+// Chaos-mode cards. Only shuffled into the deck when the host enables Chaos
+// Mode; kept separate so the base game stays predictable. Mixed into the Chance
+// deck. drawCard looks cards up in ALL_CHANCE_CARDS so these resolve either way.
+export const CHAOS_CHANCE_CARDS: Card[] = [
+  { id: "cx01", text: "⚡ NEPA don take light! Total blackout — nobody fit collect rent until the round waka back around.",
+    action: { kind: "blackout" } },
+];
+
+// Every card the Chance deck can draw, base + chaos, for id lookups.
+export const ALL_CHANCE_CARDS: Card[] = [...CHANCE_CARDS, ...CHAOS_CHANCE_CARDS];

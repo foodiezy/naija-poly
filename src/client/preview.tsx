@@ -64,9 +64,10 @@ const engineState = {
     "Bola drew Hustle: \"Village meeting levy — pay ₦40,000.\"",
   ],
   winnerId: null,
-  settings: { startingCash: 1_500_000, turnLimit: 0, freeParkingJackpot: false },
+  settings: { startingCash: 1_500_000, turnLimit: 0, freeParkingJackpot: false, chaosMode: false },
   currentTurn: 4,
   freeParkingPot: 0,
+  blackout: null,
   activeTrade: null,
 };
 
@@ -82,6 +83,7 @@ const roomState: RoomState = {
   startingCash: 1_500_000,
   turnLimit: 0,
   freeParkingJackpot: false,
+  chaosMode: false,
   turnTimerEnabled: false,
   turnTimeoutSecs: 120,
   turnDeadline: 0,

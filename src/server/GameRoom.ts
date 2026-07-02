@@ -25,6 +25,7 @@ export class GameRoomState extends Schema {
   @type("number") startingCash: number = 1500000;
   @type("number") turnLimit: number = 0; // 0 = unlimited
   @type("boolean") freeParkingJackpot: boolean = false;
+  @type("boolean") chaosMode: boolean = false; // NEPA blackout & other chaos cards
   @type("boolean") turnTimerEnabled: boolean = false;
   @type("number") turnTimeoutSecs: number = 120;
   @type("number") turnDeadline: number = 0; // epoch ms; 0 = no active timer
@@ -296,7 +297,7 @@ export class GameRoom extends Room<GameRoomState> {
     });
 
     // Message handler to update lobby settings
-    this.onMessage("UPDATE_SETTINGS", (client, message: { startingCash?: number; turnLimit?: number; freeParkingJackpot?: boolean; turnTimerEnabled?: boolean; turnTimeoutSecs?: number }) => {
+    this.onMessage("UPDATE_SETTINGS", (client, message: { startingCash?: number; turnLimit?: number; freeParkingJackpot?: boolean; chaosMode?: boolean; turnTimerEnabled?: boolean; turnTimeoutSecs?: number }) => {
       if (this.state.status !== "lobby") {
         this.sendError(client, "Cannot change settings once game starts");
         return;
@@ -324,6 +325,9 @@ export class GameRoom extends Room<GameRoomState> {
       }
       if (message.freeParkingJackpot !== undefined) {
         this.state.freeParkingJackpot = !!message.freeParkingJackpot;
+      }
+      if (message.chaosMode !== undefined) {
+        this.state.chaosMode = !!message.chaosMode;
       }
       if (message.turnTimerEnabled !== undefined) {
         this.state.turnTimerEnabled = !!message.turnTimerEnabled;
@@ -392,6 +396,7 @@ export class GameRoom extends Room<GameRoomState> {
         startingCash: this.state.startingCash,
         turnLimit: this.state.turnLimit,
         freeParkingJackpot: this.state.freeParkingJackpot,
+        chaosMode: this.state.chaosMode,
       });
 
       // Map custom lobby player display names back to engine players
