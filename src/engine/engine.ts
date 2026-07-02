@@ -480,7 +480,9 @@ export function applyAction(
         }
       }
 
-      const refund = tile.houseCost / 2;
+      // Sell back to the bank at half price. Floor keeps money an exact integer
+      // of Naira even if a retheme sets an odd houseCost (data is data).
+      const refund = Math.floor(tile.houseCost / 2);
       currentPlayer.cash += refund;
       tileState.houses -= 1;
 
