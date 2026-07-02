@@ -83,6 +83,33 @@ export const IconTrophy: React.FC<IconProps> = ({ size = 16, ...props }) => (
   </svg>
 );
 
+// Board development markers — deliberately distinct silhouettes: a small
+// green cottage vs. a tall red multi-storey hotel with lit windows.
+export const IconHouse: React.FC<IconProps> = ({ size = 12, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <rect x="4.5" y="10.5" width="15" height="10.5" fill="#22c55e" stroke="#0a3d1c" strokeWidth="1.1" strokeLinejoin="round" />
+    <path d="M12 2.5 22 11.5H2z" fill="#16a34a" stroke="#0a3d1c" strokeWidth="1.1" strokeLinejoin="round" />
+    <rect x="10" y="14.5" width="4" height="6.5" fill="#0a3d1c" />
+  </svg>
+);
+
+export const IconHotel: React.FC<IconProps> = ({ size = 14, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <rect x="5" y="3.5" width="14" height="17.5" fill="#ef4444" stroke="#7a1414" strokeWidth="1.1" strokeLinejoin="round" />
+    <g fill="#fde3e3">
+      <rect x="7.4" y="6" width="2.3" height="2.3" />
+      <rect x="10.85" y="6" width="2.3" height="2.3" />
+      <rect x="14.3" y="6" width="2.3" height="2.3" />
+      <rect x="7.4" y="9.7" width="2.3" height="2.3" />
+      <rect x="10.85" y="9.7" width="2.3" height="2.3" />
+      <rect x="14.3" y="9.7" width="2.3" height="2.3" />
+      <rect x="7.4" y="13.4" width="2.3" height="2.3" />
+      <rect x="14.3" y="13.4" width="2.3" height="2.3" />
+    </g>
+    <rect x="10.6" y="16.5" width="2.8" height="4.5" fill="#7a1414" />
+  </svg>
+);
+
 export const IconWarning: React.FC<IconProps> = ({ size = 16, ...props }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
     <path d="M12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2ZM12 20C7.6 20 4 16.4 4 12C4 7.6 7.6 4 12 4C16.4 4 20 7.6 20 12C20 16.4 16.4 20 12 20ZM13 7H11V13H13V7ZM13 15H11V17H13V15Z" fill="currentColor" />

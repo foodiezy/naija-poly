@@ -9,6 +9,7 @@ import { useTokenWalker } from "../hooks/useTokenWalker";
 import { ALL_TRIVIA } from "../../data/facts";
 import TileImage from "./TileImage";
 import { tileImageUrl } from "../tileImages";
+import { IconHouse, IconHotel } from "./icons";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
 // type, so drop the redundant "Airport"/"Corporation" suffix; the full name
@@ -441,7 +442,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
         const houseDots = [];
         if (showHouses && !isHotel) {
           for (let i = 0; i < tileState.houses; i++) {
-            houseDots.push(<div key={i} className="house-dot" />);
+            houseDots.push(<IconHouse key={i} className="house-dot" />);
           }
         }
 
@@ -514,7 +515,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             {/* House dots container */}
             {showHouses && (
               <div className="tile-houses">
-                {isHotel ? <div className="hotel-dot" /> : houseDots}
+                {isHotel ? <IconHotel className="hotel-dot" /> : houseDots}
               </div>
             )}
 
