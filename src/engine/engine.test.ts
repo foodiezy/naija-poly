@@ -583,6 +583,41 @@ describe("Game Engine", () => {
       expect(nextState.players[1].cash).toBe(STARTING_CASH + 50_000);
     });
 
+    it("rejects trade offers with non-integer or NaN cash (wire poisoning)", () => {
+      const state = createGame(["p1", "p2"]);
+      state.tiles[1].ownerId = "p1";
+
+      // NaN would slip past every `<` comparison and poison a player's cash.
+      const nanOffer = {
+        fromId: "p1",
+        toId: "p2",
+        giveCash: NaN,
+        getCash: 0,
+        giveTiles: [1],
+        getTiles: [],
+      };
+      expect(() => applyAction(state, "p1", { type: "PROPOSE_TRADE", trade: nanOffer })).toThrow();
+
+      // Fractional Naira breaks the integer-money invariant.
+      const floatOffer = { ...nanOffer, giveCash: 0.5 };
+      expect(() => applyAction(state, "p1", { type: "PROPOSE_TRADE", trade: floatOffer })).toThrow();
+
+      // Missing tile arrays.
+      const badTiles = { fromId: "p1", toId: "p2", giveCash: 0, getCash: 0 } as unknown as {
+        fromId: string; toId: string; giveCash: number; getCash: number; giveTiles: number[]; getTiles: number[];
+      };
+      expect(() => applyAction(state, "p1", { type: "PROPOSE_TRADE", trade: badTiles })).toThrow();
+    });
+
+    it("rejects non-integer bid amounts", () => {
+      const state = createGame(["p1", "p2"]);
+      state.players[0].position = 1;
+      state.phase = "awaiting-buy-decision";
+      const s = applyAction(state, "p1", { type: "DECLINE_BUY" });
+      expect(() => applyAction(s, "p1", { type: "BID", amount: NaN })).toThrow();
+      expect(() => applyAction(s, "p1", { type: "BID", amount: 10_000.5 })).toThrow();
+    });
+
     it("handles bankruptcy and property transfers to creditor", () => {
       const state = createGame(["p1", "p2"]);
       // p1 owns Mushin (pos 3), developed with 1 house (rent level 1 = 20,000)

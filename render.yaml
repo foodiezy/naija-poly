@@ -1,12 +1,16 @@
 services:
-  # Game server (Colyseus + Express WebSocket)
+  # Single web service: the Express+Colyseus server also serves the built
+  # Vite client as static files, so there is no separate static site to create.
   - type: web
     name: odogwu-empire-server
     runtime: node
     buildCommand: npm install --legacy-peer-deps && npm run build:client
     startCommand: npm run start
     healthCheckPath: /health
-
-# NOTE: The client (Vite static site) must be created manually on Render.
-# Render Blueprint does not support type: static.
-# See README for instructions.
+    envVars:
+      # Comma-separated exact origins allowed to make credentialed requests.
+      # Set this to your deployed URL, e.g. https://odogwu-empire-server.onrender.com
+      # (localhost is always allowed). Leave unset if the client is served
+      # same-origin from this service — same-origin requests don't need it.
+      - key: ALLOWED_ORIGINS
+        sync: false

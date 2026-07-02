@@ -41,21 +41,36 @@ export class GameRoom extends Room<GameRoomState> {
   // Per-turn AFK timeout (optional, host-configured).
   private turnTimer?: ReturnType<typeof this.clock.setTimeout>;
 
+  // Authoritative full engine state, kept in-memory only. The copy synced to
+  // clients (this.state.gameStateJson) is REDACTED — it omits the shuffled
+  // card decks so a player can't read upcoming Chance/Hustle cards from
+  // devtools. All server logic reads this field, never the redacted JSON.
+  private fullState: GameState | null = null;
+
   private sendError(client: Client, message: string) {
     client.send("ERROR", { message });
+  }
+
+  // Persist the authoritative state and publish a redacted copy to clients.
+  // The redacted copy blanks the deck order/pointers (secret information) while
+  // keeping everything the UI actually renders. Also flips room status on
+  // game-over so both timeout and action paths stay consistent.
+  private persist(state: GameState) {
+    this.fullState = state;
+    const redacted: GameState = { ...state, chanceOrder: [], hustleOrder: [], chancePtr: 0, hustlePtr: 0 };
+    this.state.gameStateJson = JSON.stringify(redacted);
+    if (state.phase === "game-over") {
+      this.state.status = "finished";
+    }
   }
 
   // Single path for mutating game state: apply the action through the pure
   // engine, (re)arm the auction timer if an auction is live, then persist.
   private runEngineAction(playerId: string, action: Action) {
-    const engineState = JSON.parse(this.state.gameStateJson) as GameState;
-    const nextEngineState = applyAction(engineState, playerId, action);
+    if (!this.fullState) throw new Error("Game has not started");
+    const nextEngineState = applyAction(this.fullState, playerId, action);
     this.armAuctionTimer(nextEngineState);
-    this.state.gameStateJson = JSON.stringify(nextEngineState);
-
-    if (nextEngineState.phase === "game-over") {
-      this.state.status = "finished";
-    }
+    this.persist(nextEngineState);
 
     // (Re)arm the AFK turn timer for the new turn/phase.
     this.armTurnTimer(nextEngineState);
@@ -89,12 +104,8 @@ export class GameRoom extends Room<GameRoomState> {
   private onTurnTimeout() {
     this.turnTimer = undefined;
     if (this.state.status !== "in_progress") return;
-    let s: GameState;
-    try {
-      s = JSON.parse(this.state.gameStateJson);
-    } catch {
-      return;
-    }
+    const s = this.fullState;
+    if (!s) return;
     if (s.phase === "auction" || s.phase === "game-over") return;
     const current = s.players[s.currentPlayerIndex];
     if (!current || current.bankrupt || isAIPlayer(current.id)) return;
@@ -127,12 +138,8 @@ export class GameRoom extends Room<GameRoomState> {
     this.clearAITimer();
     if (this.state.status !== "in_progress") return;
 
-    let engineState: GameState;
-    try {
-      engineState = JSON.parse(this.state.gameStateJson) as GameState;
-    } catch {
-      return;
-    }
+    const engineState = this.fullState;
+    if (!engineState) return;
     if (engineState.phase === "game-over") return;
 
     let actorId: string | null = null;
@@ -166,12 +173,8 @@ export class GameRoom extends Room<GameRoomState> {
     this.aiTimer = undefined;
     if (this.state.status !== "in_progress") return;
 
-    let engineState: GameState;
-    try {
-      engineState = JSON.parse(this.state.gameStateJson) as GameState;
-    } catch {
-      return;
-    }
+    const engineState = this.fullState;
+    if (!engineState) return;
 
     const action = getAIAction(engineState, actorId);
     if (!action) {
@@ -211,14 +214,11 @@ export class GameRoom extends Room<GameRoomState> {
     this.auctionTimer = undefined;
     if (this.state.status !== "in_progress") return;
     try {
-      const engineState = JSON.parse(this.state.gameStateJson) as GameState;
-      if (engineState.phase !== "auction") return;
+      const engineState = this.fullState;
+      if (!engineState || engineState.phase !== "auction") return;
       const nextEngineState = applyAction(engineState, "__server__", { type: "RESOLVE_AUCTION" });
       this.armAuctionTimer(nextEngineState);
-      this.state.gameStateJson = JSON.stringify(nextEngineState);
-      if (nextEngineState.phase === "game-over") {
-        this.state.status = "finished";
-      }
+      this.persist(nextEngineState);
       this.armTurnTimer(nextEngineState);
       this.scheduleAIIfNeeded();
     } catch (err: unknown) {
@@ -281,7 +281,7 @@ export class GameRoom extends Room<GameRoomState> {
           this.sendError(client, "Starting cash must be between ₦100,000 and ₦10,000,000");
           return;
         }
-        this.state.startingCash = cash;
+        this.state.startingCash = Math.floor(cash);
       }
       if (message.turnLimit !== undefined) {
         const limit = Number(message.turnLimit);
@@ -371,8 +371,11 @@ export class GameRoom extends Room<GameRoomState> {
         }
       });
 
-      this.state.gameStateJson = JSON.stringify(initialEngineState);
+      this.persist(initialEngineState);
       this.state.status = "in_progress";
+      // Seal the room so no stranger can join a game already in progress
+      // (matchmaking would otherwise route "quick play" joiners into it).
+      this.lock();
 
       console.log(`Game started with players: ${playerIds.join(", ")}`);
       // The first player up could be a computer; also start their turn clock.
@@ -414,6 +417,9 @@ export class GameRoom extends Room<GameRoomState> {
       this.state.turnDeadline = 0;
       this.state.status = "lobby";
       this.state.gameStateJson = "";
+      this.fullState = null;
+      // Reopen the room so players can join the fresh lobby again.
+      this.unlock();
       console.log(`Game reset back to lobby by host ${client.sessionId}`);
     });
 
@@ -453,6 +459,14 @@ export class GameRoom extends Room<GameRoomState> {
   }
 
   onJoin(client: Client, options: { name?: string }) {
+    // Only lobby-stage rooms accept new players. The room is also lock()ed on
+    // START_GAME, but guard here too so a direct joinById can't seat a stranger
+    // in a running game. (Reconnections don't go through onJoin, so they're
+    // unaffected.)
+    if (this.state.status !== "lobby") {
+      throw new Error("This game has already started.");
+    }
+
     const rawName = (options.name || "").trim().substring(0, 20);
     const name = rawName || `Player_${client.sessionId.substring(0, 4)}`;
 

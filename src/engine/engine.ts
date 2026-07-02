@@ -711,6 +711,9 @@ export function applyAction(
 
       // Bids must raise the top bid by exactly one of the set increments.
       const amount = action.amount;
+      if (!Number.isInteger(amount)) {
+        throw new Error("Bid amount must be a whole number");
+      }
       const raise = amount - auction.highestBid;
       if (!auction.bidIncrements.includes(raise)) {
         throw new Error(
@@ -794,6 +797,19 @@ export function applyAction(
       }
 
       const trade = action.trade;
+      // Shape validation: the wire payload is attacker-controlled, so reject
+      // anything that isn't a well-formed trade before touching money/tiles.
+      // NaN/undefined cash would slip past every `<` comparison below (all
+      // comparisons with NaN are false) and permanently poison a player's cash.
+      if (!trade || typeof trade !== "object") {
+        throw new Error("Malformed trade offer");
+      }
+      if (!Number.isInteger(trade.giveCash) || !Number.isInteger(trade.getCash)) {
+        throw new Error("Trade cash values must be whole numbers");
+      }
+      if (!Array.isArray(trade.giveTiles) || !Array.isArray(trade.getTiles)) {
+        throw new Error("Trade tile lists must be arrays");
+      }
       if (trade.fromId !== playerId) {
         throw new Error("Proposer ID must match active player");
       }
@@ -802,6 +818,9 @@ export function applyAction(
       const recipient = nextState.players.find((p) => p.id === trade.toId);
       if (!recipient || recipient.bankrupt) {
         throw new Error("Recipient player not found or bankrupt");
+      }
+      if (recipient.id === proposer.id) {
+        throw new Error("Cannot trade with yourself");
       }
 
       // Cash checks
