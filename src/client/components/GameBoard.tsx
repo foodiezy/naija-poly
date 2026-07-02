@@ -405,8 +405,8 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             )}
           </AnimatePresence>
 
-          {/* Center: Game Feed */}
-          <div className="board-center-feed" style={{ width: "100%", maxWidth: "550px", margin: 0, background: "rgba(0, 0, 0, 0.4)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "2px", maxHeight: "110px" }}>
+          {/* Center: Game Feed — blends into the board-center background (no boxed panel) */}
+          <div className="board-center-feed" style={{ width: "100%", maxWidth: "550px", margin: 0, background: "transparent", border: "none", maxHeight: "110px" }}>
             <div className="board-center-feed-logs" style={{ padding: "0.5rem 1rem" }}>
               {engineState.log?.map((logLine: string, idx: number) => (
                 <div key={idx} className={getLogClass(logLine)} style={{ fontSize: "0.78rem", padding: "2px 0", textAlign: "center" }}>
