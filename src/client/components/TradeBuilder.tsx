@@ -82,18 +82,9 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
     onClose();
   };
 
-  // Live deal-balance valuation: tile value (bank assessment) + cash.
+  // Live valuation of each side: tile value (bank assessment) + cash.
   const giveValue = tradeGiveCash + tradeGiveTiles.reduce((s, p) => s + tileValue(p, tiles), 0);
   const getValue = tradeGetCash + tradeGetTiles.reduce((s, p) => s + tileValue(p, tiles), 0);
-  const balance = getValue - giveValue;
-  const balanceLabel =
-    !tradeTargetId || (giveValue === 0 && getValue === 0)
-      ? null
-      : Math.abs(balance) < Math.max(giveValue, getValue) * 0.08
-        ? { text: "Fair Deal", tone: "fair" }
-        : balance > 0
-          ? { text: "Favours You", tone: "you" }
-          : { text: "Favours Them", tone: "them" };
 
   const isEmpty = tradeGiveTiles.length === 0 && tradeGetTiles.length === 0 && tradeGiveCash === 0 && tradeGetCash === 0;
 
@@ -294,9 +285,6 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
                   <span className="trade-balance-label">You offer</span>
                   <span className="trade-balance-value">₦{giveValue.toLocaleString()}</span>
                 </div>
-                {balanceLabel && (
-                  <span className={`trade-balance-pill tone-${balanceLabel.tone}`}>{balanceLabel.text}</span>
-                )}
                 <div className="trade-balance-side right">
                   <span className="trade-balance-label">You receive</span>
                   <span className="trade-balance-value">₦{getValue.toLocaleString()}</span>
