@@ -47,6 +47,37 @@ export class GameRoom extends Room<GameRoomState> {
   // devtools. All server logic reads this field, never the redacted JSON.
   private fullState: GameState | null = null;
 
+  // Per-client token bucket, throttling inbound messages so a malicious client
+  // can't flood ACTION/SEND_CHAT (each ACTION costs a structuredClone +
+  // stringify of the whole game state). Capacity allows a natural burst; refill
+  // is generous enough that real play never trips it.
+  private rateBuckets = new Map<string, { tokens: number; last: number }>();
+  private static readonly RL_CAPACITY = 20; // max burst
+  private static readonly RL_REFILL_PER_SEC = 8; // sustained rate
+
+  // Returns true if the client may send now (and spends a token); false if it's
+  // over its limit. Refills based on elapsed time since the last check.
+  private allowMessage(client: Client): boolean {
+    const now = Date.now();
+    const bucket = this.rateBuckets.get(client.sessionId) ?? {
+      tokens: GameRoom.RL_CAPACITY,
+      last: now,
+    };
+    const elapsedSec = (now - bucket.last) / 1000;
+    bucket.tokens = Math.min(
+      GameRoom.RL_CAPACITY,
+      bucket.tokens + elapsedSec * GameRoom.RL_REFILL_PER_SEC,
+    );
+    bucket.last = now;
+    let allowed = false;
+    if (bucket.tokens >= 1) {
+      bucket.tokens -= 1;
+      allowed = true;
+    }
+    this.rateBuckets.set(client.sessionId, bucket);
+    return allowed;
+  }
+
   private sendError(client: Client, message: string) {
     client.send("ERROR", { message });
   }
@@ -385,6 +416,10 @@ export class GameRoom extends Room<GameRoomState> {
 
     // Message handler for player actions
     this.onMessage("ACTION", (client, action: Action) => {
+      if (!this.allowMessage(client)) {
+        this.sendError(client, "Slow down — too many actions too fast.");
+        return;
+      }
       if (this.state.status !== "in_progress") {
         this.sendError(client, "Game is not in progress");
         return;
@@ -427,6 +462,10 @@ export class GameRoom extends Room<GameRoomState> {
     // private/direct message delivered only to the sender and that recipient;
     // otherwise it is broadcast to everyone (the general channel).
     this.onMessage("SEND_CHAT", (client, message: { text: string; toId?: string }) => {
+      if (!this.allowMessage(client)) {
+        this.sendError(client, "Slow down — you're sending messages too fast.");
+        return;
+      }
       const text = (message.text || "").trim().substring(0, 500);
       if (!text) return;
 
@@ -494,6 +533,7 @@ export class GameRoom extends Room<GameRoomState> {
     if (this.state.status === "lobby") {
       // If still in lobby, remove immediately
       this.state.lobbyPlayers.delete(client.sessionId);
+      this.rateBuckets.delete(client.sessionId);
       if (this.state.hostId === client.sessionId) {
         // Assign new host if any left
         const remainingKeys = Array.from(this.state.lobbyPlayers.keys()) as string[];
@@ -512,6 +552,7 @@ export class GameRoom extends Room<GameRoomState> {
         // them through the engine so turns keep flowing and the game can't
         // stall waiting on someone who is gone.
         console.log(`Client ${client.sessionId} permanently disconnected.`);
+        this.rateBuckets.delete(client.sessionId);
         if (this.state.status === "in_progress") {
           try {
             this.runEngineAction(client.sessionId, { type: "FORFEIT" });
