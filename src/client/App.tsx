@@ -55,6 +55,21 @@ export default function App() {
   const [gameResultRecorded, setGameResultRecorded] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  // Room code from an invite link (?room=CODE), read once on load so a friend
+  // who taps a shared link lands on the lobby with the join field prefilled.
+  const [inviteRoomId] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("room")?.trim() ?? "";
+  });
+
+  // Once we're in a room, strip ?room= from the address bar so a refresh
+  // reconnects (via the stored token) instead of re-triggering the invite flow.
+  useEffect(() => {
+    if (room && typeof window !== "undefined" && window.location.search) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [room]);
+
   useEffect(() => {
     if (typeof localStorage !== "undefined" && !localStorage.getItem("odogwu-tutorial-seen")) {
       setShowOnboarding(true);
@@ -113,17 +128,20 @@ export default function App() {
 
   const copyRoomCode = useCallback(async () => {
     if (!room) return;
+    // Share a tappable invite URL — one tap drops a friend straight into this
+    // lobby with the code prefilled, instead of "copy code, open site, paste".
+    const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${room.roomId}`;
     try {
-      await navigator.clipboard.writeText(room.roomId);
-      toast.success("📋 Room code copied!", { autoClose: 1500, toastId: "copy" });
+      await navigator.clipboard.writeText(inviteUrl);
+      toast.success("🔗 Invite link copied — share it!", { autoClose: 1800, toastId: "copy" });
     } catch {
       const el = document.createElement("textarea");
-      el.value = room.roomId;
+      el.value = inviteUrl;
       document.body.appendChild(el);
       el.select();
       document.execCommand("copy");
       document.body.removeChild(el);
-      toast.success("📋 Room code copied!", { autoClose: 1500, toastId: "copy" });
+      toast.success("🔗 Invite link copied — share it!", { autoClose: 1800, toastId: "copy" });
     }
   }, [room]);
 
@@ -145,12 +163,12 @@ export default function App() {
         <div className="header-right">
           {room && (
             <>
-              <span className="room-badge" onClick={copyRoomCode} title="Click to copy room code">
+              <span className="room-badge" onClick={copyRoomCode} title="Click to copy the invite link">
                 Room: {room.roomId}
-                <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>📋</span>
+                <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>🔗</span>
               </span>
               <button className="header-btn header-btn-gold" onClick={copyRoomCode}>
-                Copy
+                Invite 🔗
               </button>
             </>
           )}
@@ -223,6 +241,7 @@ export default function App() {
                 onCreateRoom={createRoom}
                 onJoinRoom={joinRoom}
                 onQuickMatch={quickMatch}
+                initialRoomId={inviteRoomId}
               />
               <AnimatePresence>
                 {showOnboarding && (
