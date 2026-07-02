@@ -7,7 +7,6 @@ import { MotionConfig } from "framer-motion";
 import { AnimatePresence } from "framer-motion";
 import GameBoard from "./components/GameBoard";
 import ControlPanel from "./components/ControlPanel";
-import AssetsPanel from "./components/AssetsPanel";
 import ChatPanel from "./components/ChatPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import TileInspector from "./components/TileInspector";
@@ -141,10 +140,6 @@ function PreviewApp() {
             onSendAction={(action) => console.log("Action dispatched in preview:", action)}
             autoEndTurn={autoEndTurn}
             onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
-          />
-          <AssetsPanel
-            room={mockRoom}
-            engineState={engineState as any}
           />
         </div>
       </div>

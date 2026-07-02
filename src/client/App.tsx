@@ -7,10 +7,11 @@ import "react-toastify/dist/ReactToastify.css";
 import Lobby from "./components/Lobby";
 import RoomLobbyView from "./components/RoomLobbyView";
 import GameBoard from "./components/GameBoard";
-import AssetsPanel from "./components/AssetsPanel";
 import ChatPanel from "./components/ChatPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import ControlPanel from "./components/ControlPanel";
+// (AssetsPanel removed — its holdings list duplicated ControlPanel's PropertyList;
+// its unique Round + Net Worth now live in ControlPanel's player card.)
 import TileInspector from "./components/TileInspector";
 import GameOverModal from "./components/GameOverModal";
 import BuyDeedModal from "./components/BuyDeedModal";
@@ -333,12 +334,6 @@ export default function App() {
               onSendAction={sendAction}
               autoEndTurn={autoEndTurn}
               onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
-              turnDeadline={roomState?.turnDeadline}
-              turnTimeoutSecs={roomState?.turnTimeoutSecs}
-            />
-            <AssetsPanel
-              room={room}
-              engineState={engineState}
               turnDeadline={roomState?.turnDeadline}
               turnTimeoutSecs={roomState?.turnTimeoutSecs}
             />
