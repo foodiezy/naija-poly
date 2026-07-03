@@ -7,9 +7,11 @@ import { RoomState, RoomSettings } from "../../shared/room";
 
 // Fallback logic for local vs deployed addresses
 const isDev = import.meta.env.DEV;
-const endpoint = isDev
+const endpoint = import.meta.env.VITE_SERVER_URL
+  ? import.meta.env.VITE_SERVER_URL
+  : isDev
   ? "ws://localhost:2567"
-  : (import.meta.env.VITE_SERVER_URL ?? window.location.origin.replace(/^http/, "ws"));
+  : window.location.origin.replace(/^http/, "ws");
 
 // The 0.16.22 matchmaking seat-reservation response, minus the `room` field
 // that the 0.17 server omits and we synthesize below.
