@@ -244,18 +244,6 @@ export default function App() {
                 onQuickMatch={quickMatch}
                 initialRoomId={inviteRoomId}
               />
-              <AnimatePresence>
-                {showOnboarding && (
-                  <OnboardingModal
-                    onClose={() => {
-                      setShowOnboarding(false);
-                      if (typeof localStorage !== "undefined") {
-                        localStorage.setItem("odogwu-tutorial-seen", "1");
-                      }
-                    }}
-                  />
-                )}
-              </AnimatePresence>
             </>
           )}
         </motion.div>
@@ -385,11 +373,30 @@ export default function App() {
       </AnimatePresence>
 
       {/* Footer */}
+      {/* Tutorial — top level so the footer "How to Play" works everywhere,
+          not just on the landing page. */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <OnboardingModal
+            onClose={() => {
+              setShowOnboarding(false);
+              if (typeof localStorage !== "undefined") {
+                localStorage.setItem("odogwu-tutorial-seen", "1");
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       <footer className="app-footer">
         <div className="footer-left">
           <span className="footer-logo">🏛️ Odogwu Empire</span>
-          <span>How to Play</span>
-          <span>Privacy</span>
+          <span
+            style={{ cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "2px" }}
+            onClick={() => setShowOnboarding(true)}
+          >
+            How to Play
+          </span>
         </div>
         <div className="footer-right">
           © 2026 Odogwu Games · Made with Lagos vibes.

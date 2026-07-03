@@ -50,4 +50,15 @@ cards (written in Pidgin), and try to bankrupt each other. "Free parking" is the
 - Keep functions small and pure; prefer many tested helpers over one big switch.
 
 ## Current state
-Board data, types, game setup, ROLL flow, property upgrading (building/selling houses/hotels), mortgaging/unmortgaging logic, auctions, player-to-player trading, and bankruptcy resolution are fully implemented. The multiplayer Colyseus + Express game server is completed, allowing client lobbies, token selection, room starting, turn progression actions over WebSockets, and automatic player reconnections. Verified with strict typechecking and 37 passing vitest tests.
+Feature-complete and deployment-ready. Engine: full rules (roll/buy/rent/cards,
+building with bank supply caps, mortgage, auctions, multi-asset trading,
+bankruptcy, forfeit) plus opt-in Chaos Mode (NEPA blackout card freezes rent
+for a round). Server: Colyseus room with lobby/settings/AI bots/turn & auction
+timers, reconnection (60s grace), room lock on start, per-client rate
+limiting, redacted state sync (deck order hidden from clients), CORS pinned
+via ALLOWED_ORIGINS. Client: full board UI with real place photos, deed cards
+with owner management (upgrade/sell/mortgage from the card), trading, chat
+(+DMs), invite links (?room=CODE), onboarding, sounds, error boundary, vendor
+bundle splitting. Deploys as ONE Render web service (render.yaml): Express
+serves the built client + WebSockets same-origin. 76 passing vitest tests,
+strict typecheck.

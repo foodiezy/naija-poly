@@ -770,11 +770,6 @@ h6 {
     min-height: 56px;
   }
 
-  .holdings-actions .holdings-btn {
-    padding: 6px 10px;
-    font-size: 0.72rem;
-  }
-
   /* Modals fit screen */
   .buy-deed-card,
   .tile-inspector-overlay .deed-card {
@@ -796,7 +791,6 @@ h6 {
 
   /* Chat / settings panels collapse padding */
   .console-panel,
-  .assets-panel,
   .settings-panel {
     padding: 0.8rem;
   }
@@ -1441,42 +1435,6 @@ h6 {
   }
 }
 
-/* Deed inspector — bigger house/hotel icons showing build progression at a
-   glance, alongside the existing text status. */
-.deed-dev-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 7px;
-  padding: 0.35rem 0 0.15rem;
-}
-
-.deed-dev-icon {
-  width: 22px;
-  height: 26px;
-  flex-shrink: 0;
-  background: linear-gradient(to bottom, #34d399 0%, #10b981 100%);
-  clip-path: polygon(50% 0%, 100% 40%, 100% 100%, 0% 100%, 0% 40%);
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
-  outline: 1px solid rgba(255, 255, 255, 0.35);
-  outline-offset: -1px;
-}
-
-.deed-dev-icon.empty {
-  background: rgba(255, 255, 255, 0.05);
-  filter: none;
-  outline: 1.5px dashed rgba(255, 255, 255, 0.15);
-}
-
-.deed-dev-icon.hotel {
-  width: 30px;
-  height: 30px;
-  background: linear-gradient(to bottom, #dc2626 0%, #ef4444 100%);
-  clip-path: polygon(15% 0%, 85% 0%,
-      85% 15%, 100% 15%,
-      100% 100%, 0% 100%,
-      0% 15%, 15% 15%);
-  outline-color: rgba(255, 255, 255, 0.4);
-}
 
 /* Tokens positioned inside Tile */
 .tile-tokens-container {
@@ -1765,134 +1723,6 @@ h6 {
   color: var(--color-danger);
 }
 
-/* Left-column Assets + Round Timer panel */
-.assets-panel {
-  gap: 0.6rem;
-  min-height: 0;
-  flex: 0 0 auto;
-}
-
-.assets-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.9rem;
-  font-weight: bold;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding-bottom: 0.5rem;
-}
-
-.assets-round-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.assets-round-badge strong {
-  color: var(--color-gold);
-}
-
-.assets-round-limit {
-  color: var(--text-muted);
-  margin-left: 2px;
-}
-
-.assets-timer-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  margin-bottom: 0.25rem;
-}
-
-.assets-timer-secs {
-  font-weight: bold;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-naira);
-}
-
-.assets-timer-secs.urgent {
-  color: var(--color-danger);
-}
-
-.assets-timer-track {
-  height: 4px;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.assets-timer-fill {
-  height: 100%;
-  background: var(--color-naira);
-  border-radius: 999px;
-  transition: width 0.25s linear;
-}
-
-.assets-timer-fill.urgent {
-  background: var(--color-danger);
-}
-
-.assets-total {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.45rem 0.6rem;
-  border-radius: var(--radius-md);
-  background: rgba(16, 185, 129, 0.06);
-  border: 1px solid rgba(16, 185, 129, 0.15);
-  font-size: 0.72rem;
-  color: var(--text-secondary);
-}
-
-.assets-total strong {
-  font-size: 0.95rem;
-  color: var(--color-naira);
-}
-
-.assets-list {
-  max-height: 240px;
-  overflow-y: auto;
-}
-
-.assets-prop-value {
-  font-size: 0.72rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-gold);
-  white-space: nowrap;
-}
-
-.assets-prop-pips {
-  font-size: 0.6rem;
-  line-height: 1;
-  letter-spacing: -1px;
-  white-space: nowrap;
-}
-
-/* Monopoly (full color group owned): tint the row + glow the color dot */
-.sidebar-prop-row.assets-monopoly {
-  background: rgba(245, 158, 11, 0.07);
-  border-radius: var(--radius-sm);
-}
-
-.sidebar-prop-row.assets-monopoly .sidebar-prop-dot {
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.45);
-}
-
-.assets-empty {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  font-style: italic;
-  text-align: center;
-  padding: 0.75rem 0.5rem;
-}
 
 /* Left-column settings strip */
 .settings-panel {
@@ -4111,67 +3941,6 @@ html.high-contrast .glass-panel {
   font-weight: 600;
 }
 
-.holdings-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 0.15rem;
-}
-
-.holdings-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 3px 8px;
-  font-size: 0.66rem;
-  font-weight: 700;
-  border-radius: 6px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  font-family: var(--font-sans);
-  transition: filter 0.12s ease, background 0.15s ease;
-  letter-spacing: 0.02em;
-}
-
-.holdings-btn.build {
-  background: rgba(16, 185, 129, 0.16);
-  color: var(--color-naira);
-  border-color: rgba(16, 185, 129, 0.32);
-}
-
-.holdings-btn.build:hover {
-  background: rgba(16, 185, 129, 0.25);
-}
-
-.holdings-btn.sell {
-  background: rgba(239, 68, 68, 0.14);
-  color: var(--color-danger);
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.holdings-btn.sell:hover {
-  background: rgba(239, 68, 68, 0.22);
-}
-
-.holdings-btn.mortgage {
-  background: rgba(245, 158, 11, 0.14);
-  color: var(--color-gold);
-  border-color: rgba(245, 158, 11, 0.3);
-}
-
-.holdings-btn.mortgage:hover {
-  background: rgba(245, 158, 11, 0.24);
-}
-
-.holdings-btn.unmortgage {
-  background: rgba(16, 185, 129, 0.12);
-  color: var(--color-naira);
-  border-color: rgba(16, 185, 129, 0.28);
-}
-
-.holdings-btn.unmortgage:hover {
-  background: rgba(16, 185, 129, 0.22);
-}
 
 /* ──────────────────────────────────────────────────────────────────────
    Players panel — redesigned cards with stats + wealth bar
@@ -4956,33 +4725,6 @@ html.high-contrast .glass-panel {
   margin-top: 1px;
 }
 
-.trade-balance-pill {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 5px 12px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-
-.trade-balance-pill.tone-fair {
-  background: rgba(99, 102, 241, 0.18);
-  color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.35);
-}
-
-.trade-balance-pill.tone-you {
-  background: rgba(16, 185, 129, 0.18);
-  color: #6ee7b7;
-  border: 1px solid rgba(16, 185, 129, 0.4);
-}
-
-.trade-balance-pill.tone-them {
-  background: rgba(239, 68, 68, 0.16);
-  color: #fca5a5;
-  border: 1px solid rgba(239, 68, 68, 0.35);
-}
 
 .trade-incoming-from {
   display: flex;
@@ -5175,20 +4917,6 @@ html.high-contrast .glass-panel {
   inset: 0;
   background: linear-gradient(180deg, rgba(2, 6, 16, 0.05) 0%, rgba(15, 23, 42, 0.9) 100%);
   pointer-events: none;
-}
-
-.deed-photo-caption {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 0.5rem 0.9rem;
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #fff;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
-  z-index: 1;
 }
 
 /* --- Small board-tile thumbnails --- */
