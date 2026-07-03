@@ -1363,11 +1363,25 @@ h6 {
    houses in a row along the band, replaced by a single red hotel at max. */
 .tile-houses {
   display: flex;
-  gap: 2px;
+  gap: 1px;
   position: absolute;
   z-index: 4;
   align-items: center;
   justify-content: center;
+  /* Compact dark pill so the icon + ×N count read as one badge on the band. */
+  background: rgba(8, 6, 18, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 5px;
+  padding: 1px 3px;
+}
+
+/* ×N house count (richup.io style) */
+.house-count {
+  font-size: 8.5px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  letter-spacing: -0.02em;
 }
 
 /* Each edge centres the pip row/column on its 11px band (band centre ≈ 5.5px
@@ -1380,7 +1394,7 @@ h6 {
 }
 
 .edge-left .tile-houses {
-  flex-direction: column;
+  flex-direction: row;
   right: 5.5px;
   top: 50%;
   transform: translate(50%, -50%);
@@ -1394,7 +1408,7 @@ h6 {
 }
 
 .edge-right .tile-houses {
-  flex-direction: column;
+  flex-direction: row;
   left: 5.5px;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -3403,6 +3417,45 @@ html.high-contrast .glass-panel {
   margin-top: 1rem;
 }
 
+/* Owner management actions on the property card (richup.io style). */
+.deed-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 1.25rem 0;
+}
+
+.deed-action-btn {
+  flex: 1 1 auto;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.1s ease, filter 0.15s ease;
+}
+
+.deed-action-btn:hover { filter: brightness(1.12); }
+.deed-action-btn:active { transform: translateY(1px); }
+
+.deed-action-btn .deed-action-amt {
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.deed-action-btn.build { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); }
+.deed-action-btn.sell { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); }
+.deed-action-btn.mortgage { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
+.deed-action-btn.unmortgage { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); }
+
 .panel-tab-btn {
   transition: all 0.2s ease-in-out;
 }
@@ -3898,6 +3951,14 @@ html.high-contrast .glass-panel {
   border-color: rgba(255, 255, 255, 0.18);
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.holdings-card-clickable {
+  cursor: pointer;
+}
+
+.holdings-card-clickable:hover {
+  border-color: var(--color-gold, #f59e0b);
 }
 
 .holdings-card.full-set {

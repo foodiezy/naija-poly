@@ -22,10 +22,11 @@ interface ControlPanelProps {
   onToggleAutoEndTurn?: () => void;
   turnDeadline?: number;
   turnTimeoutSecs?: number;
+  onOpenTile?: (pos: number) => void;
 }
 
 export default function ControlPanel({
-  room, engineState, onSendAction, autoEndTurn, onToggleAutoEndTurn, turnDeadline, turnTimeoutSecs,
+  room, engineState, onSendAction, autoEndTurn, onToggleAutoEndTurn, turnDeadline, turnTimeoutSecs, onOpenTile,
 }: ControlPanelProps) {
   const [showTradeBuilder, setShowTradeBuilder] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -185,12 +186,11 @@ export default function ControlPanel({
         </div>
       )}
 
-      {/* 5. My properties */}
+      {/* 5. My properties — click a holding to open its card (upgrade/sell there) */}
       <PropertyList
         engineState={engineState}
         mySessionId={mySessionId}
-        canManage={canManage}
-        onSendAction={onSendAction}
+        onOpenTile={onOpenTile}
       />
     </div>
   );

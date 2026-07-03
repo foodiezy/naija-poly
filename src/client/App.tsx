@@ -336,6 +336,7 @@ export default function App() {
               onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
               turnDeadline={roomState?.turnDeadline}
               turnTimeoutSecs={roomState?.turnTimeoutSecs}
+              onOpenTile={(pos) => setSelectedTilePos(pos)}
             />
           </div>
 
@@ -346,6 +347,12 @@ export default function App() {
                 engineState={engineState}
                 roomState={roomState}
                 onClose={() => setSelectedTilePos(null)}
+                mySessionId={mySessionId}
+                canManage={
+                  engineState.players?.[engineState.currentPlayerIndex]?.id === mySessionId &&
+                  (engineState.phase === "awaiting-roll" || engineState.phase === "awaiting-end-turn")
+                }
+                onSendAction={sendAction}
               />
             )}
           </AnimatePresence>

@@ -1,20 +1,27 @@
 import { motion } from "framer-motion";
 import { BOARD, PropertyTile, AirportTile, UtilityTile, TaxTile } from "../../data/board";
 import { getDevelopmentName } from "../../engine/engine";
+import { canBuildOn, canSellHouseOn, canMortgageAt, canUnmortgageAt } from "../../engine/queries";
 import { tokenEmoji } from "../../data/tokens";
-import { GameState, Player } from "../../engine/types";
+import { GameState, Player, Action } from "../../engine/types";
 import { RoomState } from "../../shared/room";
 import { getFactForTile } from "../../data/facts";
 import TileImage from "./TileImage";
+import { IconBuild, IconSell, IconMortgage, IconUnmortgage } from "./icons";
 
 interface TileInspectorProps {
   tilePos: number;
   engineState: GameState;
   roomState: RoomState | null;
   onClose: () => void;
+  // When present, the card lets the owner manage the property directly
+  // (richup.io style): upgrade / sell / mortgage / redeem from the deed.
+  mySessionId?: string | null;
+  canManage?: boolean;
+  onSendAction?: (action: Action) => void;
 }
 
-export default function TileInspector({ tilePos, engineState, roomState, onClose }: TileInspectorProps) {
+export default function TileInspector({ tilePos, engineState, roomState, onClose, mySessionId, canManage, onSendAction }: TileInspectorProps) {
   const tile = BOARD[tilePos];
   if (!tile) return null;
 
@@ -39,6 +46,51 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
     yellow: "var(--color-yellow)",
     green: "var(--color-green)",
     darkblue: "var(--color-darkblue)",
+  };
+
+  // Manage the property straight from its card (richup.io style). Only shown to
+  // the owner on their turn; each button is gated by the same pure predicate the
+  // engine validates with, so the UI can't offer an illegal move.
+  const renderActions = () => {
+    if (!onSendAction || !mySessionId || !canManage) return null;
+    const build = canBuildOn(engineState, mySessionId, tilePos);
+    const sell = canSellHouseOn(engineState, mySessionId, tilePos);
+    const mort = canMortgageAt(engineState, mySessionId, tilePos);
+    const unmort = canUnmortgageAt(engineState, mySessionId, tilePos);
+    if (!build && !sell && !mort && !unmort) return null;
+
+    const houses = tileState?.houses ?? 0;
+    const houseCost = "houseCost" in tile ? (tile as PropertyTile).houseCost : 0;
+    const mortgageVal = "mortgage" in tile ? (tile as { mortgage: number }).mortgage : 0;
+
+    return (
+      <div className="deed-actions">
+        {build && (
+          <button className="deed-action-btn build" onClick={() => onSendAction({ type: "BUILD", pos: tilePos })}>
+            <IconBuild size={15} /> {houses === 4 ? "Build Hotel" : "Upgrade"}
+            <span className="deed-action-amt">₦{houseCost.toLocaleString()}</span>
+          </button>
+        )}
+        {sell && (
+          <button className="deed-action-btn sell" onClick={() => onSendAction({ type: "SELL_HOUSE", pos: tilePos })}>
+            <IconSell size={15} /> Sell
+            <span className="deed-action-amt">+₦{Math.floor(houseCost / 2).toLocaleString()}</span>
+          </button>
+        )}
+        {mort && (
+          <button className="deed-action-btn mortgage" onClick={() => onSendAction({ type: "MORTGAGE", pos: tilePos })}>
+            <IconMortgage size={15} /> Mortgage
+            <span className="deed-action-amt">+₦{mortgageVal.toLocaleString()}</span>
+          </button>
+        )}
+        {unmort && (
+          <button className="deed-action-btn unmortgage" onClick={() => onSendAction({ type: "UNMORTGAGE", pos: tilePos })}>
+            <IconUnmortgage size={15} /> Redeem
+            <span className="deed-action-amt">₦{Math.round(mortgageVal * 1.1).toLocaleString()}</span>
+          </button>
+        )}
+      </div>
+    );
   };
 
   const renderPropertyDeed = (t: PropertyTile) => {
@@ -325,6 +377,9 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
         {tile.type === "airport" && renderAirportDeed(tile as AirportTile)}
         {tile.type === "utility" && renderUtilityDeed(tile as UtilityTile)}
         {!["property", "airport", "utility"].includes(tile.type) && renderSpecialDeed()}
+
+        {/* Owner management actions — upgrade / sell / mortgage from the card */}
+        {(tile.type === "property" || tile.type === "airport" || tile.type === "utility") && renderActions()}
 
         {/* Players currently on this tile */}
         {playersOnTile.length > 0 && (

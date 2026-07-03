@@ -151,6 +151,9 @@ function PreviewApp() {
             engineState={engineState as any}
             roomState={roomState}
             onClose={() => setSelectedTilePos(null)}
+            mySessionId="p1"
+            canManage
+            onSendAction={(action) => console.log("Deed action:", action)}
           />
         )}
       </AnimatePresence>

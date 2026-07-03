@@ -436,15 +436,11 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
         const groupColor = hasColorBar ? (tile as PropertyTile).group : null;
         const tileIcon = !hasColorBar ? getSpecialTileIcon(tile) : "";
 
-        // Render houses/hotels
+        // Render houses/hotels — richup.io style: one icon + a ×N count badge
+        // (a compact pill on the colour band) rather than repeating the icon.
         const showHouses = tileState && tileState.houses > 0;
         const isHotel = tileState && tileState.houses === 5;
-        const houseDots = [];
-        if (showHouses && !isHotel) {
-          for (let i = 0; i < tileState.houses; i++) {
-            houseDots.push(<IconHouse key={i} className="house-dot" />);
-          }
-        }
+        const houseCount = tileState ? tileState.houses : 0;
 
         // Price formatting
         let priceLabel = "";
@@ -515,7 +511,14 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             {/* House dots container */}
             {showHouses && (
               <div className="tile-houses">
-                {isHotel ? <IconHotel className="hotel-dot" /> : houseDots}
+                {isHotel ? (
+                  <IconHotel className="hotel-dot" />
+                ) : (
+                  <>
+                    <IconHouse className="house-dot" />
+                    {houseCount > 1 && <span className="house-count">×{houseCount}</span>}
+                  </>
+                )}
               </div>
             )}
 
