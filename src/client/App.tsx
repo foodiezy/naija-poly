@@ -21,6 +21,7 @@ import OnboardingModal from "./components/OnboardingModal";
 import { useGameRoom } from "./hooks/useGameRoom";
 import { useSoundEffects } from "./hooks/useSoundEffects";
 import { useAutoEndTurn } from "./hooks/useAutoEndTurn";
+import { useTokenWalker } from "./hooks/useTokenWalker";
 import * as sound from "./utils/sound";
 import { recordGameResult } from "./utils/stats";
 import { BOARD } from "../data/board";
@@ -70,6 +71,18 @@ export default function App() {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, [room]);
+
+  // Own the token walker here (not in GameBoard) so the buy card can wait for
+  // the player's piece to finish walking before it reveals the landing tile.
+  const displayedPositions = useTokenWalker(engineState?.players ?? []);
+  const myTokenWalking =
+    !!mySessionId &&
+    (() => {
+      const me = engineState?.players?.find((p: Player) => p.id === mySessionId);
+      if (!me) return false;
+      const shown = displayedPositions.get(mySessionId);
+      return shown !== undefined && shown !== me.position;
+    })();
 
   useEffect(() => {
     if (typeof localStorage !== "undefined" && !localStorage.getItem("odogwu-tutorial-seen")) {
@@ -311,6 +324,7 @@ export default function App() {
               mySessionId={mySessionId || undefined}
               onTileClick={(pos) => setSelectedTilePos(pos)}
               onEndTurn={() => sendAction({ type: "END_TURN" })}
+              displayedPositions={displayedPositions}
             />
           </div>
 
@@ -346,7 +360,7 @@ export default function App() {
           </AnimatePresence>
 
           <AnimatePresence>
-            {mySessionId && (
+            {mySessionId && !myTokenWalking && (
               <BuyDeedModal
                 engineState={engineState}
                 mySessionId={mySessionId}

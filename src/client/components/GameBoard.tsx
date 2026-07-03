@@ -5,7 +5,6 @@ import { getDevelopmentName } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
-import { useTokenWalker } from "../hooks/useTokenWalker";
 import { ALL_TRIVIA } from "../../data/facts";
 import TileImage from "./TileImage";
 import { tileImageUrl } from "../tileImages";
@@ -26,6 +25,9 @@ interface GameBoardProps {
   mySessionId?: string;
   onTileClick?: (pos: number) => void;
   onEndTurn?: () => void;
+  // Animated token positions from the shared walker (owned by App so the buy
+  // card can wait for the token to arrive). Falls back to static positions.
+  displayedPositions?: Map<string, number>;
 }
 
 // Which edge a tile sits on — determines color-bar side
@@ -91,7 +93,7 @@ function getTileGridCoords(pos: number): { row: number; col: number } {
   }
 }
 
-export default function GameBoard({ engineState, roomState, mySessionId, onTileClick, onEndTurn }: GameBoardProps) {
+export default function GameBoard({ engineState, roomState, mySessionId, onTileClick, onEndTurn, displayedPositions: displayedPositionsProp }: GameBoardProps) {
   if (!engineState) {
     return (
       <div className="glass-panel" style={{ padding: "2rem", textAlign: "center" }}>
@@ -105,8 +107,10 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   const tilesState = engineState.tiles || {};
   const lobbyPlayers = roomState?.lobbyPlayers || new Map();
 
-  // Smoothly walk tokens hop-by-hop toward their authoritative positions
-  const displayedPositions = useTokenWalker(players);
+  // App owns the token walker (so the buy card can wait for the token to
+  // arrive). Fall back to static positions when it isn't provided (the design
+  // preview, which has no motion).
+  const displayedPositions = displayedPositionsProp ?? new Map(players.map((p) => [p.id, p.position]));
   const getDisplayedPos = (p: Player) => displayedPositions.get(p.id) ?? p.position;
 
   // Identify the local player's position and the active turn player
