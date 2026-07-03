@@ -4,11 +4,12 @@
 import { useState } from "react";
 import ReactDOM from "react-dom/client";
 import { MotionConfig } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import GameBoard from "./components/GameBoard";
 import ControlPanel from "./components/ControlPanel";
-import AssetsPanel from "./components/AssetsPanel";
 import ChatPanel from "./components/ChatPanel";
 import SettingsPanel from "./components/SettingsPanel";
+import TileInspector from "./components/TileInspector";
 import { BOARD } from "../data/board";
 import { TOKENS } from "../data/tokens";
 import { RoomState } from "../shared/room";
@@ -62,9 +63,10 @@ const engineState = {
     "Bola drew Hustle: \"Village meeting levy — pay ₦40,000.\"",
   ],
   winnerId: null,
-  settings: { startingCash: 1_500_000, turnLimit: 0, freeParkingJackpot: false },
+  settings: { startingCash: 1_500_000, turnLimit: 0, freeParkingJackpot: false, chaosMode: false },
   currentTurn: 4,
   freeParkingPot: 0,
+  blackout: null,
   activeTrade: null,
 };
 
@@ -80,6 +82,7 @@ const roomState: RoomState = {
   startingCash: 1_500_000,
   turnLimit: 0,
   freeParkingJackpot: false,
+  chaosMode: false,
   turnTimerEnabled: false,
   turnTimeoutSecs: 120,
   turnDeadline: 0,
@@ -88,6 +91,7 @@ const roomState: RoomState = {
 function PreviewApp() {
   const [muted, setMuted] = useState(false);
   const [autoEndTurn, setAutoEndTurn] = useState(true);
+  const [selectedTilePos, setSelectedTilePos] = useState<number | null>(null);
   const mockRoom = { sessionId: "p1", state: roomState } as any;
 
   return (
@@ -125,7 +129,7 @@ function PreviewApp() {
             engineState={engineState as any}
             roomState={roomState}
             mySessionId="p1"
-            onTileClick={() => {}}
+            onTileClick={(pos) => setSelectedTilePos(pos)}
           />
         </div>
 
@@ -137,12 +141,22 @@ function PreviewApp() {
             autoEndTurn={autoEndTurn}
             onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
           />
-          <AssetsPanel
-            room={mockRoom}
-            engineState={engineState as any}
-          />
         </div>
       </div>
+
+      <AnimatePresence>
+        {selectedTilePos !== null && (
+          <TileInspector
+            tilePos={selectedTilePos}
+            engineState={engineState as any}
+            roomState={roomState}
+            onClose={() => setSelectedTilePos(null)}
+            mySessionId="p1"
+            canManage
+            onSendAction={(action) => console.log("Deed action:", action)}
+          />
+        )}
+      </AnimatePresence>
 
       <footer className="app-footer">
         <div className="footer-left">

@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { BOARD, PropertyTile, AirportTile, UtilityTile } from "../../data/board";
 import { GameState, Action, Player } from "../../engine/types";
 import { IconAuction } from "./icons";
+import TileImage from "./TileImage";
 
 interface Props {
   engineState: GameState;
@@ -70,8 +71,12 @@ export default function BuyDeedModal({ engineState, mySessionId, onSendAction }:
         exit={{ scale: 0.85, opacity: 0, rotateY: 30 }}
         transition={{ type: "spring", stiffness: 280, damping: 22 }}
       >
-        <div className="buy-deed-landed-pill">
-          You landed on
+        <div className="buy-deed-photo-wrap">
+          <TileImage pos={currentPlayer.position} className="buy-deed-photo" />
+          <div className="buy-deed-photo-scrim" />
+          <div className="buy-deed-landed-pill">
+            You landed on
+          </div>
         </div>
 
         <div className="buy-deed-header" style={{ background: headerColor }}>

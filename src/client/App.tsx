@@ -7,10 +7,11 @@ import "react-toastify/dist/ReactToastify.css";
 import Lobby from "./components/Lobby";
 import RoomLobbyView from "./components/RoomLobbyView";
 import GameBoard from "./components/GameBoard";
-import AssetsPanel from "./components/AssetsPanel";
 import ChatPanel from "./components/ChatPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import ControlPanel from "./components/ControlPanel";
+// (AssetsPanel removed — its holdings list duplicated ControlPanel's PropertyList;
+// its unique Round + Net Worth now live in ControlPanel's player card.)
 import TileInspector from "./components/TileInspector";
 import GameOverModal from "./components/GameOverModal";
 import BuyDeedModal from "./components/BuyDeedModal";
@@ -54,6 +55,21 @@ export default function App() {
   const [autoEndTurn, setAutoEndTurn] = useState(true);
   const [gameResultRecorded, setGameResultRecorded] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Room code from an invite link (?room=CODE), read once on load so a friend
+  // who taps a shared link lands on the lobby with the join field prefilled.
+  const [inviteRoomId] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("room")?.trim() ?? "";
+  });
+
+  // Once we're in a room, strip ?room= from the address bar so a refresh
+  // reconnects (via the stored token) instead of re-triggering the invite flow.
+  useEffect(() => {
+    if (room && typeof window !== "undefined" && window.location.search) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [room]);
 
   useEffect(() => {
     if (typeof localStorage !== "undefined" && !localStorage.getItem("odogwu-tutorial-seen")) {
@@ -113,17 +129,20 @@ export default function App() {
 
   const copyRoomCode = useCallback(async () => {
     if (!room) return;
+    // Share a tappable invite URL — one tap drops a friend straight into this
+    // lobby with the code prefilled, instead of "copy code, open site, paste".
+    const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${room.roomId}`;
     try {
-      await navigator.clipboard.writeText(room.roomId);
-      toast.success("📋 Room code copied!", { autoClose: 1500, toastId: "copy" });
+      await navigator.clipboard.writeText(inviteUrl);
+      toast.success("🔗 Invite link copied — share it!", { autoClose: 1800, toastId: "copy" });
     } catch {
       const el = document.createElement("textarea");
-      el.value = room.roomId;
+      el.value = inviteUrl;
       document.body.appendChild(el);
       el.select();
       document.execCommand("copy");
       document.body.removeChild(el);
-      toast.success("📋 Room code copied!", { autoClose: 1500, toastId: "copy" });
+      toast.success("🔗 Invite link copied — share it!", { autoClose: 1800, toastId: "copy" });
     }
   }, [room]);
 
@@ -145,12 +164,12 @@ export default function App() {
         <div className="header-right">
           {room && (
             <>
-              <span className="room-badge" onClick={copyRoomCode} title="Click to copy room code">
+              <span className="room-badge" onClick={copyRoomCode} title="Click to copy the invite link">
                 Room: {room.roomId}
-                <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>📋</span>
+                <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>🔗</span>
               </span>
               <button className="header-btn header-btn-gold" onClick={copyRoomCode}>
-                Copy
+                Invite 🔗
               </button>
             </>
           )}
@@ -223,19 +242,8 @@ export default function App() {
                 onCreateRoom={createRoom}
                 onJoinRoom={joinRoom}
                 onQuickMatch={quickMatch}
+                initialRoomId={inviteRoomId}
               />
-              <AnimatePresence>
-                {showOnboarding && (
-                  <OnboardingModal
-                    onClose={() => {
-                      setShowOnboarding(false);
-                      if (typeof localStorage !== "undefined") {
-                        localStorage.setItem("odogwu-tutorial-seen", "1");
-                      }
-                    }}
-                  />
-                )}
-              </AnimatePresence>
             </>
           )}
         </motion.div>
@@ -316,12 +324,7 @@ export default function App() {
               onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
               turnDeadline={roomState?.turnDeadline}
               turnTimeoutSecs={roomState?.turnTimeoutSecs}
-            />
-            <AssetsPanel
-              room={room}
-              engineState={engineState}
-              turnDeadline={roomState?.turnDeadline}
-              turnTimeoutSecs={roomState?.turnTimeoutSecs}
+              onOpenTile={(pos) => setSelectedTilePos(pos)}
             />
           </div>
 
@@ -332,6 +335,12 @@ export default function App() {
                 engineState={engineState}
                 roomState={roomState}
                 onClose={() => setSelectedTilePos(null)}
+                mySessionId={mySessionId}
+                canManage={
+                  engineState.players?.[engineState.currentPlayerIndex]?.id === mySessionId &&
+                  (engineState.phase === "awaiting-roll" || engineState.phase === "awaiting-end-turn")
+                }
+                onSendAction={sendAction}
               />
             )}
           </AnimatePresence>
@@ -364,11 +373,30 @@ export default function App() {
       </AnimatePresence>
 
       {/* Footer */}
+      {/* Tutorial — top level so the footer "How to Play" works everywhere,
+          not just on the landing page. */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <OnboardingModal
+            onClose={() => {
+              setShowOnboarding(false);
+              if (typeof localStorage !== "undefined") {
+                localStorage.setItem("odogwu-tutorial-seen", "1");
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       <footer className="app-footer">
         <div className="footer-left">
           <span className="footer-logo">🏛️ Odogwu Empire</span>
-          <span>How to Play</span>
-          <span>Privacy</span>
+          <span
+            style={{ cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "2px" }}
+            onClick={() => setShowOnboarding(true)}
+          >
+            How to Play
+          </span>
         </div>
         <div className="footer-right">
           © 2026 Odogwu Games · Made with Lagos vibes.

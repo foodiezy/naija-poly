@@ -770,11 +770,6 @@ h6 {
     min-height: 56px;
   }
 
-  .holdings-actions .holdings-btn {
-    padding: 6px 10px;
-    font-size: 0.72rem;
-  }
-
   /* Modals fit screen */
   .buy-deed-card,
   .tile-inspector-overlay .deed-card {
@@ -796,7 +791,6 @@ h6 {
 
   /* Chat / settings panels collapse padding */
   .console-panel,
-  .assets-panel,
   .settings-panel {
     padding: 0.8rem;
   }
@@ -1260,30 +1254,50 @@ h6 {
 }
 
 .tile-name {
-  font-size: clamp(0.62rem, 0.9vw, 0.78rem);
+  font-size: clamp(0.58rem, 0.9vw, 0.78rem);
   font-weight: 700;
   text-align: center;
   line-height: 1.08;
   letter-spacing: 0.01em;
   color: var(--text-primary);
   word-break: normal;
-  overflow-wrap: break-word;
+  /* `anywhere` (unlike break-word) shrinks min-content width, so long names
+     like "Kafanchan" wrap on narrow side tiles instead of clipping mid-word. */
+  overflow-wrap: anywhere;
   max-width: 100%;
   padding: 0 2px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
 
 /* Richup.io signature bottom price stripe block */
 .tile-price {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(8, 6, 18, 0.72);
   font-size: 0.66rem;
   font-weight: 700;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.92);
   width: 100%;
   text-align: center;
   padding: 3px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   margin-top: 1px;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Mortgaged: grey the photo + colour band so the tile visibly "sleeps";
+   the price stripe keeps a lock and muted text instead of overflowing the
+   word "Mortgaged" across neighbouring tiles. */
+.tile.tile-mortgaged .tile-photo-layer .tile-image {
+  filter: grayscale(1) brightness(0.55);
+}
+
+.tile-mortgaged .tile-color-bar {
+  opacity: 0.4;
+}
+
+.tile-mortgaged .tile-price {
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .tile-owner-indicator {
@@ -1339,63 +1353,74 @@ h6 {
   color: var(--text-muted);
 }
 
+/* Development pips sit directly ON the colour band (richup.io style): green
+   houses in a row along the band, replaced by a single red hotel at max. */
 .tile-houses {
   display: flex;
-  gap: 2px;
+  gap: 1px;
   position: absolute;
-  z-index: 3;
+  z-index: 4;
+  align-items: center;
+  justify-content: center;
+  /* Compact dark pill so the icon + ×N count read as one badge on the band. */
+  background: rgba(8, 6, 18, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 5px;
+  padding: 1px 3px;
 }
 
-/* Bottom edge tiles: houses sit along the top (next to color bar) */
+/* ×N house count (richup.io style) */
+.house-count {
+  font-size: 8.5px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+/* Each edge centres the pip row/column on its 11px band (band centre ≈ 5.5px
+   from the centre-facing edge). */
 .edge-bottom .tile-houses {
   flex-direction: row;
-  top: 13px;
+  top: 5.5px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
 }
 
-/* Left edge tiles: houses sit along the right (next to color bar) */
 .edge-left .tile-houses {
-  flex-direction: column;
-  right: 13px;
+  flex-direction: row;
+  right: 5.5px;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translate(50%, -50%);
 }
 
-/* Top edge tiles: houses sit along the bottom (next to color bar) */
 .edge-top .tile-houses {
   flex-direction: row;
-  bottom: 13px;
+  bottom: 5.5px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, 50%);
 }
 
-/* Right edge tiles: houses sit along the left (next to color bar) */
 .edge-right .tile-houses {
-  flex-direction: column;
-  left: 13px;
+  flex-direction: row;
+  left: 5.5px;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
 }
 
-/* House shape — small pentagon (house with roof) */
+/* Distinct SVG development icons (green cottage vs. tall red hotel). These
+   just size + shadow the <svg>; the artwork lives in icons.tsx. */
 .house-dot {
-  width: 7px;
-  height: 8px;
-  background: linear-gradient(to bottom, #34d399 0%, #10b981 100%);
-  clip-path: polygon(50% 0%, 100% 38%, 100% 100%, 0% 100%, 0% 38%);
-  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.55));
+  width: 11px;
+  height: 11px;
+  display: block;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.55));
 }
 
-/* Hotel shape — taller red building with flat roof accent */
 .hotel-dot {
-  width: 10px;
-  height: 10px;
-  background: linear-gradient(to bottom, #dc2626 0%, #ef4444 100%);
-  clip-path: polygon(15% 0%, 85% 0%,
-      85% 15%, 100% 15%,
-      100% 100%, 0% 100%,
-      0% 15%, 15% 15%);
+  width: 15px;
+  height: 15px;
+  display: block;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
   animation: hotelGlow 2s ease-in-out infinite alternate;
 }
@@ -1409,6 +1434,7 @@ h6 {
     filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
   }
 }
+
 
 /* Tokens positioned inside Tile */
 .tile-tokens-container {
@@ -1697,134 +1723,6 @@ h6 {
   color: var(--color-danger);
 }
 
-/* Left-column Assets + Round Timer panel */
-.assets-panel {
-  gap: 0.6rem;
-  min-height: 0;
-  flex: 0 0 auto;
-}
-
-.assets-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.9rem;
-  font-weight: bold;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding-bottom: 0.5rem;
-}
-
-.assets-round-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.assets-round-badge strong {
-  color: var(--color-gold);
-}
-
-.assets-round-limit {
-  color: var(--text-muted);
-  margin-left: 2px;
-}
-
-.assets-timer-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  margin-bottom: 0.25rem;
-}
-
-.assets-timer-secs {
-  font-weight: bold;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-naira);
-}
-
-.assets-timer-secs.urgent {
-  color: var(--color-danger);
-}
-
-.assets-timer-track {
-  height: 4px;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.assets-timer-fill {
-  height: 100%;
-  background: var(--color-naira);
-  border-radius: 999px;
-  transition: width 0.25s linear;
-}
-
-.assets-timer-fill.urgent {
-  background: var(--color-danger);
-}
-
-.assets-total {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.45rem 0.6rem;
-  border-radius: var(--radius-md);
-  background: rgba(16, 185, 129, 0.06);
-  border: 1px solid rgba(16, 185, 129, 0.15);
-  font-size: 0.72rem;
-  color: var(--text-secondary);
-}
-
-.assets-total strong {
-  font-size: 0.95rem;
-  color: var(--color-naira);
-}
-
-.assets-list {
-  max-height: 240px;
-  overflow-y: auto;
-}
-
-.assets-prop-value {
-  font-size: 0.72rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-gold);
-  white-space: nowrap;
-}
-
-.assets-prop-pips {
-  font-size: 0.6rem;
-  line-height: 1;
-  letter-spacing: -1px;
-  white-space: nowrap;
-}
-
-/* Monopoly (full color group owned): tint the row + glow the color dot */
-.sidebar-prop-row.assets-monopoly {
-  background: rgba(245, 158, 11, 0.07);
-  border-radius: var(--radius-sm);
-}
-
-.sidebar-prop-row.assets-monopoly .sidebar-prop-dot {
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.45);
-}
-
-.assets-empty {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  font-style: italic;
-  text-align: center;
-  padding: 0.75rem 0.5rem;
-}
 
 /* Left-column settings strip */
 .settings-panel {
@@ -2478,36 +2376,6 @@ html.high-contrast .glass-panel {
   min-width: 14px;
   display: inline-block;
   text-align: center;
-}
-
-/* Trade Modal / Section */
-.trade-overlay {
-  z-index: 100;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-}
-
-.trade-card {
-  width: 100%;
-  max-width: 500px;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.trade-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.9rem;
 }
 
 /* Error message notification */
@@ -3379,6 +3247,45 @@ html.high-contrast .glass-panel {
   margin-top: 1rem;
 }
 
+/* Owner management actions on the property card (richup.io style). */
+.deed-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 1.25rem 0;
+}
+
+.deed-action-btn {
+  flex: 1 1 auto;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.1s ease, filter 0.15s ease;
+}
+
+.deed-action-btn:hover { filter: brightness(1.12); }
+.deed-action-btn:active { transform: translateY(1px); }
+
+.deed-action-btn .deed-action-amt {
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.deed-action-btn.build { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); }
+.deed-action-btn.sell { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); }
+.deed-action-btn.mortgage { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
+.deed-action-btn.unmortgage { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); }
+
 .panel-tab-btn {
   transition: all 0.2s ease-in-out;
 }
@@ -3876,6 +3783,14 @@ html.high-contrast .glass-panel {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 }
 
+.holdings-card-clickable {
+  cursor: pointer;
+}
+
+.holdings-card-clickable:hover {
+  border-color: var(--color-gold, #f59e0b);
+}
+
 .holdings-card.full-set {
   border-color: rgba(245, 158, 11, 0.35);
   box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.12), 0 4px 14px rgba(245, 158, 11, 0.12);
@@ -4026,67 +3941,6 @@ html.high-contrast .glass-panel {
   font-weight: 600;
 }
 
-.holdings-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 0.15rem;
-}
-
-.holdings-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 3px 8px;
-  font-size: 0.66rem;
-  font-weight: 700;
-  border-radius: 6px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  font-family: var(--font-sans);
-  transition: filter 0.12s ease, background 0.15s ease;
-  letter-spacing: 0.02em;
-}
-
-.holdings-btn.build {
-  background: rgba(16, 185, 129, 0.16);
-  color: var(--color-naira);
-  border-color: rgba(16, 185, 129, 0.32);
-}
-
-.holdings-btn.build:hover {
-  background: rgba(16, 185, 129, 0.25);
-}
-
-.holdings-btn.sell {
-  background: rgba(239, 68, 68, 0.14);
-  color: var(--color-danger);
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.holdings-btn.sell:hover {
-  background: rgba(239, 68, 68, 0.22);
-}
-
-.holdings-btn.mortgage {
-  background: rgba(245, 158, 11, 0.14);
-  color: var(--color-gold);
-  border-color: rgba(245, 158, 11, 0.3);
-}
-
-.holdings-btn.mortgage:hover {
-  background: rgba(245, 158, 11, 0.24);
-}
-
-.holdings-btn.unmortgage {
-  background: rgba(16, 185, 129, 0.12);
-  color: var(--color-naira);
-  border-color: rgba(16, 185, 129, 0.28);
-}
-
-.holdings-btn.unmortgage:hover {
-  background: rgba(16, 185, 129, 0.22);
-}
 
 /* ──────────────────────────────────────────────────────────────────────
    Players panel — redesigned cards with stats + wealth bar
@@ -4871,33 +4725,6 @@ html.high-contrast .glass-panel {
   margin-top: 1px;
 }
 
-.trade-balance-pill {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 5px 12px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-
-.trade-balance-pill.tone-fair {
-  background: rgba(99, 102, 241, 0.18);
-  color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.35);
-}
-
-.trade-balance-pill.tone-you {
-  background: rgba(16, 185, 129, 0.18);
-  color: #6ee7b7;
-  border: 1px solid rgba(16, 185, 129, 0.4);
-}
-
-.trade-balance-pill.tone-them {
-  background: rgba(239, 68, 68, 0.16);
-  color: #fca5a5;
-  border: 1px solid rgba(239, 68, 68, 0.35);
-}
 
 .trade-incoming-from {
   display: flex;
@@ -5032,4 +4859,105 @@ html.high-contrast .glass-panel {
   .trade-card-actions {
     padding: 0.75rem 0.9rem;
   }
+}
+
+/* =========================================================================
+   Tile photos — real-place imagery on deed cards + board tiles
+   ========================================================================= */
+
+/* Shared base for both the <img> and the themed fallback <div>. */
+.tile-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tile-image-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tile-image-fallback-emoji {
+  font-size: 2.4rem;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+  opacity: 0.92;
+}
+
+/* --- Buy-decision modal banner --- */
+.buy-deed-photo-wrap {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  overflow: hidden;
+}
+
+.buy-deed-photo-wrap .tile-image-fallback-emoji {
+  font-size: 3rem;
+}
+
+.buy-deed-photo-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(2, 6, 16, 0.12) 0%, rgba(2, 6, 16, 0.6) 100%);
+  pointer-events: none;
+}
+
+/* --- Deed inspector banner --- */
+.deed-photo-wrap {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  overflow: hidden;
+}
+
+.deed-photo-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(2, 6, 16, 0.05) 0%, rgba(15, 23, 42, 0.9) 100%);
+  pointer-events: none;
+}
+
+/* --- Small board-tile thumbnails --- */
+.tile-photo-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Translucent photo fill (richup.io style): the real place photo fills the
+   whole tile but sits at reduced opacity over the dark tile base, so it reads
+   as a subtle background texture the name + price stripe sit cleanly on top of. */
+.tile-photo-layer .tile-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.5;
+  filter: saturate(0.9);
+}
+
+.tile-photo-layer .tile-image-fallback-emoji {
+  font-size: 1.15rem;
+  opacity: 0.45;
+}
+
+.tile-photo-scrim {
+  position: absolute;
+  inset: 0;
+  /* Light vignette only — the photo's own reduced opacity does the dimming;
+     this just deepens the bottom so the price stripe reads. */
+  background: linear-gradient(180deg, rgba(12, 10, 26, 0.15) 0%, rgba(12, 10, 26, 0.55) 100%);
+}
+
+/* Lift the static tile content above the z-index:0 photo layer. The
+   absolutely-positioned bits (color bar, houses, tokens, owner badge,
+   tooltip) already paint above it thanks to DOM order. */
+.tile > .tile-type-icon,
+.tile > .tile-name,
+.tile > .tile-price {
+  position: relative;
+  z-index: 1;
 }

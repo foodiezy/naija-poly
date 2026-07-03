@@ -5,6 +5,7 @@ import { GameState, Action } from "../../engine/types";
 import { tokenEmoji } from "../../data/tokens";
 import { tokenName } from "../../data/tokens";
 import { RoomState } from "../../shared/room";
+import { netWorth } from "../lib/holdings";
 import { IconTimer, IconBankrupt, IconWarning } from "./icons";
 import PlayerList from "./PlayerList";
 import AuctionPanel from "./AuctionPanel";
@@ -21,10 +22,11 @@ interface ControlPanelProps {
   onToggleAutoEndTurn?: () => void;
   turnDeadline?: number;
   turnTimeoutSecs?: number;
+  onOpenTile?: (pos: number) => void;
 }
 
 export default function ControlPanel({
-  room, engineState, onSendAction, autoEndTurn, onToggleAutoEndTurn, turnDeadline, turnTimeoutSecs,
+  room, engineState, onSendAction, autoEndTurn, onToggleAutoEndTurn, turnDeadline, turnTimeoutSecs, onOpenTile,
 }: ControlPanelProps) {
   const [showTradeBuilder, setShowTradeBuilder] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -57,6 +59,7 @@ export default function ControlPanel({
     : 0;
 
   const myToken = liveState?.lobbyPlayers?.get(mySessionId);
+  const myNetWorth = netWorth(me?.cash ?? 0, engineState.tiles, mySessionId);
 
   return (
     <div className="console-panel glass-panel" style={{ padding: 0, overflow: "hidden" }}>
@@ -107,6 +110,10 @@ export default function ControlPanel({
         <div className="sidebar-player-name">{me?.name || "—"}</div>
         <div className="sidebar-player-token-label">Token: {me ? tokenName(myToken?.tokenId) : "—"}</div>
         <div className="sidebar-player-balance">₦{(me?.cash ?? 0).toLocaleString()}</div>
+        <div className="sidebar-player-meta" style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem", width: "100%", marginTop: "0.4rem", fontSize: "0.7rem", color: "var(--text-muted)" }}>
+          <span>Net worth <strong style={{ color: "var(--text-secondary)" }}>₦{myNetWorth.toLocaleString()}</strong></span>
+          <span>Round <strong style={{ color: "var(--text-secondary)" }}>{engineState.currentTurn ?? 1}{engineState.settings?.turnLimit > 0 ? ` / ${engineState.settings.turnLimit}` : ""}</strong></span>
+        </div>
       </div>
 
       {/* 3. Auction panel */}
@@ -179,12 +186,11 @@ export default function ControlPanel({
         </div>
       )}
 
-      {/* 5. My properties */}
+      {/* 5. My properties — click a holding to open its card (upgrade/sell there) */}
       <PropertyList
         engineState={engineState}
         mySessionId={mySessionId}
-        canManage={canManage}
-        onSendAction={onSendAction}
+        onOpenTile={onOpenTile}
       />
     </div>
   );

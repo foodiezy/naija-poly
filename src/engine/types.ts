@@ -56,6 +56,7 @@ export interface GameSettings {
   startingCash: number;
   turnLimit: number; // 0 = unlimited
   freeParkingJackpot: boolean;
+  chaosMode: boolean; // adds Naija "chaos" cards (e.g. NEPA blackout) to the deck
 }
 
 export interface GameState {
@@ -77,6 +78,9 @@ export interface GameState {
   settings: GameSettings;
   currentTurn: number; // current round number
   freeParkingPot: number; // Mama Put Rest Stop jackpot pot
+  // Chaos-mode "NEPA blackout": while set, no rent is collected. Ends once the
+  // round counter reaches `untilRound` (i.e. play wraps back around once).
+  blackout?: { untilRound: number } | null;
 }
 
 // ---- Actions the reducer will accept -------------------------------------

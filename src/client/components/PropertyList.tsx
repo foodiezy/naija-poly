@@ -1,15 +1,13 @@
 import { BOARD, AirportTile, PropertyTile, UtilityTile } from "../../data/board";
 import type { Tile } from "../../data/board";
 import { getDevelopmentName } from "../../engine/engine";
-import { canBuildOn, canSellHouseOn, canMortgageAt, canUnmortgageAt } from "../../engine/queries";
-import { GameState, Action, TileState } from "../../engine/types";
-import { IconBuild, IconSell, IconMortgage, IconUnmortgage } from "./icons";
+import { GameState, TileState } from "../../engine/types";
 
 interface Props {
   engineState: GameState;
   mySessionId: string;
-  canManage: boolean;
-  onSendAction: (action: Action) => void;
+  // Click a holding to open its card, where upgrade/sell/mortgage live.
+  onOpenTile?: (pos: number) => void;
 }
 
 function currentRent(tile: Tile, ts: TileState | undefined, engineState: GameState, ownerId: string): number | null {
@@ -51,7 +49,7 @@ function tileSubLabel(tile: Tile): string {
   return "";
 }
 
-export default function PropertyList({ engineState, mySessionId, canManage, onSendAction }: Props) {
+export default function PropertyList({ engineState, mySessionId, onOpenTile }: Props) {
   const { tiles } = engineState;
 
   const myProperties = BOARD.filter((tile: Tile) => {
@@ -78,12 +76,6 @@ export default function PropertyList({ engineState, mySessionId, canManage, onSe
             const isMortgaged = ts?.mortgaged ?? false;
             const rentNow = currentRent(tile, ts, engineState, mySessionId);
 
-            const build = canManage && canBuildOn(engineState, mySessionId, tile.pos);
-            const sell = canManage && canSellHouseOn(engineState, mySessionId, tile.pos);
-            const mortgage = canManage && canMortgageAt(engineState, mySessionId, tile.pos);
-            const unmortgage = canManage && canUnmortgageAt(engineState, mySessionId, tile.pos);
-            const hasActions = build || sell || mortgage || unmortgage;
-
             // Full-group ownership pip indicator (for property tiles)
             const ownsFullGroup =
               isProp &&
@@ -94,7 +86,9 @@ export default function PropertyList({ engineState, mySessionId, canManage, onSe
             return (
               <div
                 key={tile.pos}
-                className={`holdings-card${isMortgaged ? " mortgaged" : ""}${ownsFullGroup ? " full-set" : ""}`}
+                className={`holdings-card holdings-card-clickable${isMortgaged ? " mortgaged" : ""}${ownsFullGroup ? " full-set" : ""}`}
+                onClick={() => onOpenTile?.(tile.pos)}
+                title="Open card to upgrade, sell or mortgage"
               >
                 <div className="holdings-band" style={{ background: colorVar(tile) }} />
                 <div className="holdings-body">
@@ -142,48 +136,6 @@ export default function PropertyList({ engineState, mySessionId, canManage, onSe
                             ? `${getDevelopmentName(houses)} · ${houses}/4`
                             : "Unimproved (0/4)"}
                       </span>
-                    </div>
-                  )}
-
-                  {hasActions && (
-                    <div className="holdings-actions">
-                      {build && (
-                        <button
-                          className="holdings-btn build"
-                          onClick={() => onSendAction({ type: "BUILD", pos: tile.pos })}
-                          title={`Costs ₦${((tile as PropertyTile).houseCost || 0).toLocaleString()}`}
-                        >
-                          <IconBuild size={13} />
-                          {houses === 4 ? "Build Hotel" : houses === 0 ? "Build 1st House" : `Build House ${houses + 1}`}
-                          {" "}<span style={{ opacity: 0.7 }}>₦{((tile as PropertyTile).houseCost / 1000).toFixed(0)}k</span>
-                        </button>
-                      )}
-                      {sell && (
-                        <button
-                          className="holdings-btn sell"
-                          onClick={() => onSendAction({ type: "SELL_HOUSE", pos: tile.pos })}
-                        >
-                          <IconSell size={13} /> Sell
-                        </button>
-                      )}
-                      {mortgage && (
-                        <button
-                          className="holdings-btn mortgage"
-                          onClick={() => onSendAction({ type: "MORTGAGE", pos: tile.pos })}
-                          title={`Receive ₦${("mortgage" in tile ? tile.mortgage : 0).toLocaleString()}`}
-                        >
-                          <IconMortgage size={13} /> Mortgage
-                        </button>
-                      )}
-                      {unmortgage && (
-                        <button
-                          className="holdings-btn unmortgage"
-                          onClick={() => onSendAction({ type: "UNMORTGAGE", pos: tile.pos })}
-                          title={`Pay ₦${Math.round(("mortgage" in tile ? tile.mortgage : 0) * 1.1).toLocaleString()}`}
-                        >
-                          <IconUnmortgage size={13} /> Redeem
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>
