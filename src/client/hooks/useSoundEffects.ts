@@ -29,7 +29,9 @@ export function useSoundEffects(engineState: GameState | null, mySessionId: stri
         } else if (logLine.includes("Kirikiri Prison")) {
           sound.playJail();
         } else if (logLine.includes("built a")) {
-          sound.playBuild();
+          // Hotel (top upgrade) gets a grander fanfare than a house.
+          if (logLine.includes("built a Hotel")) sound.playHotel();
+          else sound.playBuild();
         }
 
         // "Your turn" notification: play chime + browser Notification
