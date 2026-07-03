@@ -110,6 +110,18 @@ export const IconHotel: React.FC<IconProps> = ({ size = 14, ...props }) => (
   </svg>
 );
 
+export const IconArrowUp: React.FC<IconProps> = ({ size = 18, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <path d="M12 5c-.3 0-.5.1-.7.3l-6 6c-.4.4-.4 1 0 1.4.4.4 1 .4 1.4 0L11 8.4V18c0 .6.4 1 1 1s1-.4 1-1V8.4l4.3 4.3c.4.4 1 .4 1.4 0 .4-.4.4-1 0-1.4l-6-6c-.2-.2-.4-.3-.7-.3z" fill="currentColor" />
+  </svg>
+);
+
+export const IconArrowDown: React.FC<IconProps> = ({ size = 18, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <path d="M12 19c.3 0 .5-.1.7-.3l6-6c.4-.4.4-1 0-1.4-.4-.4-1-.4-1.4 0L13 15.6V6c0-.6-.4-1-1-1s-1 .4-1 1v9.6l-4.3-4.3c-.4-.4-1-.4-1.4 0-.4.4-.4 1 0 1.4l6 6c.2.2.4.3.7.3z" fill="currentColor" />
+  </svg>
+);
+
 export const IconWarning: React.FC<IconProps> = ({ size = 16, ...props }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
     <path d="M12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2ZM12 20C7.6 20 4 16.4 4 12C4 7.6 7.6 4 12 4C16.4 4 20 7.6 20 12C20 16.4 16.4 20 12 20ZM13 7H11V13H13V7ZM13 15H11V17H13V15Z" fill="currentColor" />

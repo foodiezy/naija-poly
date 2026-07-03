@@ -7,7 +7,7 @@ import { GameState, Player, Action } from "../../engine/types";
 import { RoomState } from "../../shared/room";
 import { getFactForTile } from "../../data/facts";
 import TileImage from "./TileImage";
-import { IconBuild, IconSell, IconMortgage, IconUnmortgage } from "./icons";
+import { IconArrowUp, IconArrowDown, IconMortgage, IconUnmortgage } from "./icons";
 
 interface TileInspectorProps {
   tilePos: number;
@@ -53,40 +53,59 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
   // engine validates with, so the UI can't offer an illegal move.
   const renderActions = () => {
     if (!onSendAction || !mySessionId || !canManage) return null;
+    if (tileState?.ownerId !== mySessionId) return null;
+
+    const isProp = tile.type === "property";
     const build = canBuildOn(engineState, mySessionId, tilePos);
     const sell = canSellHouseOn(engineState, mySessionId, tilePos);
     const mort = canMortgageAt(engineState, mySessionId, tilePos);
     const unmort = canUnmortgageAt(engineState, mySessionId, tilePos);
-    if (!build && !sell && !mort && !unmort) return null;
-
     const houses = tileState?.houses ?? 0;
+    const mortgaged = tileState?.mortgaged ?? false;
     const houseCost = "houseCost" in tile ? (tile as PropertyTile).houseCost : 0;
-    const mortgageVal = "mortgage" in tile ? (tile as { mortgage: number }).mortgage : 0;
+
+    const levelLabel =
+      houses === 5 ? "Hotel (max)" : houses === 0 ? "Unimproved" : `${getDevelopmentName(houses)} · ${houses}/4`;
 
     return (
-      <div className="deed-actions">
-        {build && (
-          <button className="deed-action-btn build" onClick={() => onSendAction({ type: "BUILD", pos: tilePos })}>
-            <IconBuild size={15} /> {houses === 4 ? "Build Hotel" : "Upgrade"}
-            <span className="deed-action-amt">₦{houseCost.toLocaleString()}</span>
-          </button>
+      <div className="deed-manage">
+        {/* Up/down arrow upgrade control (richup.io style) */}
+        {isProp && (
+          <div className="deed-upgrade">
+            <button
+              className="deed-arrow"
+              disabled={!sell}
+              onClick={() => sell && onSendAction({ type: "SELL_HOUSE", pos: tilePos })}
+              title={sell ? `Sell one level (+₦${Math.floor(houseCost / 2).toLocaleString()})` : "Nothing to sell"}
+            >
+              <IconArrowDown size={20} />
+            </button>
+            <div className="deed-upgrade-level">
+              <span className="deed-upgrade-badge">{houses === 5 ? "🏨" : houses > 0 ? "🏠" : "—"}</span>
+              <span className="deed-upgrade-text">{levelLabel}</span>
+            </div>
+            <button
+              className="deed-arrow up"
+              disabled={!build}
+              onClick={() => build && onSendAction({ type: "BUILD", pos: tilePos })}
+              title={build ? `${houses === 4 ? "Build hotel" : "Build a house"} (₦${houseCost.toLocaleString()})` : "Can't build yet"}
+            >
+              <IconArrowUp size={20} />
+            </button>
+          </div>
         )}
-        {sell && (
-          <button className="deed-action-btn sell" onClick={() => onSendAction({ type: "SELL_HOUSE", pos: tilePos })}>
-            <IconSell size={15} /> Sell
-            <span className="deed-action-amt">+₦{Math.floor(houseCost / 2).toLocaleString()}</span>
-          </button>
-        )}
-        {mort && (
-          <button className="deed-action-btn mortgage" onClick={() => onSendAction({ type: "MORTGAGE", pos: tilePos })}>
-            <IconMortgage size={15} /> Mortgage
-            <span className="deed-action-amt">+₦{mortgageVal.toLocaleString()}</span>
-          </button>
-        )}
-        {unmort && (
-          <button className="deed-action-btn unmortgage" onClick={() => onSendAction({ type: "UNMORTGAGE", pos: tilePos })}>
-            <IconUnmortgage size={15} /> Redeem
-            <span className="deed-action-amt">₦{Math.round(mortgageVal * 1.1).toLocaleString()}</span>
+
+        {/* Mortgage / redeem */}
+        {(mort || unmort || mortgaged) && (
+          <button
+            className={`deed-mort-btn${mortgaged ? " redeem" : ""}`}
+            disabled={!mort && !unmort}
+            onClick={() => {
+              if (unmort) onSendAction({ type: "UNMORTGAGE", pos: tilePos });
+              else if (mort) onSendAction({ type: "MORTGAGE", pos: tilePos });
+            }}
+          >
+            {mortgaged ? <><IconUnmortgage size={15} /> Redeem mortgage</> : <><IconMortgage size={15} /> Mortgage</>}
           </button>
         )}
       </div>
