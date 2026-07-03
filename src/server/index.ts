@@ -38,7 +38,8 @@ app.use(
       const isLocalDev =
         origin.startsWith("http://localhost:") ||
         origin.startsWith("http://127.0.0.1:");
-      const isAllowed = isLocalDev || allowedOrigins.includes(origin);
+      const isRender = origin.endsWith(".onrender.com");
+      const isAllowed = isLocalDev || isRender || allowedOrigins.includes(origin);
 
       if (isAllowed) {
         callback(null, true);
