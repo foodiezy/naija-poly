@@ -3247,44 +3247,95 @@ html.high-contrast .glass-panel {
   margin-top: 1rem;
 }
 
-/* Owner management actions on the property card (richup.io style). */
-.deed-actions {
+/* Owner management on the property card — richup.io up/down arrow upgrade. */
+.deed-manage {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.5rem;
   margin: 1rem 1.25rem 0;
 }
 
-.deed-action-btn {
+.deed-upgrade {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.deed-arrow {
+  flex: 0 0 auto;
+  width: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fca5a5;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease, background 0.15s ease;
+}
+
+.deed-arrow.up {
+  color: #6ee7b7;
+}
+
+.deed-arrow:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  filter: brightness(1.15);
+}
+
+.deed-arrow:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.deed-arrow:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.deed-upgrade-level {
   flex: 1 1 auto;
-  min-width: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.6rem 0.75rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.deed-upgrade-badge {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.deed-mort-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
   font-size: 0.82rem;
   font-weight: 700;
   color: #fff;
   cursor: pointer;
-  transition: transform 0.1s ease, filter 0.15s ease;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  transition: filter 0.15s ease, transform 0.1s ease;
 }
 
-.deed-action-btn:hover { filter: brightness(1.12); }
-.deed-action-btn:active { transform: translateY(1px); }
-
-.deed-action-btn .deed-action-amt {
-  font-size: 0.72rem;
-  font-weight: 600;
-  opacity: 0.85;
+.deed-mort-btn.redeem {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
 }
 
-.deed-action-btn.build { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); }
-.deed-action-btn.sell { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); }
-.deed-action-btn.mortgage { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
-.deed-action-btn.unmortgage { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); }
+.deed-mort-btn:hover:not(:disabled) { filter: brightness(1.12); }
+.deed-mort-btn:active:not(:disabled) { transform: translateY(1px); }
+.deed-mort-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .panel-tab-btn {
   transition: all 0.2s ease-in-out;

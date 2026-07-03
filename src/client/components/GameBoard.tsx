@@ -5,7 +5,6 @@ import { getDevelopmentName } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
-import { useTokenWalker } from "../hooks/useTokenWalker";
 import { ALL_TRIVIA } from "../../data/facts";
 import TileImage from "./TileImage";
 import { tileImageUrl } from "../tileImages";
@@ -26,6 +25,9 @@ interface GameBoardProps {
   mySessionId?: string;
   onTileClick?: (pos: number) => void;
   onEndTurn?: () => void;
+  // Animated token positions from the shared walker (owned by App so the buy
+  // card can wait for the token to arrive). Falls back to static positions.
+  displayedPositions?: Map<string, number>;
 }
 
 // Which edge a tile sits on — determines color-bar side
@@ -91,7 +93,7 @@ function getTileGridCoords(pos: number): { row: number; col: number } {
   }
 }
 
-export default function GameBoard({ engineState, roomState, mySessionId, onTileClick, onEndTurn }: GameBoardProps) {
+export default function GameBoard({ engineState, roomState, mySessionId, onTileClick, onEndTurn, displayedPositions: displayedPositionsProp }: GameBoardProps) {
   if (!engineState) {
     return (
       <div className="glass-panel" style={{ padding: "2rem", textAlign: "center" }}>
@@ -105,16 +107,22 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   const tilesState = engineState.tiles || {};
   const lobbyPlayers = roomState?.lobbyPlayers || new Map();
 
-  // Smoothly walk tokens hop-by-hop toward their authoritative positions
-  const displayedPositions = useTokenWalker(players);
+  // App owns the token walker (so the buy card can wait for the token to
+  // arrive). Fall back to static positions when it isn't provided (the design
+  // preview, which has no motion).
+  const displayedPositions = displayedPositionsProp ?? new Map(players.map((p) => [p.id, p.position]));
   const getDisplayedPos = (p: Player) => displayedPositions.get(p.id) ?? p.position;
 
   // Identify the local player's position and the active turn player
   const myPlayer = mySessionId ? players.find((p: Player) => p.id === mySessionId) : null;
   const myPosition = myPlayer ? getDisplayedPos(myPlayer) : -1;
   const activePlayerIndex = engineState.currentPlayerIndex ?? -1;
-  const activePlayerId = activePlayerIndex >= 0 && players[activePlayerIndex] ? players[activePlayerIndex].id : null;
+  const activePlayer = activePlayerIndex >= 0 ? players[activePlayerIndex] : undefined;
+  const activePlayerId = activePlayer ? activePlayer.id : null;
   const isMyTurn = activePlayerId === mySessionId;
+  // True once the active player's piece has finished walking — used to hold the
+  // drawn-card banner until arrival so the token walk isn't spoiled.
+  const activeArrived = !activePlayer || getDisplayedPos(activePlayer) === activePlayer.position;
 
   const logsEndRef = useRef<HTMLDivElement>(null);
   // Whether the drawn-card banner is currently shown (auto-dismisses).
@@ -238,10 +246,13 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
       setCardVisible(false);
       return;
     }
+    // Wait for the drawer's token to land before revealing the card, so the
+    // walk animation keeps its suspense.
+    if (!activeArrived) return;
     setCardVisible(true);
     const t = setTimeout(() => setCardVisible(false), 4000);
     return () => clearTimeout(t);
-  }, [lastLog]);
+  }, [lastLog, activeArrived]);
 
   // Can the local player end their turn right now?
   const canEndTurn = isMyTurn && engineState.phase === "awaiting-end-turn" && (myPlayer?.cash ?? 0) >= 0;
