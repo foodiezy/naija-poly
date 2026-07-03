@@ -292,6 +292,31 @@ function synthBuild() {
   }
 }
 
+/** Triumphant rising arpeggio for completing a Hotel (top-tier upgrade). */
+function synthHotel() {
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5–E5–G5–C6
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "triangle";
+      const t = now + i * 0.08;
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.22 * masterVolume, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
+      osc.start(t);
+      osc.stop(t + 0.36);
+    });
+  } catch (e) {
+    console.warn("Audio playback error:", e);
+  }
+}
+
 /** Rising three-note fanfare for the "It's your turn!" notification */
 function synthYourTurn() {
   try {
@@ -363,5 +388,9 @@ export const playRentPay = () => play("rent", synthRentPay);
 export const playDraw = () => play("draw", synthDraw);
 export const playJail = () => play("jail", synthJail);
 export const playBuild = () => play("build", synthBuild);
+export const playHotel = () => {
+  if (isMuted) return;
+  synthHotel();
+};
 export const playYourTurn = () => play("your-turn", synthYourTurn);
 export const playGameOver = () => play("game-over", synthGameOver);
