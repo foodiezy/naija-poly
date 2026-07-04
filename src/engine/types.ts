@@ -17,6 +17,7 @@ export interface Player {
   jailTurns: number; // failed roll-out attempts
   jailCardSources: Array<"chance" | "hustle">; // which deck each held card came from
   bankrupt: boolean;
+  kicked?: boolean; // True if eliminated by vote-kick
   order: number; // turn order
 }
 
@@ -81,6 +82,7 @@ export interface GameState {
   // Chaos-mode "NEPA blackout": while set, no rent is collected. Ends once the
   // round counter reaches `untilRound` (i.e. play wraps back around once).
   blackout?: { untilRound: number } | null;
+  votekicks: Record<PlayerId, PlayerId[]>; // targetId -> array of voterIds
 }
 
 // ---- Actions the reducer will accept -------------------------------------
@@ -101,6 +103,7 @@ export type Action =
   | { type: "USE_JAIL_CARD" }
   | { type: "DECLARE_BANKRUPT" }
   | { type: "FORFEIT" } // a player permanently left (disconnect): eliminate them
+  | { type: "VOTE_KICK"; targetId: PlayerId }
   | { type: "END_TURN" };
 
 export interface TradeOffer {

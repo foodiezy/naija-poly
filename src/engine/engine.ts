@@ -200,6 +200,7 @@ export function createGame(
     currentTurn: 1,
     freeParkingPot: 0,
     blackout: null,
+    votekicks: {},
   };
 }
 
@@ -224,8 +225,9 @@ export function applyAction(
   const isTradeResponse = action.type === "RESPOND_TRADE";
   // A disconnect can land on any player at any time, not just the active one.
   const isForfeit = action.type === "FORFEIT";
+  const isVoteKick = action.type === "VOTE_KICK";
 
-  if (playerId !== currentPlayer.id && !isAuctionAction && !isTradeResponse && !isForfeit) {
+  if (playerId !== currentPlayer.id && !isAuctionAction && !isTradeResponse && !isForfeit && !isVoteKick) {
     const playerObj = nextState.players.find(p => p.id === playerId);
     const isDeclaringBankruptInDebt = action.type === "DECLARE_BANKRUPT" && playerObj && playerObj.cash < 0;
     if (!isDeclaringBankruptInDebt) {
@@ -1060,6 +1062,43 @@ export function applyAction(
           nextState.phase = "awaiting-roll";
           nextState.log.push(`It is now ${nextState.players[nextIndex].name}'s turn.`);
         }
+      }
+      break;
+    }
+
+    case "VOTE_KICK": {
+      const targetId = action.targetId;
+      const targetPlayer = nextState.players.find(p => p.id === targetId);
+      const voterPlayer = nextState.players.find(p => p.id === playerId);
+      
+      if (!targetPlayer || targetPlayer.bankrupt) {
+        throw new Error("Target player is not in the game or is already bankrupt");
+      }
+      if (!voterPlayer || voterPlayer.bankrupt) {
+        throw new Error("You cannot vote if you are not an active player");
+      }
+      if (targetId === playerId) {
+        throw new Error("You cannot vote to commot yourself. Use forfeit instead.");
+      }
+
+      if (!nextState.votekicks[targetId]) {
+        nextState.votekicks[targetId] = [];
+      }
+      
+      const votes = nextState.votekicks[targetId];
+      if (votes.includes(playerId)) {
+        throw new Error("You have already voted to commot this player");
+      }
+      
+      votes.push(playerId);
+      nextState.log.push(`${voterPlayer.name} voted to commot ${targetPlayer.name} (${votes.length} votes).`);
+      
+      const activePlayersCount = nextState.players.filter(p => !p.bankrupt).length;
+      if (votes.length > activePlayersCount / 2) {
+        targetPlayer.kicked = true;
+        nextState.log.push(`Vote majority reached! ${targetPlayer.name} don commot from the game.`);
+        // Run the FORFEIT action directly to safely and fully eliminate them (handles auctions/trades/properties)
+        return applyAction(nextState, targetId, { type: "FORFEIT" }, rng);
       }
       break;
     }

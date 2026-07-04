@@ -89,7 +89,7 @@ export default function ControlPanel({
       </AnimatePresence>
 
       {/* 1. Player roster */}
-      <PlayerList engineState={engineState} mySessionId={mySessionId} liveState={liveState} />
+      <PlayerList engineState={engineState} mySessionId={mySessionId} liveState={liveState} onSendAction={onSendAction} />
 
       {/* Per-turn AFK countdown */}
       {isMyTurn && !isBankrupt && !isAuctionActive && turnDeadline && turnDeadline > 0 && (
@@ -175,15 +175,26 @@ export default function ControlPanel({
 
       {/* Auto End Turn toggle */}
       {!isBankrupt && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.4rem 1rem", background: "rgba(0,0,0,0.2)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.7rem", color: "var(--text-muted)", cursor: "pointer", fontWeight: 600 }}>
-            <input type="checkbox" checked={!!autoEndTurn} onChange={onToggleAutoEndTurn} style={{ cursor: "pointer" }} />
-            Auto End Turn
-          </label>
-          {autoEndTurn && isMyTurn && phase === "awaiting-end-turn" && (me?.cash ?? 0) >= 0 && (
-            <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", fontStyle: "italic" }}>⏳ auto ~2s</span>
-          )}
-        </div>
+        <>
+          <div style={{ padding: "0.4rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.05)", textAlign: "center" }}>
+            <button
+              className="button-primary"
+              style={{ width: "100%", background: "transparent", border: "1px solid rgba(239,68,68,0.3)", color: "var(--color-danger)", fontSize: "0.65rem", padding: "0.25rem", borderRadius: "2px" }}
+              onClick={() => { if (window.confirm("Are you sure you want to go bankrupt and leave the game? This cannot be undone.")) onSendAction({ type: "FORFEIT" }); }}
+            >
+              Declare Bankruptcy (Leave Game)
+            </button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.4rem 1rem", background: "rgba(0,0,0,0.2)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.7rem", color: "var(--text-muted)", cursor: "pointer", fontWeight: 600 }}>
+              <input type="checkbox" checked={!!autoEndTurn} onChange={onToggleAutoEndTurn} style={{ cursor: "pointer" }} />
+              Auto End Turn
+            </label>
+            {autoEndTurn && isMyTurn && phase === "awaiting-end-turn" && (me?.cash ?? 0) >= 0 && (
+              <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", fontStyle: "italic" }}>⏳ auto ~2s</span>
+            )}
+          </div>
+        </>
       )}
 
       {/* 5. My properties — click a holding to open its card (upgrade/sell there) */}

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { GameState, Player } from "../../engine/types";
+import { GameState, Player, Action } from "../../engine/types";
 import { tokenEmoji } from "../../data/tokens";
 import { RoomState } from "../../shared/room";
 import { BOARD, ColorGroup } from "../../data/board";
@@ -9,6 +9,7 @@ interface Props {
   engineState: GameState;
   mySessionId: string;
   liveState: RoomState | undefined;
+  onSendAction?: (action: Action) => void;
 }
 
 const COLOR_GROUPS: ColorGroup[] = [
@@ -37,9 +38,10 @@ function statusLabel(p: Player, isActive: boolean): { text: string; tone: string
   return { text: "Waiting", tone: "waiting" };
 }
 
-export default function PlayerList({ engineState, mySessionId, liveState }: Props) {
-  const { players, currentPlayerIndex, currentTurn, settings, tiles } = engineState;
+export default function PlayerList({ engineState, mySessionId, liveState, onSendAction }: Props) {
+  const { players, currentPlayerIndex, currentTurn, settings, tiles, votekicks } = engineState;
   const currentPlayer = players[currentPlayerIndex];
+  const me = players.find(p => p.id === mySessionId);
 
   const getToken = (id: string) => {
     const lp = liveState?.lobbyPlayers?.get(id);
@@ -97,6 +99,21 @@ export default function PlayerList({ engineState, mySessionId, liveState }: Prop
                     <span className="player-card-name">{p.name}</span>
                     {isMe && <span className="player-card-you-tag">YOU</span>}
                     {!isMe && isAI(p.name) && <span className="player-card-ai-tag">BOT</span>}
+                    {!isMe && !p.bankrupt && !isAI(p.name) && !me?.bankrupt && onSendAction && (
+                      <button 
+                        className="votekick-btn"
+                        style={{ marginLeft: 'auto', fontSize: '0.6rem', padding: '0.1rem 0.3rem', background: 'transparent', border: '1px solid var(--color-danger)', color: 'var(--color-danger)', borderRadius: '2px', cursor: 'pointer' }}
+                        onClick={() => {
+                          if (window.confirm(`Vote to commot ${p.name}?`)) {
+                            onSendAction({ type: "VOTE_KICK", targetId: p.id });
+                          }
+                        }}
+                        title={`Votes: ${votekicks?.[p.id]?.length || 0}`}
+                        disabled={votekicks?.[p.id]?.includes(mySessionId)}
+                      >
+                        {votekicks?.[p.id]?.includes(mySessionId) ? "Voted" : "Commot"} ({votekicks?.[p.id]?.length || 0})
+                      </button>
+                    )}
                   </div>
                   <div className="player-card-status-row">
                     <span className={`player-card-status status-${status.tone}`}>{status.text}</span>
