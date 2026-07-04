@@ -137,7 +137,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
     if (isMyTurn) return; // no trivia during your own turn
     const interval = setInterval(() => {
       setBoardTriviaIdx(prev => (prev + 1) % ALL_TRIVIA.length);
-    }, 7000);
+    }, 14000);
     return () => clearInterval(interval);
   }, [isMyTurn]);
 
@@ -188,6 +188,9 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
       case 4: rotation = "rotateX(0deg) rotateY(-90deg)"; break;
       default: rotation = "rotateX(0deg) rotateY(0deg)";
     }
+    // Rest the die at a slight isometric tilt so the value face plus two side
+    // faces are visible — reads as a real 3D die instead of a flat square.
+    rotation = `rotateX(-18deg) rotateY(22deg) ${rotation}`;
 
     return (
       <motion.div
@@ -260,7 +263,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   return (
     <div className="monopoly-board">
       {/* Board Center (Richup.io Style) */}
-      <div className="board-center" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", background: "linear-gradient(135deg, #120e24 0%, #0a0814 100%)", padding: "1.5rem", borderRadius: "2px" }}>
+      <div className="board-center" style={{ display: "flex", flexDirection: "column", justifyContent: "flex-start", gap: "0.75rem", background: "linear-gradient(135deg, #120e24 0%, #0a0814 100%)", padding: "1.5rem", borderRadius: "2px" }}>
         {/* Top Row: Logo, Mama Put Pot and Game Phase/Turn HUD */}
         <div className="board-center-top-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 5, width: "100%" }}>
           <div className="board-center-logo" style={{ margin: 0, fontSize: "1.2rem", letterSpacing: "0.2em", background: "linear-gradient(135deg, var(--color-gold) 0%, #f97316 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
@@ -323,7 +326,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
         </div>
 
         {/* Central Display: Dice + Active Player Status (Richup.io centerpiece) */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, margin: "1rem 0", zIndex: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: "0 1 auto", marginTop: "1.5rem", zIndex: 10 }}>
           {/* Dice — bigger stage, shake-then-settle */}
           <AnimatePresence mode="wait">
             {engineState.dice && (
