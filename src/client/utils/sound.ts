@@ -12,7 +12,11 @@
 
 let audioCtx: AudioContext | null = null;
 let isMuted = false;
-let masterVolume = 0.9;
+let masterVolume = 0.6;
+// Shared output chain: every cue routes through a master gain into a gentle
+// compressor/limiter, so stacked tones stay warm instead of harsh/clippy and
+// one volume knob governs everything.
+let masterGain: GainNode | null = null;
 
 // Decoded sample buffers, keyed by event name. Absent = fall back to synth.
 const buffers = new Map<SfxName, AudioBuffer>();
@@ -49,9 +53,10 @@ export function getMuted(): boolean {
   return isMuted;
 }
 
-// 0–1. Applied to sample playback (the synth tones use their own envelopes).
+// 0–1. Governs the whole output chain (samples + synth).
 export function setVolume(v: number) {
   masterVolume = Math.max(0, Math.min(1, v));
+  if (masterGain) masterGain.gain.value = masterVolume;
 }
 
 export function getVolume(): number {
@@ -68,6 +73,24 @@ function getAudioContext(): AudioContext {
     audioCtx.resume();
   }
   return audioCtx;
+}
+
+// Lazily build the shared master gain → compressor → speakers chain. All cues
+// connect here instead of straight to ctx.destination.
+function getMasterGain(ctx: AudioContext): GainNode {
+  if (!masterGain) {
+    masterGain = ctx.createGain();
+    masterGain.gain.value = masterVolume;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -20;
+    comp.knee.value = 26;
+    comp.ratio.value = 4;
+    comp.attack.value = 0.003;
+    comp.release.value = 0.25;
+    masterGain.connect(comp);
+    comp.connect(ctx.destination);
+  }
+  return masterGain;
 }
 
 // Fetch + decode every available sample once. Missing files are expected and
@@ -102,9 +125,9 @@ function playSample(name: SfxName): boolean {
     const src = ctx.createBufferSource();
     const gain = ctx.createGain();
     src.buffer = buffer;
-    gain.gain.value = masterVolume;
+    gain.gain.value = 1; // master chain applies the volume
     src.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(getMasterGain(ctx));
     src.start();
     return true;
   } catch (e) {
@@ -130,7 +153,7 @@ function synthRoll() {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(getMasterGain(ctx));
 
     osc.type = "triangle";
     const now = ctx.currentTime;
@@ -157,7 +180,7 @@ function synthCash() {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(getMasterGain(ctx));
 
       osc.type = "sine";
       osc.frequency.setValueAtTime(freq, now + delay);
@@ -183,7 +206,7 @@ function synthRentPay() {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(getMasterGain(ctx));
 
     osc.type = "triangle";
     const now = ctx.currentTime;
@@ -212,7 +235,7 @@ function synthDraw() {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(getMasterGain(ctx));
 
       osc.type = "sine";
       osc.frequency.setValueAtTime(freq, now + delay);
@@ -240,16 +263,19 @@ function synthJail() {
 
     osc1.connect(gain);
     osc2.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(getMasterGain(ctx));
 
-    osc1.type = "sawtooth";
-    osc2.type = "sawtooth";
+    // Triangle (not sawtooth) — a warmer, less buzzy "uh-oh" for jail.
+    osc1.type = "triangle";
+    osc2.type = "triangle";
 
-    osc1.frequency.setValueAtTime(110, now);
-    osc2.frequency.setValueAtTime(113, now); // slightly detuned
+    osc1.frequency.setValueAtTime(140, now);
+    osc1.frequency.exponentialRampToValueAtTime(90, now + 0.4);
+    osc2.frequency.setValueAtTime(143, now); // slightly detuned for body
+    osc2.frequency.exponentialRampToValueAtTime(92, now + 0.4);
 
-    gain.gain.setValueAtTime(0.15, now);
-    gain.gain.linearRampToValueAtTime(0.15, now + 0.25);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.16, now + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
 
     osc1.start(now);
@@ -272,7 +298,7 @@ function synthBuild() {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(getMasterGain(ctx));
 
       osc.type = "triangle";
       osc.frequency.setValueAtTime(pitch, now + delay);
@@ -302,12 +328,12 @@ function synthHotel() {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(getMasterGain(ctx));
       osc.type = "triangle";
       const t = now + i * 0.08;
       osc.frequency.setValueAtTime(freq, t);
       gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.22 * masterVolume, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
       osc.start(t);
       osc.stop(t + 0.36);
@@ -327,7 +353,7 @@ function synthYourTurn() {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(getMasterGain(ctx));
 
       osc.type = "sine";
       osc.frequency.setValueAtTime(freq, now + delay);
@@ -361,7 +387,7 @@ function synthGameOver() {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(getMasterGain(ctx));
 
       osc.type = "triangle";
       osc.frequency.setValueAtTime(freq, now + delay);
