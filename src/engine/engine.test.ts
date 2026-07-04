@@ -889,4 +889,50 @@ describe("Game Engine", () => {
       expect(next.players[next.currentPlayerIndex].bankrupt).toBe(false);
     });
   });
+
+  describe("Vote-kick (Commot)", () => {
+    it("tallies a vote without kicking below majority", () => {
+      const state = createGame(["p1", "p2", "p3"]);
+      const next = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" });
+      expect(next.votekicks["p3"]).toEqual(["p1"]);
+      const target = next.players.find((p) => p.id === "p3")!;
+      expect(target.bankrupt).toBe(false);
+      expect(target.kicked).toBeFalsy();
+    });
+
+    it("allows any active player to vote off-turn", () => {
+      const state = createGame(["p1", "p2", "p3"]);
+      expect(state.currentPlayerIndex).toBe(0); // p1's turn
+      // p2 voting is off-turn but must be allowed.
+      const next = applyAction(state, "p2", { type: "VOTE_KICK", targetId: "p3" });
+      expect(next.votekicks["p3"]).toEqual(["p2"]);
+    });
+
+    it("eliminates the target once votes pass half the active players", () => {
+      let state = createGame(["p1", "p2", "p3"]);
+      state = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" });
+      state = applyAction(state, "p2", { type: "VOTE_KICK", targetId: "p3" });
+      const target = state.players.find((p) => p.id === "p3")!;
+      expect(target.kicked).toBe(true);
+      expect(target.bankrupt).toBe(true); // eliminated via the FORFEIT path
+      expect(state.players.filter((p) => !p.bankrupt)).toHaveLength(2);
+    });
+
+    it("rejects voting for yourself", () => {
+      const state = createGame(["p1", "p2", "p3"]);
+      expect(() => applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p1" })).toThrow();
+    });
+
+    it("rejects voting for the same player twice", () => {
+      let state = createGame(["p1", "p2", "p3"]);
+      state = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" });
+      expect(() => applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" })).toThrow();
+    });
+
+    it("rejects voting against an already-eliminated player", () => {
+      let state = createGame(["p1", "p2", "p3"]);
+      state = applyAction(state, "p3", { type: "FORFEIT" });
+      expect(() => applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" })).toThrow();
+    });
+  });
 });
