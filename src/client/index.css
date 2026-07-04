@@ -2469,9 +2469,10 @@ html.high-contrast .glass-panel {
 .die-3d-wrapper {
   width: 50px;
   height: 50px;
-  perspective: 200px;
+  perspective: 420px;
   display: inline-block;
-  margin: 0 0.25rem;
+  margin: 0 0.4rem;
+  filter: drop-shadow(3px 5px 5px rgba(0, 0, 0, 0.5));
 }
 
 .die-3d {
@@ -2519,18 +2520,22 @@ html.high-contrast .glass-panel {
 
 .face.top {
   transform: rotateX(90deg) translateZ(22px);
+  filter: brightness(1.08);
 }
 
 .face.bottom {
   transform: rotateX(-90deg) translateZ(22px);
+  filter: brightness(0.8);
 }
 
 .face.left {
   transform: rotateY(-90deg) translateZ(22px);
+  filter: brightness(0.86);
 }
 
 .face.right {
   transform: rotateY(90deg) translateZ(22px);
+  filter: brightness(0.92);
 }
 
 /* Pips rendering & grid alignment */
@@ -3155,18 +3160,18 @@ html.high-contrast .glass-panel {
 
 .deed-card {
   width: 90%;
-  max-width: 380px;
-  background: rgba(15, 23, 42, 0.95) !important;
+  max-width: 330px;
+  background: rgba(15, 23, 42, 0.97) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(245, 158, 11, 0.05);
-  border-radius: 2px;
+  border-radius: 10px;
   overflow: hidden;
   padding: 0 !important;
   animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .deed-header {
-  padding: 1.25rem;
+  padding: 0.65rem 1rem;
   color: #000;
   text-align: center;
   font-weight: bold;
@@ -3189,13 +3194,13 @@ html.high-contrast .glass-panel {
 
 .deed-name {
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: 0.5px;
 }
 
 .deed-body {
-  padding: 1.25rem;
+  padding: 0.85rem 1rem;
   text-align: left;
 }
 
@@ -4958,7 +4963,7 @@ html.high-contrast .glass-panel {
 .deed-photo-wrap {
   position: relative;
   width: 100%;
-  height: 150px;
+  height: 88px;
   overflow: hidden;
 }
 
