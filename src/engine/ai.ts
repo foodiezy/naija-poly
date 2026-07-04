@@ -7,8 +7,8 @@
 
 import { BOARD, PropertyTile, JAIL_FINE } from "../data/board";
 import type { GameState, PlayerId, Action } from "./types";
-// Keep a little cash on hand rather than spending to zero.
-const CASH_BUFFER = 50_000;
+// Default cash buffer to keep on hand rather than spending to zero.
+const DEFAULT_CASH_BUFFER = 50_000;
 
 function isProperty(pos: number): boolean {
   return BOARD[pos].type === "property";
@@ -80,15 +80,25 @@ export function getAIAction(state: GameState, playerId: PlayerId): Action | null
   const me = state.players.find((p) => p.id === playerId);
   if (!me || me.bankrupt) return null;
 
-  // --- Trades: respond to an offer addressed to us. This can land on another
-  // player's turn (the proposer's), so it is checked before turn/auction logic.
-  // Accept only when we come out at least even by list value and can cover the
-  // cash we'd give up; otherwise decline so the proposer isn't left hanging.
+  const style = me.aiStyle || "Normal";
+
+  // Customize thresholds based on personality
+  let cashBuffer = DEFAULT_CASH_BUFFER;
+  if (style === "CashSaver") cashBuffer = 150_000;
+  if (style === "PropertyHoarder") cashBuffer = 0;
+
+  // --- Trades: respond to an offer addressed to us.
   if (state.activeTrade && state.activeTrade.toId === playerId) {
     const t = state.activeTrade;
     const receive = t.giveCash + t.giveTiles.reduce((s, p) => s + tilePrice(p), 0);
     const giveUp = t.getCash + t.getTiles.reduce((s, p) => s + tilePrice(p), 0);
-    const accept = t.getCash <= me.cash && receive >= giveUp;
+    let accept = t.getCash <= me.cash && receive >= giveUp;
+    
+    // Trader accepts slight losses to keep things moving
+    if (style === "Trader" && t.getCash <= me.cash && receive >= giveUp * 0.9) {
+      accept = true;
+    }
+    
     return { type: "RESPOND_TRADE", accept };
   }
 
@@ -100,10 +110,16 @@ export function getAIAction(state: GameState, playerId: PlayerId): Action | null
 
     const tile = BOARD[a.tilePos];
     const value = "price" in tile ? tile.price : 0;
-    const cap = Math.floor(value * 0.8); // never overpay past 80% of list price
+    
+    let capMultiplier = 0.8;
+    if (style === "AggressiveBidder") capMultiplier = 1.2;
+    if (style === "PropertyHoarder") capMultiplier = 1.0;
+    if (style === "CashSaver") capMultiplier = 0.6;
+    
+    const cap = Math.floor(value * capMultiplier);
     const inc = a.bidIncrements[0];
     const nextBid = a.highestBid + inc;
-    if (nextBid <= cap && me.cash >= nextBid + CASH_BUFFER) {
+    if (nextBid <= cap && me.cash >= nextBid + cashBuffer) {
       return { type: "BID", amount: nextBid };
     }
     return { type: "PASS_BID" };
@@ -116,7 +132,7 @@ export function getAIAction(state: GameState, playerId: PlayerId): Action | null
     case "awaiting-roll": {
       if (me.inJail) {
         if (me.jailCardSources.length > 0) return { type: "USE_JAIL_CARD" };
-        if (me.cash >= 200_000 + CASH_BUFFER) return { type: "PAY_JAIL_FINE" };
+        if (me.cash >= 200_000 + cashBuffer) return { type: "PAY_JAIL_FINE" };
         // Can't comfortably pay — roll for doubles (or pay if forced later).
         if (me.jailTurns >= 2 && me.cash >= JAIL_FINE) return { type: "PAY_JAIL_FINE" };
       }
@@ -132,7 +148,7 @@ export function getAIAction(state: GameState, playerId: PlayerId): Action | null
         groupTiles(tile as PropertyTile).some(
           (t) => t.pos !== me.position && state.tiles[t.pos]?.ownerId === playerId,
         );
-      const threshold = completesGroup ? price + CASH_BUFFER : price * 2;
+      const threshold = completesGroup ? price + cashBuffer : price * (style === "PropertyHoarder" ? 1 : 2);
       if (me.cash >= threshold) return { type: "BUY" };
       return { type: "DECLINE_BUY" };
     }
@@ -147,11 +163,54 @@ export function getAIAction(state: GameState, playerId: PlayerId): Action | null
         return { type: "DECLARE_BANKRUPT" };
       }
       // Develop a property if we can afford it.
+      let buildBuffer = cashBuffer;
+      if (style === "Builder") buildBuffer = 0; // Builder spends all cash on houses
+
       for (const tile of BOARD) {
-        if (isProperty(tile.pos) && canBuild(state, playerId, tile.pos)) {
-          return { type: "BUILD", pos: tile.pos };
+        if (isProperty(tile.pos)) {
+          // Re-implement canBuild check with custom buildBuffer
+          const ts = state.tiles[tile.pos];
+          if (ts && ts.ownerId === playerId && !ts.mortgaged && ts.houses < 5) {
+            const group = groupTiles(tile as PropertyTile);
+            if (group.every((t) => state.tiles[t.pos]?.ownerId === playerId)) {
+              if (!group.some((t) => state.tiles[t.pos]?.mortgaged)) {
+                if (!group.some((t) => (state.tiles[t.pos]?.houses ?? 0) < ts.houses)) {
+                  if (me.cash >= (tile as PropertyTile).houseCost + buildBuffer) {
+                    return { type: "BUILD", pos: tile.pos };
+                  }
+                }
+              }
+            }
+          }
         }
       }
+      
+      // Trader might randomly propose a trade if they have some cash but need properties
+      if (style === "Trader" && Math.random() < 0.3) {
+        // Find a property we need to complete a set
+        for (const tile of BOARD) {
+          if (isProperty(tile.pos) && state.tiles[tile.pos]?.ownerId && state.tiles[tile.pos]?.ownerId !== playerId) {
+            const group = groupTiles(tile as PropertyTile);
+            const ownedInGroup = group.filter((t) => state.tiles[t.pos]?.ownerId === playerId).length;
+            if (ownedInGroup > 0) {
+              const targetOwner = state.tiles[tile.pos]!.ownerId!;
+              // propose trade for this tile
+              return {
+                type: "PROPOSE_TRADE",
+                trade: {
+                  fromId: playerId,
+                  toId: targetOwner,
+                  giveCash: Math.min(me.cash, tilePrice(tile.pos) + 20000),
+                  getCash: 0,
+                  giveTiles: [],
+                  getTiles: [tile.pos]
+                }
+              };
+            }
+          }
+        }
+      }
+
       return { type: "END_TURN" };
     }
 

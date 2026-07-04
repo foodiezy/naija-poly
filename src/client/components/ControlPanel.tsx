@@ -13,6 +13,7 @@ import ActionButtons from "./ActionButtons";
 import PropertyList from "./PropertyList";
 import TradeOverlay from "./TradeOverlay";
 import TradeBuilder from "./TradeBuilder";
+import DebtRescueModal from "./DebtRescueModal";
 
 interface ControlPanelProps {
   room: Room;
@@ -29,6 +30,8 @@ export default function ControlPanel({
   room, engineState, onSendAction, autoEndTurn, onToggleAutoEndTurn, turnDeadline, turnTimeoutSecs, onOpenTile,
 }: ControlPanelProps) {
   const [showTradeBuilder, setShowTradeBuilder] = useState(false);
+  const [initialTradeOffer, setInitialTradeOffer] = useState<TradeOffer | undefined>(undefined);
+  const [showDebtRescue, setShowDebtRescue] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   const mySessionId = room.sessionId;
@@ -74,6 +77,10 @@ export default function ControlPanel({
             mySessionId={mySessionId}
             onSendAction={onSendAction}
             liveState={liveState}
+            onCounterOffer={(reversedTrade) => {
+              setInitialTradeOffer(reversedTrade);
+              setShowTradeBuilder(true);
+            }}
           />
         )}
         {showTradeBuilder && (
@@ -82,8 +89,22 @@ export default function ControlPanel({
             engineState={engineState}
             mySessionId={mySessionId}
             onSendAction={onSendAction}
-            onClose={() => setShowTradeBuilder(false)}
+            onClose={() => {
+              setShowTradeBuilder(false);
+              setInitialTradeOffer(undefined);
+            }}
             liveState={liveState}
+            initialOffer={initialTradeOffer}
+          />
+        )}
+        {showDebtRescue && me && (
+          <DebtRescueModal
+            key="debt-rescue"
+            engineState={engineState}
+            me={me}
+            onSendAction={onSendAction}
+            onClose={() => setShowDebtRescue(false)}
+            onOpenTrade={() => setShowTradeBuilder(true)}
           />
         )}
       </AnimatePresence>
@@ -114,6 +135,21 @@ export default function ControlPanel({
           <span>Net worth <strong style={{ color: "var(--text-secondary)" }}>₦{myNetWorth.toLocaleString()}</strong></span>
           <span>Round <strong style={{ color: "var(--text-secondary)" }}>{engineState.currentTurn ?? 1}{engineState.settings?.turnLimit > 0 ? ` / ${engineState.settings.turnLimit}` : ""}</strong></span>
         </div>
+        {me?.secretObjective && (
+          <div style={{ marginTop: "0.75rem", width: "100%", background: "rgba(0,0,0,0.3)", borderRadius: "4px", padding: "0.5rem", borderLeft: "2px solid var(--color-gold)", fontSize: "0.75rem", textAlign: "left" }}>
+            <div style={{ color: "var(--color-gold)", fontWeight: 600, marginBottom: "0.2rem", textTransform: "uppercase", fontSize: "0.65rem", letterSpacing: "1px" }}>Secret Objective</div>
+            <div style={{ color: "var(--text-secondary)", textDecoration: me.objectiveCompleted ? "line-through" : "none", opacity: me.objectiveCompleted ? 0.6 : 1 }}>
+              {me.secretObjective === "own_2_airports" && "Own at least 2 Airports"}
+              {me.secretObjective === "complete_color_set" && "Complete any color set"}
+              {me.secretObjective === "cash_2m" && "Have ₦2,000,000 in cash"}
+              {me.secretObjective === "own_4_properties" && "Own any 4 properties"}
+              {me.secretObjective === "first_hotel" && "Build a Hotel"}
+            </div>
+            {me.objectiveCompleted && (
+              <div style={{ color: "var(--color-green)", fontWeight: 600, marginTop: "0.2rem" }}>Bonus claimed! ✅</div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 3. Auction panel */}
@@ -137,10 +173,10 @@ export default function ControlPanel({
           </div>
           <button
             className="button-primary"
-            style={{ width: "100%", background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)", fontSize: "0.75rem", padding: "0.4rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", borderRadius: "2px" }}
-            onClick={() => { if (window.confirm("Declare bankruptcy? You will lose everything.")) onSendAction({ type: "DECLARE_BANKRUPT" }); }}
+            style={{ width: "100%", background: "var(--color-gold)", color: "#000", fontSize: "0.75rem", padding: "0.4rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", borderRadius: "2px" }}
+            onClick={() => setShowDebtRescue(true)}
           >
-            Declare Bankruptcy <IconBankrupt size={16} />
+            Settle Debt <IconBankrupt size={16} />
           </button>
         </div>
       )}

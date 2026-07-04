@@ -175,6 +175,48 @@ export default function GameOverModal({ engineState, roomState, mySessionId, onR
         </div>
 
         <div className="leaderboard-container" style={{ marginTop: "1.25rem" }}>
+          <h3 style={{ margin: "0 0 1rem 0", color: "var(--color-gold)", textTransform: "uppercase", fontSize: "1rem", letterSpacing: "1px" }}>Match Highlights</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.75rem", marginBottom: "1.25rem" }}>
+            {(() => {
+              if (!engineState.stats) return null;
+              
+              const awards = [
+                { id: "rentPaid", title: "Biggest Donor 💸", getVal: (s: any) => s.rentPaid, format: (v: number) => `₦${v.toLocaleString()}` },
+                { id: "highestAuctionBid", title: "Biggest Spender 🤑", getVal: (s: any) => s.highestAuctionBid, format: (v: number) => `₦${v.toLocaleString()}` },
+                { id: "propertiesBought", title: "Property Mogul 🏢", getVal: (s: any) => s.propertiesBought, format: (v: number) => `${v} properties` },
+                { id: "jailTimes", title: "Jail Regular 🚔", getVal: (s: any) => s.jailTimes, format: (v: number) => `${v} visits` },
+              ];
+
+              return awards.map(award => {
+                let topPlayer = null;
+                let topValue = 0;
+                engineState.players.forEach(p => {
+                  const val = award.getVal(engineState.stats[p.id]);
+                  if (val > topValue) {
+                    topValue = val;
+                    topPlayer = p;
+                  }
+                });
+
+                if (!topPlayer || topValue === 0) return null;
+
+                const token = tokenEmoji(roomState?.lobbyPlayers?.get(topPlayer.id)?.tokenId);
+
+                return (
+                  <div key={award.id} style={{ background: "rgba(0,0,0,0.2)", padding: "0.75rem", borderRadius: "var(--radius-md)", borderLeft: "3px solid var(--color-gold)" }}>
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "0.25rem" }}>{award.title}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontWeight: "bold" }}>{token} {topPlayer.name}</span>
+                      <span style={{ color: "var(--color-gold)" }}>{award.format(topValue)}</span>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </div>
+
+        <div className="leaderboard-container">
           <h3 style={{ margin: "0 0 1rem 0", color: "var(--color-gold)", textTransform: "uppercase", fontSize: "1rem", letterSpacing: "1px" }}>Game Summary</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1rem" }}>
             {[

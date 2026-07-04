@@ -50,7 +50,8 @@ function finalizeAuction(state: GameState): void {
   if (auction.highestBidderId !== null) {
     const winner = state.players.find((p) => p.id === auction.highestBidderId)!;
     winner.cash -= auction.highestBid;
-    state.tiles[auction.tilePos].ownerId = winner.id;
+    state.tiles[auction.tilePos] = { ownerId: winner.id, houses: 0, mortgaged: false };
+    state.stats[winner.id].propertiesBought += 1;
     state.log.push(
       `${winner.name} won the auction for ${tile.name} for ₦${auction.highestBid.toLocaleString("en-NG")}!`,
     );
@@ -153,9 +154,12 @@ export function createGame(
     ...(settings ?? {}),
   };
 
+  const AI_STYLES = ["AggressiveBidder", "PropertyHoarder", "Builder", "CashSaver", "Trader", "Normal"] as const;
+  const OBJECTIVES: Objective[] = ["own_2_airports", "complete_color_set", "cash_2m", "own_4_properties", "first_hotel"];
+
   const players: Player[] = playerIds.map((id, index) => ({
     id,
-    name: id,
+    name: `Player ${index + 1}`,
     cash: mergedSettings.startingCash,
     position: 0,
     inJail: false,
@@ -163,6 +167,9 @@ export function createGame(
     jailCardSources: [],
     bankrupt: false,
     order: index,
+    aiStyle: id.startsWith("ai_") ? AI_STYLES[Math.floor(rng() * AI_STYLES.length)] : undefined,
+    secretObjective: mergedSettings.secretObjectives ? OBJECTIVES[Math.floor(rng() * OBJECTIVES.length)] : undefined,
+    objectiveCompleted: false,
   }));
 
   const tiles: Record<number, TileState> = {};
@@ -174,6 +181,11 @@ export function createGame(
         mortgaged: false,
       };
     }
+  });
+
+  const stats: Record<PlayerId, { rentPaid: number; highestAuctionBid: number; propertiesBought: number; jailTimes: number }> = {};
+  playerIds.forEach(id => {
+    stats[id] = { rentPaid: 0, highestAuctionBid: 0, propertiesBought: 0, jailTimes: 0 };
   });
 
   // Chaos mode mixes the chaos cards (e.g. NEPA blackout) into the Chance deck.
@@ -194,13 +206,14 @@ export function createGame(
     hustleOrder,
     chancePtr: 0,
     hustlePtr: 0,
-    log: ["Game started."],
+    log: ["The game has started!"],
     winnerId: null,
     settings: mergedSettings,
     currentTurn: 1,
     freeParkingPot: 0,
     blackout: null,
     votekicks: {},
+    stats,
   };
 }
 
@@ -288,6 +301,7 @@ export function applyAction(
             currentPlayer.jailTurns = 0;
             currentPlayer.position = JAIL_POSITION;
             nextState.doublesCount = 0;
+            nextState.stats[currentPlayer.id].jailTimes += 1;
             nextState.log.push(`${currentPlayer.name} rolled doubles 3 times in a row and went to Kirikiri Prison!`);
             nextState.phase = "awaiting-end-turn";
             return nextState;
@@ -323,7 +337,8 @@ export function applyAction(
       }
 
       currentPlayer.cash -= tile.price;
-      tileState.ownerId = currentPlayer.id;
+      nextState.tiles[pos] = { ownerId: currentPlayer.id, houses: 0, mortgaged: false };
+      nextState.stats[currentPlayer.id].propertiesBought += 1;
       nextState.log.push(`${currentPlayer.name} bought ${tile.name} for ₦${tile.price.toLocaleString("en-NG")}.`);
       nextState.phase = "awaiting-end-turn";
       break;
@@ -700,6 +715,10 @@ export function applyAction(
             nextState.blackout = null;
             nextState.log.push(`💡 Light don restore! Rent dey collect again.`);
           }
+          if (nextState.airportStrike && nextState.currentTurn >= nextState.airportStrike.untilRound) {
+            nextState.airportStrike = null;
+            nextState.log.push(`🛬 Aviation workers don resume work! Airport rent dey collect again.`);
+          }
         }
 
         nextState.currentPlayerIndex = nextIndex;
@@ -750,6 +769,10 @@ export function applyAction(
       auction.highestBidderId = playerId;
       auction.deadline = null; // the server resets the clock on each new bid
       nextState.log.push(`${bidder.name} bid ₦${amount.toLocaleString("en-NG")}!`);
+      
+      if (amount > nextState.stats[playerId].highestAuctionBid) {
+        nextState.stats[playerId].highestAuctionBid = amount;
+      }
 
       // If nobody else is still in the running, the bidder wins immediately.
       const challengers = auction.participantIds.filter(
@@ -1107,6 +1130,43 @@ export function applyAction(
       throw new Error(`Action type ${(action as { type: string }).type} is not implemented yet`);
   }
 
+  if (nextState.settings.secretObjectives) {
+    nextState.players.forEach(p => {
+      if (p.secretObjective && !p.objectiveCompleted && !p.bankrupt) {
+        let completed = false;
+        switch (p.secretObjective) {
+          case "own_2_airports":
+            completed = BOARD.filter(t => t.type === "airport" && nextState.tiles[t.pos]?.ownerId === p.id).length >= 2;
+            break;
+          case "complete_color_set":
+            const groups = new Set(BOARD.filter(t => t.type === "property" && nextState.tiles[t.pos]?.ownerId === p.id).map(t => (t as PropertyTile).group));
+            for (const g of groups) {
+               const allInGroup = BOARD.filter(t => t.type === "property" && (t as PropertyTile).group === g);
+               if (allInGroup.every(t => nextState.tiles[t.pos]?.ownerId === p.id)) {
+                 completed = true;
+                 break;
+               }
+            }
+            break;
+          case "cash_2m":
+            if (p.cash >= 2_000_000) completed = true;
+            break;
+          case "own_4_properties":
+            completed = BOARD.filter(t => (t.type === "property" || t.type === "airport" || t.type === "utility") && nextState.tiles[t.pos]?.ownerId === p.id).length >= 4;
+            break;
+          case "first_hotel":
+            completed = BOARD.some(t => t.type === "property" && nextState.tiles[t.pos]?.ownerId === p.id && nextState.tiles[t.pos]?.houses === 5);
+            break;
+        }
+        if (completed) {
+          p.objectiveCompleted = true;
+          p.cash += 500_000;
+          nextState.log.push(`🎯 Secret Objective Completed! ${p.name} earned ₦500,000 bonus.`);
+        }
+      }
+    });
+  }
+
   return nextState;
 }
 
@@ -1153,6 +1213,9 @@ function resolveLanding(
         // NEPA don take light — no light, no rent.
         state.log.push(`⚡ Blackout! ${player.name} landed on ${tile.name} but NEPA don take light — no rent collected.`);
         state.phase = "awaiting-end-turn";
+      } else if (state.airportStrike && tile.type === "airport") {
+        state.log.push(`✈️ Airport Strike! ${player.name} landed on ${tile.name} but workers don lock gate — no rent collected.`);
+        state.phase = "awaiting-end-turn";
       } else {
         let rent = getRent(state, pos, state.dice ? (state.dice[0] + state.dice[1]) : 0);
         if (tile.type === "airport" && rentMultiplier === 2) {
@@ -1160,6 +1223,7 @@ function resolveLanding(
         }
 
         player.cash -= rent;
+        nextState.stats[player.id].rentPaid += rent;
         if (player.cash < 0) {
           state.owedToId = tileState.ownerId;
         }
@@ -1201,6 +1265,7 @@ function resolveLanding(
     player.jailTurns = 0;
     player.position = JAIL_POSITION;
     state.doublesCount = 0;
+    state.stats[player.id].jailTimes += 1;
     state.log.push(`${player.name} was sent to Kirikiri Prison!`);
     state.phase = "awaiting-end-turn";
   } else if (tile.type === "chance" || tile.type === "hustle") {
@@ -1310,6 +1375,7 @@ function applyCardAction(
       player.jailTurns = 0;
       player.position = JAIL_POSITION;
       state.doublesCount = 0;
+      state.stats[player.id].jailTimes += 1;
       state.log.push(`${player.name} was sent to Kirikiri Prison!`);
       state.phase = "awaiting-end-turn";
       break;
@@ -1459,6 +1525,40 @@ function applyCardAction(
       // refreshes the window.
       state.blackout = { untilRound: state.currentTurn + 1 };
       state.log.push(`⚡ NEPA don take light! Total blackout — no rent until the round waka back around.`);
+      state.phase = "awaiting-end-turn";
+      break;
+    }
+
+    case "airportStrike": {
+      state.airportStrike = { untilRound: state.currentTurn + 1 };
+      state.log.push(`✈️ Airport Strike! Aviation workers don lock gate — no airport rent until the round waka back around.`);
+      state.phase = "awaiting-end-turn";
+      break;
+    }
+
+    case "propertyBonus": {
+      let housesCount = 0;
+      let hotelsCount = 0;
+
+      Object.values(state.tiles).forEach((tileState) => {
+        if (tileState.ownerId === player.id) {
+          if (tileState.houses === 5) {
+            hotelsCount += 1;
+          } else if (tileState.houses >= 1 && tileState.houses <= 4) {
+            housesCount += tileState.houses;
+          }
+        }
+      });
+
+      const bonus = housesCount * action.perHouse + hotelsCount * action.perHotel;
+      player.cash += bonus;
+      
+      if (bonus > 0) {
+        state.log.push(`📈 Market Boom! ${player.name} collected ₦${bonus.toLocaleString("en-NG")} for owning ${housesCount} house(s) and ${hotelsCount} hotel(s).`);
+      } else {
+        state.log.push(`📈 Market Boom! ${player.name} collected nothing (no developed properties).`);
+      }
+      
       state.phase = "awaiting-end-turn";
       break;
     }

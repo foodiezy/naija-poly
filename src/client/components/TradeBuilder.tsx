@@ -15,6 +15,7 @@ interface Props {
   onSendAction: (action: Action) => void;
   onClose: () => void;
   liveState?: RoomState | undefined;
+  initialOffer?: TradeOffer;
 }
 
 function groupColorVar(tile: Tile): string {
@@ -31,17 +32,20 @@ function tileSubLabel(tile: Tile): string {
   return "";
 }
 
-export default function TradeBuilder({ engineState, mySessionId, onSendAction, onClose, liveState }: Props) {
+export default function TradeBuilder({ engineState, mySessionId, onSendAction, onClose, liveState, initialOffer }: Props) {
   const { players, tiles } = engineState;
   const me = players.find((p) => p.id === mySessionId);
 
-  const [tradeTargetId, setTradeTargetId] = useState("");
-  const [tradeGiveCash, setTradeGiveCash] = useState(0);
-  const [tradeGetCash, setTradeGetCash] = useState(0);
-  const [tradeGiveTiles, setTradeGiveTiles] = useState<number[]>([]);
-  const [tradeGetTiles, setTradeGetTiles] = useState<number[]>([]);
+  const [tradeTargetId, setTradeTargetId] = useState(initialOffer ? initialOffer.toId : "");
+  const [tradeGiveCash, setTradeGiveCash] = useState(initialOffer ? initialOffer.giveCash : 0);
+  const [tradeGetCash, setTradeGetCash] = useState(initialOffer ? initialOffer.getCash : 0);
+  const [tradeGiveTiles, setTradeGiveTiles] = useState<number[]>(initialOffer ? initialOffer.giveTiles : []);
+  const [tradeGetTiles, setTradeGetTiles] = useState<number[]>(initialOffer ? initialOffer.getTiles : []);
 
-  useEffect(() => { setTradeGetTiles([]); }, [tradeTargetId]);
+  useEffect(() => { 
+    if (initialOffer && tradeTargetId === initialOffer.toId && tradeGetTiles.length === initialOffer.getTiles.length) return;
+    setTradeGetTiles([]); 
+  }, [tradeTargetId]);
 
   const getToken = (id: string) => tokenEmoji(liveState?.lobbyPlayers?.get(id)?.tokenId);
 

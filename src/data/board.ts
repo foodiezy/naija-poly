@@ -108,7 +108,9 @@ export type CardAction =
   | { kind: "repairs"; perHouse: number; perHotel: number }
   | { kind: "nearestAirport" } // advance to next airport; rent payable is 2x
   | { kind: "nearestUtility" } // advance to next utility
-  | { kind: "blackout" }; // chaos mode: NEPA takes light — no rent for a round
+  | { kind: "blackout" } // chaos mode: NEPA takes light — no rent for a round
+  | { kind: "airportStrike" } // chaos mode: no airport rent for a round
+  | { kind: "propertyBonus"; perHouse: number; perHotel: number }; // chaos mode: market boom
 
 export interface Card {
   id: string;
@@ -373,6 +375,22 @@ export const HUSTLE_CARDS: Card[] = [
 export const CHAOS_CHANCE_CARDS: Card[] = [
   { id: "cx01", text: "⚡ NEPA don take light! Total blackout — nobody fit collect rent until the round waka back around.",
     action: { kind: "blackout" } },
+  { id: "cx02", text: "⛽ Fuel Scarcity! Waka back 3 spaces and you no fit move quick.",
+    action: { kind: "moveRelative", steps: -3 } },
+  { id: "cx03", text: "📈 Market Boom! Collect ₦20,000 per house and ₦100,000 per hotel you own.",
+    action: { kind: "propertyBonus", perHouse: 20_000, perHotel: 100_000 } },
+  { id: "cx04", text: "🎉 Owambe Expenses! You spray money for party: pay each player ₦20,000.",
+    action: { kind: "payEach", amount: 20_000 } },
+  { id: "cx05", text: "💻 Bank Network Failure! Transfer hang, you lose ₦50,000.",
+    action: { kind: "money", amount: -50_000 } },
+  { id: "cx06", text: "🚧 Area Boys Levy! Settle the boys on your street. Pay ₦30,000.",
+    action: { kind: "money", amount: -30_000 } },
+  { id: "cx07", text: "📝 Election Contract! Your candidate win, collect ₦30,000 from each player.",
+    action: { kind: "collectFromEach", amount: 30_000 } },
+  { id: "cx08", text: "❄️ Rent Freeze! Government say no landlord fit collect rent until next round.",
+    action: { kind: "blackout" } }, // re-uses blackout mechanic
+  { id: "cx09", text: "✈️ Airport Strike! Aviation workers don lock gate. No airport rent collected until next round.",
+    action: { kind: "airportStrike" } },
 ];
 
 // Every card the Chance deck can draw, base + chaos, for id lookups.

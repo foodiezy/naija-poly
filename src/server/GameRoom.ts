@@ -26,6 +26,7 @@ export class GameRoomState extends Schema {
   @type("number") turnLimit: number = 0; // 0 = unlimited
   @type("boolean") freeParkingJackpot: boolean = false;
   @type("boolean") chaosMode: boolean = false; // NEPA blackout & other chaos cards
+  @type("boolean") secretObjectives: boolean = false; // Hidden objectives for bonuses
   @type("boolean") turnTimerEnabled: boolean = false;
   @type("number") turnTimeoutSecs: number = 120;
   @type("number") turnDeadline: number = 0; // epoch ms; 0 = no active timer
@@ -297,7 +298,7 @@ export class GameRoom extends Room<GameRoomState> {
     });
 
     // Message handler to update lobby settings
-    this.onMessage("UPDATE_SETTINGS", (client, message: { startingCash?: number; turnLimit?: number; freeParkingJackpot?: boolean; chaosMode?: boolean; turnTimerEnabled?: boolean; turnTimeoutSecs?: number }) => {
+    this.onMessage("UPDATE_SETTINGS", (client, message: { startingCash?: number; turnLimit?: number; freeParkingJackpot?: boolean; chaosMode?: boolean; secretObjectives?: boolean; turnTimerEnabled?: boolean; turnTimeoutSecs?: number }) => {
       if (this.state.status !== "lobby") {
         this.sendError(client, "Cannot change settings once game starts");
         return;
@@ -328,6 +329,9 @@ export class GameRoom extends Room<GameRoomState> {
       }
       if (message.chaosMode !== undefined) {
         this.state.chaosMode = !!message.chaosMode;
+      }
+      if (message.secretObjectives !== undefined) {
+        this.state.secretObjectives = !!message.secretObjectives;
       }
       if (message.turnTimerEnabled !== undefined) {
         this.state.turnTimerEnabled = !!message.turnTimerEnabled;
@@ -397,6 +401,7 @@ export class GameRoom extends Room<GameRoomState> {
         turnLimit: this.state.turnLimit,
         freeParkingJackpot: this.state.freeParkingJackpot,
         chaosMode: this.state.chaosMode,
+        secretObjectives: this.state.secretObjectives,
       });
 
       // Map custom lobby player display names back to engine players

@@ -146,6 +146,15 @@ export default function RoomLobbyView({
               </span>
             </label>
 
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", cursor: "pointer", marginBottom: "0.75rem" }}>
+              <input
+                type="checkbox"
+                checked={roomState?.secretObjectives || false}
+                onChange={(e) => onUpdateSettings({ secretObjectives: e.target.checked })}
+              />
+              Secret Objectives
+            </label>
+
             <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", cursor: "pointer", marginBottom: "0.5rem" }}>
               <input
                 type="checkbox"

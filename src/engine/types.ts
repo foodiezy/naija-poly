@@ -8,6 +8,8 @@ import type { ColorGroup } from "../data/board";
 
 export type PlayerId = string;
 
+export type Objective = "own_2_airports" | "complete_color_set" | "cash_2m" | "own_4_properties" | "first_hotel";
+
 export interface Player {
   id: PlayerId;
   name: string;
@@ -19,6 +21,9 @@ export interface Player {
   bankrupt: boolean;
   kicked?: boolean; // True if eliminated by vote-kick
   order: number; // turn order
+  aiStyle?: "AggressiveBidder" | "PropertyHoarder" | "Builder" | "CashSaver" | "Trader" | "Normal";
+  secretObjective?: Objective;
+  objectiveCompleted?: boolean;
 }
 
 // Runtime ownership/development state for a single ownable tile, keyed by pos.
@@ -58,6 +63,7 @@ export interface GameSettings {
   turnLimit: number; // 0 = unlimited
   freeParkingJackpot: boolean;
   chaosMode: boolean; // adds Naija "chaos" cards (e.g. NEPA blackout) to the deck
+  secretObjectives?: boolean;
 }
 
 export interface GameState {
@@ -82,7 +88,15 @@ export interface GameState {
   // Chaos-mode "NEPA blackout": while set, no rent is collected. Ends once the
   // round counter reaches `untilRound` (i.e. play wraps back around once).
   blackout?: { untilRound: number } | null;
+  // Chaos-mode "Airport Strike": while set, no rent is collected on airports.
+  airportStrike?: { untilRound: number } | null;
   votekicks: Record<PlayerId, PlayerId[]>; // targetId -> array of voterIds
+  stats: Record<PlayerId, {
+    rentPaid: number;
+    highestAuctionBid: number;
+    propertiesBought: number;
+    jailTimes: number;
+  }>;
 }
 
 // ---- Actions the reducer will accept -------------------------------------

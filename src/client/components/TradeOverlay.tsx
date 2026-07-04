@@ -15,6 +15,7 @@ interface Props {
   mySessionId: string;
   onSendAction: (action: Action) => void;
   liveState?: RoomState | undefined;
+  onCounterOffer?: (reversedTrade: TradeOffer) => void;
 }
 
 function groupColorVar(tile: Tile): string {
@@ -31,7 +32,7 @@ function tileSubLabel(tile: Tile): string {
   return "";
 }
 
-export default function TradeOverlay({ activeTrade, players, tiles, mySessionId, onSendAction, liveState }: Props) {
+export default function TradeOverlay({ activeTrade, players, tiles, mySessionId, onSendAction, liveState, onCounterOffer }: Props) {
   if (activeTrade.toId !== mySessionId) return null;
 
   const proposer = players.find((p) => p.id === activeTrade.fromId);
@@ -163,6 +164,25 @@ export default function TradeOverlay({ activeTrade, players, tiles, mySessionId,
           >
             Decline
           </button>
+          {onCounterOffer && (
+            <button
+              className="trade-action-btn cancel"
+              style={{ background: "var(--color-gold)", color: "#000", border: "none" }}
+              onClick={() => {
+                onSendAction({ type: "RESPOND_TRADE", accept: false });
+                onCounterOffer({
+                  fromId: mySessionId,
+                  toId: activeTrade.fromId,
+                  giveCash: activeTrade.getCash,
+                  getCash: activeTrade.giveCash,
+                  giveTiles: activeTrade.getTiles,
+                  getTiles: activeTrade.giveTiles
+                });
+              }}
+            >
+              Counter Offer
+            </button>
+          )}
           <button
             className="trade-action-btn propose"
             disabled={!canAfford}
