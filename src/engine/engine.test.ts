@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createGame, applyAction } from "./engine";
-import { STARTING_CASH, GO_SALARY, JAIL_FINE } from "../data/board";
+import { STARTING_CASH, GO_SALARY, JAIL_FINE, BOARD } from "../data/board";
 
 // Helper stateful RNG mock
 class MockRNG {
@@ -53,7 +53,7 @@ describe("Game Engine", () => {
       expect(state.hustleOrder).toHaveLength(16);
       expect(state.chancePtr).toBe(0);
       expect(state.hustlePtr).toBe(0);
-      expect(state.log[0]).toBe("Game started.");
+      expect(state.log[0]).toBe("The game has started!");
     });
 
     it("throws when too few players", () => {
@@ -618,6 +618,44 @@ describe("Game Engine", () => {
       expect(nextState.players[1].cash).toBe(STARTING_CASH + 50_000);
     });
 
+    it("does not let a responder counter an active trade off-turn via PROPOSE_TRADE", () => {
+      const state = createGame(["p1", "p2"]);
+      state.phase = "awaiting-end-turn";
+      state.tiles[1].ownerId = "p1";
+      state.tiles[3].ownerId = "p2";
+
+      const tradeOffer = {
+        fromId: "p1",
+        toId: "p2",
+        giveCash: 0,
+        getCash: 0,
+        giveTiles: [1],
+        getTiles: [3],
+      };
+
+      const proposed = applyAction(state, "p1", { type: "PROPOSE_TRADE", trade: tradeOffer });
+      expect(proposed.activeTrade).toEqual(tradeOffer);
+
+      // p2 is not the current player (it's still p1's turn context), so p2
+      // trying to counter-propose via PROPOSE_TRADE must be rejected outright
+      // rather than silently overwriting the pending offer.
+      const counterOffer = {
+        fromId: "p2",
+        toId: "p1",
+        giveCash: 0,
+        getCash: 0,
+        giveTiles: [3],
+        getTiles: [1],
+      };
+      expect(() => applyAction(proposed, "p2", { type: "PROPOSE_TRADE", trade: counterOffer })).toThrow(
+        "It is not player p2's turn"
+      );
+
+      // The original trade remains intact and untouched.
+      expect(proposed.activeTrade).toEqual(tradeOffer);
+      expect(proposed.activeTrade?.toId).toBe("p2");
+    });
+
     it("rejects trade offers with non-integer or NaN cash (wire poisoning)", () => {
       const state = createGame(["p1", "p2"]);
       state.tiles[1].ownerId = "p1";
@@ -933,6 +971,214 @@ describe("Game Engine", () => {
       let state = createGame(["p1", "p2", "p3"]);
       state = applyAction(state, "p3", { type: "FORFEIT" });
       expect(() => applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" })).toThrow();
+    });
+
+    // BUG-1: a stale vote from a player who later forfeits still counts toward
+    // majority, so a single live voter can kick a target out of a 3-player
+    // active set (votes.length > activePlayersCount / 2 uses a snapshot of
+    // votes that includes forfeited voters). Flip to it(...) when fixed.
+    it.fails("does not let a stale voter's vote count toward majority", () => {
+      let state = createGame(["p1", "p2", "p3", "p4", "p5"]);
+      state = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p5" });
+      state = applyAction(state, "p2", { type: "VOTE_KICK", targetId: "p5" });
+      // 2 votes tallied, 5 active players -> no kick yet.
+      expect(state.players.find((p) => p.id === "p5")!.bankrupt).toBe(false);
+
+      state = applyAction(state, "p1", { type: "FORFEIT" });
+      state = applyAction(state, "p2", { type: "FORFEIT" });
+      // Active players are now p3, p4, p5. Only p3 casts a live vote.
+      state = applyAction(state, "p3", { type: "VOTE_KICK", targetId: "p5" });
+
+      const target = state.players.find((p) => p.id === "p5")!;
+      // One live vote (p3) among 3 active players is not a majority.
+      expect(target.bankrupt).toBe(false);
+    });
+
+    // BUG-2: a voter's tallied vote is never cleaned up when that voter later
+    // forfeits, leaving a stale voterId in votekicks[target] forever.
+    // Flip to it(...) when fixed.
+    it.fails("cleans up a voter's vote when that voter forfeits", () => {
+      let state = createGame(["p1", "p2", "p3", "p4"]);
+      state = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p4" });
+      state = applyAction(state, "p1", { type: "FORFEIT" });
+      expect(state.votekicks["p4"]).not.toContain("p1");
+    });
+
+    // BUG-3: when the current player is vote-kicked while in debt, owedToId
+    // is left pointing at the stale creditor instead of being cleared, even
+    // though the debtor (and their turn) has just been eliminated via FORFEIT.
+    // Flip to it(...) when fixed.
+    it.fails("clears owedToId when the current (indebted) player is vote-kicked", () => {
+      let state = createGame(["p1", "p2", "p3"]);
+      state.currentPlayerIndex = 2;
+      state.phase = "awaiting-buy-decision";
+      state.owedToId = "p1";
+      state.players[2].cash = -5_000;
+
+      state = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" });
+      state = applyAction(state, "p2", { type: "VOTE_KICK", targetId: "p3" }); // majority -> FORFEIT p3
+
+      expect(state.players[2].bankrupt).toBe(true);
+      expect(state.currentPlayerIndex).toBe(0);
+      expect(state.owedToId).toBeNull();
+    });
+
+    // BUG-4: because BUG-3 leaves owedToId stale, a later unrelated
+    // DECLARE_BANKRUPT can misroute the bankrupt player's properties to the
+    // stale creditor instead of the bank. Flip to it(...) when fixed.
+    it.fails("does not misroute a later bankruptcy to a stale creditor", () => {
+      let state = createGame(["p1", "p2", "p3"]);
+      state.currentPlayerIndex = 2;
+      state.phase = "awaiting-buy-decision";
+      state.owedToId = "p1";
+      state.players[2].cash = -5_000;
+
+      state = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" });
+      state = applyAction(state, "p2", { type: "VOTE_KICK", targetId: "p3" }); // majority -> FORFEIT p3, owedToId left stale at "p1"
+
+      // Now an unrelated bankruptcy happens: p2 is in debt and declares bankrupt.
+      state.tiles[3].ownerId = "p2";
+      state.players[1].cash = -1;
+      state.currentPlayerIndex = 1; // make it p2's own turn context
+
+      state = applyAction(state, "p2", { type: "DECLARE_BANKRUPT" });
+
+      // p2's property should go to the bank (no one is owed anything for p2's
+      // debt), not to the stale "p1" creditor left behind by the vote-kick.
+      expect(state.tiles[3].ownerId).toBeNull();
+    });
+
+    it("kicks the standing high bidder mid-auction: bid voided, auction continues", () => {
+      let state = createGame(["p1", "p2", "p3"]);
+      state.currentPlayerIndex = 0;
+      state.phase = "auction";
+      state.auctionState = {
+        tilePos: 1,
+        highestBid: 50_000,
+        highestBidderId: "p3",
+        participantIds: ["p1", "p2", "p3"],
+        passedIds: ["p1"],
+        minIncrement: 10_000,
+        bidIncrements: [10_000, 20_000, 50_000],
+        bidDurationMs: 12_000,
+        deadline: null,
+      };
+
+      state = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" });
+      state = applyAction(state, "p2", { type: "VOTE_KICK", targetId: "p3" }); // majority -> FORFEIT p3
+
+      expect(state.phase).toBe("auction");
+      expect(state.auctionState?.highestBidderId).toBeNull();
+      expect(state.auctionState?.highestBid).toBe(0);
+      expect(state.auctionState?.participantIds).toEqual(["p1", "p2"]);
+      expect(state.tiles[1].ownerId).toBeNull();
+      expect(state.players[2].bankrupt).toBe(true);
+    });
+
+    it("kicking the sole remaining bidder (also current player) closes the auction with no sale and advances the turn", () => {
+      let state = createGame(["p1", "p2", "p3"]);
+      state.currentPlayerIndex = 2;
+      state.phase = "auction";
+      state.auctionState = {
+        tilePos: 1,
+        highestBid: 0,
+        highestBidderId: null,
+        participantIds: ["p1", "p2", "p3"],
+        passedIds: ["p1", "p2"],
+        minIncrement: 10_000,
+        bidIncrements: [10_000, 20_000, 50_000],
+        bidDurationMs: 12_000,
+        deadline: null,
+      };
+
+      state = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" });
+      state = applyAction(state, "p2", { type: "VOTE_KICK", targetId: "p3" }); // majority -> FORFEIT p3
+
+      expect(state.auctionState).toBeNull();
+      expect(state.phase).toBe("awaiting-roll");
+      expect(state.players[state.currentPlayerIndex].bankrupt).toBe(false);
+      expect(state.tiles[1].ownerId).toBeNull();
+    });
+
+    it("vote-kick input purity: does not mutate the input state, and applies the majority kick", () => {
+      const state = createGame(["p1", "p2", "p3"]);
+      const s1 = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" });
+      const snapshot = JSON.stringify(s1);
+
+      const s2 = applyAction(s1, "p2", { type: "VOTE_KICK", targetId: "p3" }); // majority -> recursive FORFEIT
+
+      expect(JSON.stringify(s1)).toBe(snapshot);
+      expect(s2.players[2].bankrupt).toBe(true);
+    });
+  });
+
+  describe("Secret objectives", () => {
+    // BUG-5: the objectives-completion sweep runs unconditionally at the end
+    // of every applyAction call, regardless of whether the acting player has
+    // anything to do with the objective. An unrelated VOTE_KICK action still
+    // triggers the (Naira 500,000) bonus payout for an already-qualifying player.
+    // Flip to it(...) when fixed.
+    it.fails("does not fire an objective bonus from an unrelated player's action", () => {
+      let state = createGame(["p1", "p2", "p3"], { secretObjectives: true });
+      state.players.forEach((p) => {
+        p.secretObjective = undefined;
+        p.objectiveCompleted = false;
+      });
+      state.players[0].secretObjective = "cash_2m";
+      state.players[0].cash = 2_000_000;
+      state.players[0].objectiveCompleted = false;
+
+      state = applyAction(state, "p2", { type: "VOTE_KICK", targetId: "p3" });
+
+      expect(state.players[0].cash).toBe(2_000_000);
+      expect(state.players[0].objectiveCompleted).toBe(false);
+    });
+
+    it("fires the objective bonus exactly once", () => {
+      let state = createGame(["p1", "p2"], { secretObjectives: true });
+      state.players.forEach((p) => {
+        p.secretObjective = undefined;
+        p.objectiveCompleted = false;
+      });
+      state.players[0].secretObjective = "own_4_properties";
+      state.tiles[1].ownerId = "p1";
+      state.tiles[3].ownerId = "p1";
+      state.tiles[6].ownerId = "p1";
+      state.currentPlayerIndex = 0;
+      state.phase = "awaiting-buy-decision";
+      state.players[0].position = 8;
+      state.players[0].cash = (BOARD[8] as { price: number }).price + 5;
+
+      state = applyAction(state, "p1", { type: "BUY" }); // 4th property -> objective completes
+      state = applyAction(state, "p1", { type: "END_TURN" });
+
+      expect(state.players[0].objectiveCompleted).toBe(true);
+      expect(state.players[0].cash).toBe(5 + 500_000);
+    });
+
+    it("does not double-run the objectives pass through recursive VOTE_KICK->FORFEIT", () => {
+      let state = createGame(["p1", "p2", "p3"], { secretObjectives: true });
+      state.players.forEach((p) => {
+        p.secretObjective = undefined;
+        p.objectiveCompleted = false;
+      });
+      state.players[0].secretObjective = "cash_2m";
+      state.players[0].cash = 2_000_000;
+      state.players[0].objectiveCompleted = false;
+
+      // p2's vote fires the bonus once (unrelated-action bug from T5, still
+      // only a single pass per applyAction call).
+      state = applyAction(state, "p2", { type: "VOTE_KICK", targetId: "p3" });
+      expect(state.players[0].cash).toBe(2_500_000);
+
+      // p1's vote reaches majority and recursively calls FORFEIT via
+      // applyAction; the objectives pass must not run a second time for the
+      // same completed objective.
+      state = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" });
+
+      expect(state.players[0].cash).toBe(2_500_000);
+      expect(state.players[0].objectiveCompleted).toBe(true);
+      expect(state.players[2].bankrupt).toBe(true);
     });
   });
 });
