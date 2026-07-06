@@ -83,6 +83,7 @@ const roomState: RoomState = {
   turnLimit: 0,
   freeParkingJackpot: false,
   chaosMode: false,
+  secretObjectives: false,
   turnTimerEnabled: false,
   turnTimeoutSecs: 120,
   turnDeadline: 0,

@@ -188,7 +188,7 @@ export default function GameOverModal({ engineState, roomState, mySessionId, onR
               ];
 
               return awards.map(award => {
-                let topPlayer = null;
+                let topPlayer: Player | null = null;
                 let topValue = 0;
                 engineState.players.forEach(p => {
                   const val = award.getVal(engineState.stats[p.id]);
@@ -198,15 +198,16 @@ export default function GameOverModal({ engineState, roomState, mySessionId, onR
                   }
                 });
 
-                if (!topPlayer || topValue === 0) return null;
+                if (topValue === 0) return null;
+                const winner = topPlayer!;
 
-                const token = tokenEmoji(roomState?.lobbyPlayers?.get(topPlayer.id)?.tokenId);
+                const token = tokenEmoji(roomState?.lobbyPlayers?.get(winner.id)?.tokenId);
 
                 return (
                   <div key={award.id} style={{ background: "rgba(0,0,0,0.2)", padding: "0.75rem", borderRadius: "var(--radius-md)", borderLeft: "3px solid var(--color-gold)" }}>
                     <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "0.25rem" }}>{award.title}</div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontWeight: "bold" }}>{token} {topPlayer.name}</span>
+                      <span style={{ fontWeight: "bold" }}>{token} {winner.name}</span>
                       <span style={{ color: "var(--color-gold)" }}>{award.format(topValue)}</span>
                     </div>
                   </div>

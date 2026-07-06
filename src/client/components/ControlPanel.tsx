@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Room } from "colyseus.js";
-import { GameState, Action } from "../../engine/types";
+import { GameState, Action, TradeOffer } from "../../engine/types";
 import { tokenEmoji } from "../../data/tokens";
 import { tokenName } from "../../data/tokens";
 import { RoomState } from "../../shared/room";

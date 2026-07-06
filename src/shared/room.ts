@@ -15,6 +15,7 @@ export interface RoomSettings {
   turnLimit?: number;
   freeParkingJackpot?: boolean;
   chaosMode?: boolean;
+  secretObjectives?: boolean;
   turnTimerEnabled?: boolean;
   turnTimeoutSecs?: number;
 }
@@ -32,6 +33,7 @@ export interface RoomState {
   turnLimit: number;
   freeParkingJackpot: boolean;
   chaosMode: boolean;
+  secretObjectives: boolean;
   turnTimerEnabled: boolean;
   turnTimeoutSecs: number;
   turnDeadline: number;

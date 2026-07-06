@@ -118,6 +118,7 @@ export function useGameRoom() {
         turnLimit: state.turnLimit,
         freeParkingJackpot: state.freeParkingJackpot,
         chaosMode: state.chaosMode,
+        secretObjectives: state.secretObjectives,
         turnTimerEnabled: state.turnTimerEnabled,
         turnTimeoutSecs: state.turnTimeoutSecs,
         turnDeadline: state.turnDeadline,

@@ -21,7 +21,7 @@ import {
   auctionIncrements,
   type PropertyTile,
 } from "../data/board";
-import type { Action, GameState, PlayerId, TileState, Player, GameSettings } from "./types";
+import type { Action, GameState, PlayerId, TileState, Player, GameSettings, Objective } from "./types";
 
 // Move the turn to the next non-bankrupt player and reset per-turn state.
 // Used when the active player can no longer act (e.g. forfeited a turn by
@@ -1223,7 +1223,7 @@ function resolveLanding(
         }
 
         player.cash -= rent;
-        nextState.stats[player.id].rentPaid += rent;
+        state.stats[player.id].rentPaid += rent;
         if (player.cash < 0) {
           state.owedToId = tileState.ownerId;
         }

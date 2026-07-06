@@ -1,0 +1,12 @@
+#!/bin/sh
+# Pre-push gate: the full-game simulation must pass before anything ships.
+# A rent-path regression soft-locks every game, so this is non-negotiable.
+# Installed via: git config core.hooksPath .githooks  (see package.json prepare script)
+
+echo "[pre-push] typecheck..."
+npm run --silent typecheck || exit 1
+
+echo "[pre-push] full-game simulation + engine tests..."
+npx vitest run src/engine/playground.test.ts src/engine/engine.test.ts || exit 1
+
+echo "[pre-push] OK"

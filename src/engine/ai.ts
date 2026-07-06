@@ -27,24 +27,6 @@ function groupTiles(tile: PropertyTile): PropertyTile[] {
   );
 }
 
-// Can `playerId` legally build a house on `pos` right now? Mirrors the engine's
-// build rules (full group, none mortgaged, even-build, can afford, < hotel).
-function canBuild(state: GameState, playerId: PlayerId, pos: number): boolean {
-  const tile = BOARD[pos];
-  if (tile.type !== "property") return false;
-  const ts = state.tiles[pos];
-  if (!ts || ts.ownerId !== playerId || ts.mortgaged || ts.houses >= 5) return false;
-
-  const group = groupTiles(tile);
-  if (!group.every((t) => state.tiles[t.pos]?.ownerId === playerId)) return false;
-  if (group.some((t) => state.tiles[t.pos]?.mortgaged)) return false;
-  // Even build: can't exceed the least-developed property in the group.
-  if (group.some((t) => (state.tiles[t.pos]?.houses ?? 0) < ts.houses)) return false;
-
-  const me = state.players.find((p) => p.id === playerId);
-  return !!me && me.cash >= tile.houseCost + CASH_BUFFER;
-}
-
 // A mortgageable property the player owns (unmortgaged, no buildings in group).
 function findMortgageable(state: GameState, playerId: PlayerId): number | null {
   for (const tile of BOARD) {
