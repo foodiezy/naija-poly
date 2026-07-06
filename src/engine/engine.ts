@@ -39,6 +39,7 @@ function advanceTurnSkippingBankrupt(state: GameState): void {
   state.dice = null;
   state.phase = "awaiting-roll";
   state.log.push(`It is now ${state.players[nextIndex].name}'s turn.`);
+  evaluateObjectivesAtBoundary(state);
 }
 
 // Award the auctioned tile to the standing high bidder (or close with no sale),
@@ -64,6 +65,66 @@ function finalizeAuction(state: GameState): void {
   // strand the turn on a bankrupt player.
   if (state.players[state.currentPlayerIndex].bankrupt) {
     advanceTurnSkippingBankrupt(state);
+  }
+}
+
+// Award the one-shot secret-objective bonus. Called ONLY at a turn boundary
+// (turn passes to the next player, or the game ends), never after arbitrary
+// mid-turn actions. INVARIANT (owner): the predicate must be TRUE *AT* the
+// boundary — not "was ever true during the turn." All predicates below
+// recompute from live state and never latch, so a player who crosses a
+// threshold mid-turn and drops back before the boundary correctly gets nothing.
+// Bails if an auction or trade is still pending so cash is never injected into
+// an open auction/trade; evaluation defers to the next clean boundary.
+function evaluateObjectivesAtBoundary(state: GameState): void {
+  if (!state.settings.secretObjectives) return;
+  if (state.phase === "auction" || state.auctionState) return;
+  if (state.activeTrade) return;
+
+  state.players.forEach(p => {
+    if (p.secretObjective && !p.objectiveCompleted && !p.bankrupt) {
+      let completed = false;
+      switch (p.secretObjective) {
+        case "own_2_airports":
+          completed = BOARD.filter(t => t.type === "airport" && state.tiles[t.pos]?.ownerId === p.id).length >= 2;
+          break;
+        case "complete_color_set": {
+          const groups = new Set(BOARD.filter(t => t.type === "property" && state.tiles[t.pos]?.ownerId === p.id).map(t => (t as PropertyTile).group));
+          for (const g of groups) {
+             const allInGroup = BOARD.filter(t => t.type === "property" && (t as PropertyTile).group === g);
+             if (allInGroup.every(t => state.tiles[t.pos]?.ownerId === p.id)) {
+               completed = true;
+               break;
+             }
+          }
+          break;
+        }
+        case "cash_2m":
+          if (p.cash >= 2_000_000) completed = true;
+          break;
+        case "own_4_properties":
+          completed = BOARD.filter(t => (t.type === "property" || t.type === "airport" || t.type === "utility") && state.tiles[t.pos]?.ownerId === p.id).length >= 4;
+          break;
+        case "first_hotel":
+          completed = BOARD.some(t => t.type === "property" && state.tiles[t.pos]?.ownerId === p.id && state.tiles[t.pos]?.houses === 5);
+          break;
+      }
+      if (completed) {
+        p.objectiveCompleted = true;
+        p.cash += 500_000;
+        state.log.push(`🎯 Secret Objective Completed! ${p.name} earned ₦500,000 bonus.`);
+      }
+    }
+  });
+}
+
+// Remove an eliminated player from vote-kick bookkeeping: they can no longer
+// be a live voter in kicks against others, nor a valid target. Used by both
+// FORFEIT and DECLARE_BANKRUPT so ghost votes/targets never linger.
+function pruneVoteKicks(state: GameState, eliminatedPlayerId: PlayerId): void {
+  delete state.votekicks[eliminatedPlayerId];
+  for (const targetId of Object.keys(state.votekicks)) {
+    state.votekicks[targetId] = state.votekicks[targetId].filter((id) => id !== eliminatedPlayerId);
   }
 }
 
@@ -703,6 +764,7 @@ export function applyAction(
               nextState.winnerId = winnerId;
               nextState.phase = "game-over";
               nextState.log.push(`Turn limit of ${nextState.settings.turnLimit} rounds was reached! ${winnerName} wins the game with a net worth of ₦${highestNetWorth.toLocaleString("en-NG")}!`);
+              evaluateObjectivesAtBoundary(nextState);
               return nextState;
             }
           }
@@ -726,6 +788,7 @@ export function applyAction(
         nextState.dice = null;
         nextState.phase = "awaiting-roll";
         nextState.log.push(`It is now ${nextState.players[nextIndex].name}'s turn.`);
+        evaluateObjectivesAtBoundary(nextState);
       }
       break;
     }
@@ -958,6 +1021,9 @@ export function applyAction(
       player.bankrupt = true;
       nextState.log.push(`${player.name} left the game and forfeited.`);
 
+      // Ghost votes: this player can no longer be a live voter or a valid target.
+      pruneVoteKicks(nextState, playerId);
+
       // Return all their holdings to the bank (demolish, clear ownership).
       Object.keys(nextState.tiles).forEach((posStr) => {
         const pos = parseInt(posStr, 10);
@@ -965,6 +1031,17 @@ export function applyAction(
           nextState.tiles[pos] = { ownerId: null, houses: 0, mortgaged: false };
         }
       });
+
+      // If this player was the current player carrying a debt, the debt (and
+      // whoever it was owed to) is now moot — they're gone and it's no longer
+      // their turn. Only clear it when THIS player was the debtor; a different
+      // player's pending debt must be left untouched.
+      if (
+        nextState.owedToId !== null &&
+        nextState.players[nextState.currentPlayerIndex].id === playerId
+      ) {
+        nextState.owedToId = null;
+      }
 
       // Cancel any pending trade they were part of.
       if (
@@ -1002,6 +1079,7 @@ export function applyAction(
         if (remaining.length === 1) {
           nextState.log.push(`${remaining[0].name} has won the game!`);
         }
+        evaluateObjectivesAtBoundary(nextState);
         break;
       }
 
@@ -1024,6 +1102,9 @@ export function applyAction(
 
       bankruptPlayer.bankrupt = true;
       const creditorId = nextState.owedToId || "bank";
+
+      // Ghost votes: this player can no longer be a live voter or a valid target.
+      pruneVoteKicks(nextState, playerId);
 
       nextState.log.push(`${bankruptPlayer.name} declared bankruptcy!`);
 
@@ -1086,6 +1167,7 @@ export function applyAction(
           nextState.log.push(`It is now ${nextState.players[nextIndex].name}'s turn.`);
         }
       }
+      evaluateObjectivesAtBoundary(nextState);
       break;
     }
 
@@ -1116,8 +1198,9 @@ export function applyAction(
       votes.push(playerId);
       nextState.log.push(`${voterPlayer.name} voted to commot ${targetPlayer.name} (${votes.length} votes).`);
       
-      const activePlayersCount = nextState.players.filter(p => !p.bankrupt).length;
-      if (votes.length > activePlayersCount / 2) {
+      const activePlayerIds = new Set(nextState.players.filter(p => !p.bankrupt).map(p => p.id));
+      const liveVoteCount = votes.filter(id => activePlayerIds.has(id)).length;
+      if (liveVoteCount > activePlayerIds.size / 2) {
         targetPlayer.kicked = true;
         nextState.log.push(`Vote majority reached! ${targetPlayer.name} don commot from the game.`);
         // Run the FORFEIT action directly to safely and fully eliminate them (handles auctions/trades/properties)
@@ -1128,43 +1211,6 @@ export function applyAction(
 
     default:
       throw new Error(`Action type ${(action as { type: string }).type} is not implemented yet`);
-  }
-
-  if (nextState.settings.secretObjectives) {
-    nextState.players.forEach(p => {
-      if (p.secretObjective && !p.objectiveCompleted && !p.bankrupt) {
-        let completed = false;
-        switch (p.secretObjective) {
-          case "own_2_airports":
-            completed = BOARD.filter(t => t.type === "airport" && nextState.tiles[t.pos]?.ownerId === p.id).length >= 2;
-            break;
-          case "complete_color_set":
-            const groups = new Set(BOARD.filter(t => t.type === "property" && nextState.tiles[t.pos]?.ownerId === p.id).map(t => (t as PropertyTile).group));
-            for (const g of groups) {
-               const allInGroup = BOARD.filter(t => t.type === "property" && (t as PropertyTile).group === g);
-               if (allInGroup.every(t => nextState.tiles[t.pos]?.ownerId === p.id)) {
-                 completed = true;
-                 break;
-               }
-            }
-            break;
-          case "cash_2m":
-            if (p.cash >= 2_000_000) completed = true;
-            break;
-          case "own_4_properties":
-            completed = BOARD.filter(t => (t.type === "property" || t.type === "airport" || t.type === "utility") && nextState.tiles[t.pos]?.ownerId === p.id).length >= 4;
-            break;
-          case "first_hotel":
-            completed = BOARD.some(t => t.type === "property" && nextState.tiles[t.pos]?.ownerId === p.id && nextState.tiles[t.pos]?.houses === 5);
-            break;
-        }
-        if (completed) {
-          p.objectiveCompleted = true;
-          p.cash += 500_000;
-          nextState.log.push(`🎯 Secret Objective Completed! ${p.name} earned ₦500,000 bonus.`);
-        }
-      }
-    });
   }
 
   return nextState;

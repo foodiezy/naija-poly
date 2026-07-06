@@ -6,6 +6,9 @@ import { getAIAction } from "./ai";
 function setup() {
   const state = createGame(["ai_1", "p2"]);
   state.currentPlayerIndex = 0;
+  // createGame assigns a random aiStyle to ai_ ids; every assertion in this
+  // file assumes the "Normal" style's thresholds, so pin it.
+  state.players[0].aiStyle = "Normal";
   return state;
 }
 

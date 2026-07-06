@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createGame, applyAction } from "./engine";
-import { STARTING_CASH, GO_SALARY, JAIL_FINE, BOARD } from "../data/board";
+import { STARTING_CASH, GO_SALARY, JAIL_FINE, BOARD, type PropertyTile } from "../data/board";
 
 // Helper stateful RNG mock
 class MockRNG {
@@ -973,11 +973,7 @@ describe("Game Engine", () => {
       expect(() => applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" })).toThrow();
     });
 
-    // BUG-1: a stale vote from a player who later forfeits still counts toward
-    // majority, so a single live voter can kick a target out of a 3-player
-    // active set (votes.length > activePlayersCount / 2 uses a snapshot of
-    // votes that includes forfeited voters). Flip to it(...) when fixed.
-    it.fails("does not let a stale voter's vote count toward majority", () => {
+    it("does not let a stale voter's vote count toward majority", () => {
       let state = createGame(["p1", "p2", "p3", "p4", "p5"]);
       state = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p5" });
       state = applyAction(state, "p2", { type: "VOTE_KICK", targetId: "p5" });
@@ -994,21 +990,14 @@ describe("Game Engine", () => {
       expect(target.bankrupt).toBe(false);
     });
 
-    // BUG-2: a voter's tallied vote is never cleaned up when that voter later
-    // forfeits, leaving a stale voterId in votekicks[target] forever.
-    // Flip to it(...) when fixed.
-    it.fails("cleans up a voter's vote when that voter forfeits", () => {
+    it("cleans up a voter's vote when that voter forfeits", () => {
       let state = createGame(["p1", "p2", "p3", "p4"]);
       state = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p4" });
       state = applyAction(state, "p1", { type: "FORFEIT" });
       expect(state.votekicks["p4"]).not.toContain("p1");
     });
 
-    // BUG-3: when the current player is vote-kicked while in debt, owedToId
-    // is left pointing at the stale creditor instead of being cleared, even
-    // though the debtor (and their turn) has just been eliminated via FORFEIT.
-    // Flip to it(...) when fixed.
-    it.fails("clears owedToId when the current (indebted) player is vote-kicked", () => {
+    it("clears owedToId when the current (indebted) player is vote-kicked", () => {
       let state = createGame(["p1", "p2", "p3"]);
       state.currentPlayerIndex = 2;
       state.phase = "awaiting-buy-decision";
@@ -1023,10 +1012,7 @@ describe("Game Engine", () => {
       expect(state.owedToId).toBeNull();
     });
 
-    // BUG-4: because BUG-3 leaves owedToId stale, a later unrelated
-    // DECLARE_BANKRUPT can misroute the bankrupt player's properties to the
-    // stale creditor instead of the bank. Flip to it(...) when fixed.
-    it.fails("does not misroute a later bankruptcy to a stale creditor", () => {
+    it("does not misroute a later bankruptcy to a stale creditor", () => {
       let state = createGame(["p1", "p2", "p3"]);
       state.currentPlayerIndex = 2;
       state.phase = "awaiting-buy-decision";
@@ -1113,12 +1099,7 @@ describe("Game Engine", () => {
   });
 
   describe("Secret objectives", () => {
-    // BUG-5: the objectives-completion sweep runs unconditionally at the end
-    // of every applyAction call, regardless of whether the acting player has
-    // anything to do with the objective. An unrelated VOTE_KICK action still
-    // triggers the (Naira 500,000) bonus payout for an already-qualifying player.
-    // Flip to it(...) when fixed.
-    it.fails("does not fire an objective bonus from an unrelated player's action", () => {
+    it("does not fire an objective bonus from an unrelated player's action", () => {
       let state = createGame(["p1", "p2", "p3"], { secretObjectives: true });
       state.players.forEach((p) => {
         p.secretObjective = undefined;
@@ -1134,7 +1115,7 @@ describe("Game Engine", () => {
       expect(state.players[0].objectiveCompleted).toBe(false);
     });
 
-    it("fires the objective bonus exactly once", () => {
+    it("fires the objective bonus exactly once, only at the turn boundary", () => {
       let state = createGame(["p1", "p2"], { secretObjectives: true });
       state.players.forEach((p) => {
         p.secretObjective = undefined;
@@ -1149,14 +1130,17 @@ describe("Game Engine", () => {
       state.players[0].position = 8;
       state.players[0].cash = (BOARD[8] as { price: number }).price + 5;
 
-      state = applyAction(state, "p1", { type: "BUY" }); // 4th property -> objective completes
-      state = applyAction(state, "p1", { type: "END_TURN" });
+      state = applyAction(state, "p1", { type: "BUY" }); // 4th property -> objective satisfied, but BUY is not a boundary
+      expect(state.players[0].objectiveCompleted).toBe(false);
+      expect(state.players[0].cash).toBe(5);
+
+      state = applyAction(state, "p1", { type: "END_TURN" }); // boundary: bonus fires here
 
       expect(state.players[0].objectiveCompleted).toBe(true);
       expect(state.players[0].cash).toBe(5 + 500_000);
     });
 
-    it("does not double-run the objectives pass through recursive VOTE_KICK->FORFEIT", () => {
+    it("fires objectives at the boundary reached by a vote-kick, exactly once", () => {
       let state = createGame(["p1", "p2", "p3"], { secretObjectives: true });
       state.players.forEach((p) => {
         p.secretObjective = undefined;
@@ -1165,20 +1149,44 @@ describe("Game Engine", () => {
       state.players[0].secretObjective = "cash_2m";
       state.players[0].cash = 2_000_000;
       state.players[0].objectiveCompleted = false;
+      // Make the kick target (p3) the current player so eliminating them via
+      // FORFEIT is forced to advance the turn — i.e. actually reaches a
+      // turn boundary — rather than being a no-op on turn order.
+      state.currentPlayerIndex = 2;
 
-      // p2's vote fires the bonus once (unrelated-action bug from T5, still
-      // only a single pass per applyAction call).
+      // p2's vote alone is not a majority yet, so no kick happens and no
+      // boundary is reached: no bonus.
       state = applyAction(state, "p2", { type: "VOTE_KICK", targetId: "p3" });
-      expect(state.players[0].cash).toBe(2_500_000);
+      expect(state.players[0].cash).toBe(2_000_000);
+      expect(state.players[0].objectiveCompleted).toBe(false);
 
-      // p1's vote reaches majority and recursively calls FORFEIT via
-      // applyAction; the objectives pass must not run a second time for the
-      // same completed objective.
+      // p1's vote reaches majority, recursively calling FORFEIT via
+      // applyAction; that forfeit reaches a turn boundary, so the bonus
+      // fires exactly once.
       state = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" });
 
       expect(state.players[0].cash).toBe(2_500_000);
       expect(state.players[0].objectiveCompleted).toBe(true);
       expect(state.players[2].bankrupt).toBe(true);
+    });
+
+    it("does not award if the objective is satisfied mid-turn but not at the turn boundary", () => {
+      let state = createGame(["p1", "p2"], { secretObjectives: true });
+      state.players.forEach((p) => {
+        p.secretObjective = undefined;
+        p.objectiveCompleted = false;
+      });
+      state.players[0].secretObjective = "cash_2m";
+      state.currentPlayerIndex = 0;
+      state.phase = "awaiting-buy-decision";
+      state.players[0].position = 1;
+      const price = (BOARD[1] as PropertyTile).price;
+      state.players[0].cash = 2_000_000; // satisfies cash_2m mid-turn...
+      state = applyAction(state, "p1", { type: "BUY" }); // ...buying drops below 2m; BUY is not a boundary
+      expect(state.players[0].objectiveCompleted).toBe(false);
+      state = applyAction(state, "p1", { type: "END_TURN" }); // boundary: cash < 2m now
+      expect(state.players[0].objectiveCompleted).toBe(false);
+      expect(state.players[0].cash).toBe(2_000_000 - price);
     });
   });
 });
