@@ -21,7 +21,7 @@ import {
   auctionIncrements,
   type PropertyTile,
 } from "../data/board";
-import type { Action, GameState, PlayerId, TileState, Player, GameSettings, Objective, DebtRecord } from "./types";
+import type { Action, GameState, PlayerId, TileState, Player, GameSettings, Objective } from "./types";
 
 // Move the turn to the next non-bankrupt player and reset per-turn state.
 // Used when the active player can no longer act (e.g. forfeited a turn by

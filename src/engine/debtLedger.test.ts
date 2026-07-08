@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { createGame, applyAction, getRent } from "./engine";
-import { BOARD, STARTING_CASH, GO_SALARY, ALL_CHANCE_CARDS, type PropertyTile } from "../data/board";
-import type { GameState, DebtRecord } from "./types";
+import { createGame, applyAction } from "./engine";
+import { BOARD, STARTING_CASH, ALL_CHANCE_CARDS } from "../data/board";
+import type { GameState } from "./types";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -60,13 +60,9 @@ export function computeInvariant(state: GameState): number {
   return (state.bank || 0) + totalPlayerCash(state) + state.freeParkingPot + totalRealizableAssetValue(state);
 }
 
-function totalPlayerCash(state: GameState): number {
-  return state.players.reduce((sum, p) => sum + p.cash, 0);
-}
+const totalPlayerCash = (s: GameState) => s.players.reduce((sum, p) => sum + p.cash, 0);
 
-function totalDebtAmount(state: GameState): number {
-  return state.debtLedger.reduce((sum, d) => sum + d.amount, 0);
-}
+
 
 /**
  * Compute "realizable asset value" — the forced liquidation value of all assets 
@@ -359,11 +355,6 @@ describe("Debt Ledger", () => {
 
       // p4 (insolvent, ₦10k < ₦50k) — cash should be >= 0
       expect(nextState.players[3].cash).toBeGreaterThanOrEqual(0);
-
-      // p1 should have received at most what was actually deducted from others
-      const p2Paid = 100_000 - nextState.players[1].cash;
-      const p3Paid = 20_000 - nextState.players[2].cash;
-      const p4Paid = 10_000 - nextState.players[3].cash;
 
       // Any remaining debts for p3/p4 in the ledger represent unresolved shortfalls
       const p3Debts = nextState.debtLedger.filter(d => d.debtorId === "p3");
