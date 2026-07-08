@@ -706,9 +706,11 @@ describe("Game Engine", () => {
       const mockRng2 = MockRNG.makeRoll(1, 1);
       let nextState = applyAction(state, "p2", { type: "ROLL" }, mockRng2.getRNG());
 
-      // rent is 20,000. p2 cash: 5,000 - 20,000 = -15,000.
-      expect(nextState.players[1].cash).toBe(-15_000);
-      expect(nextState.owedToId).toBe("p1");
+      // rent is 20,000. p2 has ₦5,000 < rent, so a DebtRecord is created
+      // and p2's cash is NOT deducted (deferred to settlement).
+      expect(nextState.players[1].cash).toBe(5_000); // cash untouched
+      expect(nextState.debtLedger.length).toBeGreaterThan(0);
+      expect(nextState.debtLedger[0].creditorId).toBe("p1");
 
       // p2 declares bankruptcy
       nextState = applyAction(nextState, "p2", { type: "DECLARE_BANKRUPT" });
@@ -716,6 +718,8 @@ describe("Game Engine", () => {
       expect(nextState.tiles[1].ownerId).toBe("p1"); // transferred to p1
       expect(nextState.winnerId).toBe("p1");
       expect(nextState.phase).toBe("game-over");
+      // p1 received p2's ₦5k cash via debt settlement
+      expect(nextState.players[0].cash).toBe(STARTING_CASH + 5_000);
     });
 
     it("allows negative cash players to roll but blocks END_TURN", () => {
@@ -997,40 +1001,40 @@ describe("Game Engine", () => {
       expect(state.votekicks["p4"]).not.toContain("p1");
     });
 
-    it("clears owedToId when the current (indebted) player is vote-kicked", () => {
+    it("clears debtLedger when the current (indebted) player is vote-kicked", () => {
       let state = createGame(["p1", "p2", "p3"]);
       state.currentPlayerIndex = 2;
       state.phase = "awaiting-buy-decision";
-      state.owedToId = "p1";
-      state.players[2].cash = -5_000;
+      state.debtLedger = [{ debtorId: "p3", creditorId: "p1", amount: 5_000 }];
+      state.players[2].cash = 0;
 
       state = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" });
       state = applyAction(state, "p2", { type: "VOTE_KICK", targetId: "p3" }); // majority -> FORFEIT p3
 
       expect(state.players[2].bankrupt).toBe(true);
       expect(state.currentPlayerIndex).toBe(0);
-      expect(state.owedToId).toBeNull();
+      expect(state.debtLedger.filter(d => d.debtorId === "p3")).toHaveLength(0);
     });
 
     it("does not misroute a later bankruptcy to a stale creditor", () => {
       let state = createGame(["p1", "p2", "p3"]);
       state.currentPlayerIndex = 2;
       state.phase = "awaiting-buy-decision";
-      state.owedToId = "p1";
-      state.players[2].cash = -5_000;
+      state.debtLedger = [{ debtorId: "p3", creditorId: "p1", amount: 5_000 }];
+      state.players[2].cash = 0;
 
       state = applyAction(state, "p1", { type: "VOTE_KICK", targetId: "p3" });
-      state = applyAction(state, "p2", { type: "VOTE_KICK", targetId: "p3" }); // majority -> FORFEIT p3, owedToId left stale at "p1"
+      state = applyAction(state, "p2", { type: "VOTE_KICK", targetId: "p3" }); // majority -> FORFEIT p3, debts written off
 
       // Now an unrelated bankruptcy happens: p2 is in debt and declares bankrupt.
       state.tiles[3].ownerId = "p2";
-      state.players[1].cash = -1;
+      state.debtLedger = [{ debtorId: "p2", creditorId: "bank", amount: 1 }];
+      state.players[1].cash = 0;
       state.currentPlayerIndex = 1; // make it p2's own turn context
 
       state = applyAction(state, "p2", { type: "DECLARE_BANKRUPT" });
 
-      // p2's property should go to the bank (no one is owed anything for p2's
-      // debt), not to the stale "p1" creditor left behind by the vote-kick.
+      // p2's property should go to the bank (debt was to bank)
       expect(state.tiles[3].ownerId).toBeNull();
     });
 

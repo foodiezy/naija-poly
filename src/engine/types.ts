@@ -66,6 +66,13 @@ export interface GameSettings {
   secretObjectives?: boolean;
 }
 
+// A single outstanding debt entry in the ledger. Only created when the debtor
+export interface DebtRecord {
+  debtorId: PlayerId;
+  creditorId: PlayerId | "bank" | "pot";
+  amount: number; // always > 0; the original obligation
+}
+
 export interface GameState {
   players: Player[];
   currentPlayerIndex: number;
@@ -81,10 +88,11 @@ export interface GameState {
   winnerId: PlayerId | null;
   auctionState?: AuctionState | null;
   activeTrade?: TradeOffer | null;
-  owedToId?: PlayerId | "bank" | null;
+  debtLedger: DebtRecord[];
   settings: GameSettings;
   currentTurn: number; // current round number
   freeParkingPot: number; // Mama Put Rest Stop jackpot pot
+  bank: number; // Bank's cash balance, tracks money minted/destroyed
   // Chaos-mode "NEPA blackout": while set, no rent is collected. Ends once the
   // round counter reaches `untilRound` (i.e. play wraps back around once).
   blackout?: { untilRound: number } | null;

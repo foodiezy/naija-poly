@@ -136,8 +136,9 @@ export function getAIAction(state: GameState, playerId: PlayerId): Action | null
     }
 
     case "awaiting-end-turn": {
-      // Resolve debt first if somehow negative.
-      if (me.cash < 0) {
+      // Resolve debt first: check for unsettled debts in the ledger OR negative cash.
+      const hasDebts = state.debtLedger?.some(d => d.debtorId === playerId);
+      if (me.cash < 0 || hasDebts) {
         const sell = findSellableHouse(state, playerId);
         if (sell !== null) return { type: "SELL_HOUSE", pos: sell };
         const mort = findMortgageable(state, playerId);

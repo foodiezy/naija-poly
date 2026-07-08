@@ -21,7 +21,7 @@ import {
   auctionIncrements,
   type PropertyTile,
 } from "../data/board";
-import type { Action, GameState, PlayerId, TileState, Player, GameSettings, Objective } from "./types";
+import type { Action, GameState, PlayerId, TileState, Player, GameSettings, Objective, DebtRecord } from "./types";
 
 // Move the turn to the next non-bankrupt player and reset per-turn state.
 // Used when the active player can no longer act (e.g. forfeited a turn by
@@ -51,6 +51,7 @@ function finalizeAuction(state: GameState): void {
   if (auction.highestBidderId !== null) {
     const winner = state.players.find((p) => p.id === auction.highestBidderId)!;
     winner.cash -= auction.highestBid;
+    state.bank += auction.highestBid;
     state.tiles[auction.tilePos] = { ownerId: winner.id, houses: 0, mortgaged: false };
     state.stats[winner.id].propertiesBought += 1;
     state.log.push(
@@ -80,6 +81,7 @@ function evaluateObjectivesAtBoundary(state: GameState): void {
   if (!state.settings.secretObjectives) return;
   if (state.phase === "auction" || state.auctionState) return;
   if (state.activeTrade) return;
+  if (state.debtLedger && state.debtLedger.length > 0) return; // bail if any debt unsettled
 
   state.players.forEach(p => {
     if (p.secretObjective && !p.objectiveCompleted && !p.bankrupt) {
@@ -112,7 +114,8 @@ function evaluateObjectivesAtBoundary(state: GameState): void {
       if (completed) {
         p.objectiveCompleted = true;
         p.cash += 500_000;
-        state.log.push(`🎯 Secret Objective Completed! ${p.name} earned ₦500,000 bonus.`);
+        state.bank -= 500_000;
+        state.log.push(`${p.name} completed their secret objective and earned ₦500,000!`);
       }
     }
   });
@@ -273,9 +276,153 @@ export function createGame(
     currentTurn: 1,
     freeParkingPot: 0,
     blackout: null,
+    debtLedger: [],
     votekicks: {},
     stats,
+    bank: -(playerIds.length * mergedSettings.startingCash),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Debt-ledger helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Add a debt from a debtor to a creditor. If the debtor is solvent (can
+ * cover the full amount right now), transfer immediately — no DebtRecord,
+ * no UX change. Only record a DebtRecord when the debtor is insolvent.
+ *
+ * For non-current players (e.g. victims of collectFromEach), insolvency
+ * is auto-settled inline: they pay min(cash, owed), shortfall written off,
+ * NO forced bankruptcy on someone else's turn.
+ */
+function addDebt(
+  state: GameState,
+  debtorId: PlayerId,
+  creditorId: PlayerId | "bank",
+  amount: number,
+): void {
+  if (amount <= 0) return;
+
+  const debtor = state.players.find(p => p.id === debtorId)!;
+  const isCurrentPlayer = state.players[state.currentPlayerIndex].id === debtorId;
+
+  if (debtor.cash >= amount) {
+    // Solvent: transfer immediately, no DebtRecord
+    debtor.cash -= amount;
+    if (creditorId === "bank") {
+      state.bank += amount;
+    } else if (creditorId === "pot") {
+      state.freeParkingPot += amount;
+    } else {
+      const creditor = state.players.find(p => p.id === creditorId);
+      if (creditor && !creditor.bankrupt) {
+        creditor.cash += amount;
+      } else {
+        // If creditor is bankrupt/gone, money goes to bank (vanishes from player pool)
+        state.bank += amount;
+      }
+    }
+  } else if (isCurrentPlayer) {
+    // Current player is insolvent: record a DebtRecord.
+    // Do NOT deduct cash or pay creditor — that happens at settlement
+    // (DECLARE_BANKRUPT or after they sell/mortgage enough to cover it).
+    state.debtLedger.push({ debtorId, creditorId, amount });
+  } else {
+    // Non-current player is insolvent (e.g. collectFromEach victim):
+    // Auto-settle inline — pay what they can, write off the shortfall.
+    const actualPayout = Math.max(0, debtor.cash);
+    debtor.cash -= actualPayout; // goes to 0
+    if (creditorId === "bank") {
+      state.bank += actualPayout;
+    } else if (creditorId === "pot") {
+      state.freeParkingPot += actualPayout;
+    } else if (actualPayout > 0) {
+      const creditor = state.players.find(p => p.id === creditorId);
+      if (creditor && !creditor.bankrupt) {
+        creditor.cash += actualPayout;
+      } else {
+        state.bank += actualPayout;
+      }
+    }
+    // Shortfall is written off — genuinely gone, nothing minted.
+    const shortfall = amount - actualPayout;
+    if (shortfall > 0) {
+      state.log.push(`₦${shortfall.toLocaleString("en-NG")} shortfall written off (${debtor.name} is insolvent).`);
+    }
+  }
+}
+
+/**
+ * Force-settle all debts for a player (used at DECLARE_BANKRUPT).
+ * Pays creditors up to the debtor's remaining cash, checks creditor liveness,
+ * and writes off any shortfall.
+ *
+ * @returns the total cash actually paid out to creditors.
+ */
+function settleDebtsForPlayer(state: GameState, debtorId: PlayerId): number {
+  const debtor = state.players.find(p => p.id === debtorId)!;
+  let totalPaid = 0;
+
+  // Settle each debt in order
+  const debts = state.debtLedger.filter(d => d.debtorId === debtorId);
+  for (const debt of debts) {
+    const available = Math.max(0, debtor.cash);
+    const payout = Math.min(debt.amount, available);
+
+    // Resolve creditor liveness at settlement time
+    let resolvedCreditorId = debt.creditorId;
+    if (resolvedCreditorId !== "bank" && resolvedCreditorId !== "pot") {
+      const creditor = state.players.find(p => p.id === resolvedCreditorId);
+      if (!creditor || creditor.bankrupt) {
+        resolvedCreditorId = "bank"; // reroute to bank
+      }
+    }
+
+    if (payout > 0) {
+      debtor.cash -= payout;
+      if (resolvedCreditorId === "bank") {
+        state.bank += payout;
+      } else if (resolvedCreditorId === "pot") {
+        state.freeParkingPot += payout;
+      } else {
+        const creditor = state.players.find(p => p.id === resolvedCreditorId)!;
+        creditor.cash += payout;
+      }
+      totalPaid += payout;
+    }
+
+    const shortfall = debt.amount - payout;
+    if (shortfall > 0) {
+      state.log.push(`₦${shortfall.toLocaleString("en-NG")} debt written off.`);
+    }
+  }
+
+  // Remove all settled debts from the ledger
+  state.debtLedger = state.debtLedger.filter(d => d.debtorId !== debtorId);
+  return totalPaid;
+}
+
+/**
+ * Write off all debts owed BY a player (forfeit/kick — assets go to bank,
+ * creditors get nothing) and reroute any debts owed TO this player to the bank.
+ */
+function forceWriteOffDebts(state: GameState, playerId: PlayerId): void {
+  // Write off debts they owe (creditors get nothing)
+  const owedDebts = state.debtLedger.filter(d => d.debtorId === playerId);
+  for (const debt of owedDebts) {
+    if (debt.amount > 0) {
+      state.log.push(`₦${debt.amount.toLocaleString("en-NG")} debt written off (${state.players.find(p => p.id === playerId)!.name} left the game).`);
+    }
+  }
+  state.debtLedger = state.debtLedger.filter(d => d.debtorId !== playerId);
+
+  // Reroute debts owed TO this player to the bank
+  state.debtLedger.forEach(d => {
+    if (d.creditorId === playerId) {
+      d.creditorId = "bank";
+    }
+  });
 }
 
 export function applyAction(
@@ -340,6 +487,7 @@ export function applyAction(
                 `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine (added to Mama Put Pot) and moved.`
               );
             } else {
+              nextState.bank += JAIL_FINE;
               nextState.log.push(
                 `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine and moved.`
               );
@@ -398,6 +546,7 @@ export function applyAction(
       }
 
       currentPlayer.cash -= tile.price;
+      nextState.bank += tile.price;
       nextState.tiles[pos] = { ownerId: currentPlayer.id, houses: 0, mortgaged: false };
       nextState.stats[currentPlayer.id].propertiesBought += 1;
       nextState.log.push(`${currentPlayer.name} bought ${tile.name} for ₦${tile.price.toLocaleString("en-NG")}.`);
@@ -516,6 +665,7 @@ export function applyAction(
       }
 
       currentPlayer.cash -= tile.houseCost;
+      nextState.bank += tile.houseCost;
       tileState.houses += 1;
 
       const buildType = getDevelopmentName(tileState.houses);
@@ -570,6 +720,7 @@ export function applyAction(
       // of Naira even if a retheme sets an odd houseCost (data is data).
       const refund = Math.floor(tile.houseCost / 2);
       currentPlayer.cash += refund;
+      nextState.bank -= refund;
       tileState.houses -= 1;
 
       const sellType = getDevelopmentName(tileState.houses + 1);
@@ -609,6 +760,7 @@ export function applyAction(
 
       tileState.mortgaged = true;
       currentPlayer.cash += tile.mortgage;
+      nextState.bank -= tile.mortgage;
       nextState.log.push(`${currentPlayer.name} mortgaged ${tile.name} for ₦${tile.mortgage.toLocaleString("en-NG")}.`);
       break;
     }
@@ -637,6 +789,7 @@ export function applyAction(
       }
 
       currentPlayer.cash -= cost;
+      nextState.bank += cost;
       tileState.mortgaged = false;
       nextState.log.push(`${currentPlayer.name} unmortgaged ${tile.name} for ₦${cost.toLocaleString("en-NG")}.`);
       break;
@@ -660,6 +813,7 @@ export function applyAction(
         nextState.freeParkingPot += JAIL_FINE;
         nextState.log.push(`${currentPlayer.name} paid ₦50,000 fine (added to Mama Put Pot) and was released from Jail.`);
       } else {
+        nextState.bank += JAIL_FINE;
         nextState.log.push(`${currentPlayer.name} paid ₦50,000 fine and was released from Jail.`);
       }
       // Remain in awaiting-roll so the player can take their turn normally
@@ -696,6 +850,12 @@ export function applyAction(
     case "END_TURN": {
       if (nextState.phase !== "awaiting-end-turn") {
         throw new Error(`Cannot end turn in phase ${nextState.phase}`);
+      }
+
+      // Block if the current player has unsettled debts in the ledger
+      const playerDebts = nextState.debtLedger.filter(d => d.debtorId === currentPlayer.id);
+      if (playerDebts.length > 0) {
+        throw new Error("Cannot end turn with unsettled debts. You must mortgage properties, sell houses, or declare bankruptcy.");
       }
 
       if (currentPlayer.cash < 0) {
@@ -750,6 +910,12 @@ export function applyAction(
                   }
                 }
               });
+
+              // Subtract any pending debts this player owes
+              const pendingDebts = nextState.debtLedger
+                .filter(d => d.debtorId === p.id)
+                .reduce((sum, d) => sum + d.amount, 0);
+              netWorth -= pendingDebts;
               
               nextState.log.push(`${p.name}'s Net Worth: ₦${netWorth.toLocaleString("en-NG")}`);
               
@@ -1032,16 +1198,10 @@ export function applyAction(
         }
       });
 
-      // If this player was the current player carrying a debt, the debt (and
-      // whoever it was owed to) is now moot — they're gone and it's no longer
-      // their turn. Only clear it when THIS player was the debtor; a different
-      // player's pending debt must be left untouched.
-      if (
-        nextState.owedToId !== null &&
-        nextState.players[nextState.currentPlayerIndex].id === playerId
-      ) {
-        nextState.owedToId = null;
-      }
+      // Write off all debts this player owes (creditors get nothing since
+      // assets go to bank) and reroute debts owed TO them to the bank.
+      forceWriteOffDebts(nextState, playerId);
+      player.cash = Math.max(0, player.cash); // ensure no negative balance
 
       // Cancel any pending trade they were part of.
       if (
@@ -1096,19 +1256,38 @@ export function applyAction(
 
     case "DECLARE_BANKRUPT": {
       const bankruptPlayer = nextState.players.find((p) => p.id === playerId)!;
-      if (bankruptPlayer.cash >= 0) {
-        throw new Error("Cannot declare bankruptcy unless you are in debt (negative cash)");
+      // Can declare bankruptcy if in debt (negative cash) OR has unsettled debts in the ledger
+      const playerDebts = nextState.debtLedger.filter(d => d.debtorId === playerId);
+      if (bankruptPlayer.cash >= 0 && playerDebts.length === 0) {
+        throw new Error("Cannot declare bankruptcy unless you are in debt (negative cash or unsettled debts)");
       }
 
       bankruptPlayer.bankrupt = true;
-      const creditorId = nextState.owedToId || "bank";
 
       // Ghost votes: this player can no longer be a live voter or a valid target.
       pruneVoteKicks(nextState, playerId);
 
       nextState.log.push(`${bankruptPlayer.name} declared bankruptcy!`);
 
-      if (creditorId === "bank") {
+      // Determine primary creditor from the debt ledger for property transfer
+      // If debts exist, the first non-bank creditor (if still alive) gets properties.
+      // If all creditors are bank or bankrupt, properties go to bank.
+      let primaryCreditorId: PlayerId | "bank" = "bank";
+      for (const debt of playerDebts) {
+        if (debt.creditorId !== "bank") {
+          const creditor = nextState.players.find(p => p.id === debt.creditorId);
+          if (creditor && !creditor.bankrupt) {
+            primaryCreditorId = debt.creditorId;
+            break;
+          }
+        }
+      }
+
+      // Force-settle all debts: pay creditors up to available cash, write off shortfalls
+      // Transfer cash BEFORE property transfer
+      settleDebtsForPlayer(nextState, playerId);
+
+      if (primaryCreditorId === "bank" || primaryCreditorId === "pot") {
         // Return properties to bank (demolish houses, clear ownership)
         Object.keys(nextState.tiles).forEach((posStr) => {
           const pos = parseInt(posStr, 10);
@@ -1120,31 +1299,44 @@ export function applyAction(
             };
           }
         });
+        if (primaryCreditorId === "bank") {
+          nextState.bank += bankruptPlayer.cash;
+        } else {
+          nextState.freeParkingPot += bankruptPlayer.cash;
+        }
         nextState.log.push(`All of ${bankruptPlayer.name}'s properties were returned to the bank.`);
       } else {
-        const creditor = nextState.players.find((p) => p.id === creditorId)!;
+        const creditor = nextState.players.find((p) => p.id === primaryCreditorId)!;
 
         // Transfer remaining properties to creditor
         Object.keys(nextState.tiles).forEach((posStr) => {
           const pos = parseInt(posStr, 10);
           if (nextState.tiles[pos].ownerId === playerId) {
-            nextState.tiles[pos].ownerId = creditorId;
+            nextState.tiles[pos].ownerId = primaryCreditorId;
             // Demolish houses
             nextState.tiles[pos].houses = 0;
             // Mortgaged status remains the same
           }
         });
 
-        // Transfer remaining cash if positive
+        // Transfer remaining cash if positive (after debt settlement took what it could)
         if (bankruptPlayer.cash > 0) {
           creditor.cash += bankruptPlayer.cash;
+          bankruptPlayer.cash = 0;
         }
 
         nextState.log.push(`All of ${bankruptPlayer.name}'s properties were transferred to ${creditor.name}.`);
       }
 
-      // Clean up debt tracking
-      nextState.owedToId = null;
+      // Ensure bankrupt player's cash is 0 (never negative)
+      bankruptPlayer.cash = 0;
+
+      // Reroute any debts owed TO this bankrupt player to the bank
+      nextState.debtLedger.forEach(d => {
+        if (d.creditorId === playerId) {
+          d.creditorId = "bank";
+        }
+      });
 
       // Check win condition
       const activePlayers = nextState.players.filter((p) => !p.bankrupt);
@@ -1227,6 +1419,7 @@ function movePlayerAndResolve(
 
   if (newPos < currentPos) {
     player.cash += GO_SALARY;
+    state.bank -= GO_SALARY;
     state.log.push(`${player.name} passed START and collected ₦200,000.`);
   }
 
@@ -1271,26 +1464,28 @@ function resolveLanding(
         player.cash -= rent;
         state.stats[player.id].rentPaid += rent;
         if (player.cash < 0) {
-          state.owedToId = tileState.ownerId;
+          // Insolvent: revert cash deduction, use addDebt to handle properly
+          player.cash += rent;
+          addDebt(state, player.id, tileState.ownerId!, rent);
+        } else {
+          // Solvent: immediate transfer (already deducted from player)
+          const owner = state.players.find((p) => p.id === tileState.ownerId)!;
+          owner.cash += rent;
         }
-        const owner = state.players.find((p) => p.id === tileState.ownerId)!;
-        owner.cash += rent;
+        const ownerForLog = state.players.find((p) => p.id === tileState.ownerId)!;
 
         state.log.push(
-          `${player.name} paid ₦${rent.toLocaleString("en-NG")} rent to ${owner.name} for landing on ${tile.name}.`
+          `${player.name} paid ₦${rent.toLocaleString("en-NG")} rent to ${ownerForLog.name} for landing on ${tile.name}.`
         );
         state.phase = "awaiting-end-turn";
       }
     }
   } else if (tile.type === "tax") {
-    player.cash -= tile.amount;
-    if (player.cash < 0) {
-      state.owedToId = "bank";
-    }
     if (state.settings.freeParkingJackpot) {
-      state.freeParkingPot += tile.amount;
+      addDebt(state, player.id, "pot", tile.amount);
       state.log.push(`${player.name} paid ₦${tile.amount.toLocaleString("en-NG")} for ${tile.name} (added to Mama Put Pot).`);
     } else {
+      addDebt(state, player.id, "bank", tile.amount);
       state.log.push(`${player.name} paid ₦${tile.amount.toLocaleString("en-NG")} for ${tile.name}.`);
     }
     state.phase = "awaiting-end-turn";
@@ -1379,17 +1574,19 @@ function applyCardAction(
 ): void {
   switch (action.kind) {
     case "money": {
-      player.cash += action.amount;
-      if (player.cash < 0) {
-        state.owedToId = "bank";
-      }
-      const verb = action.amount >= 0 ? "received" : "lost";
-      const amtAbs = Math.abs(action.amount);
-      if (action.amount < 0 && state.settings.freeParkingJackpot) {
-        state.freeParkingPot += amtAbs;
-        state.log.push(`${player.name} lost ₦${amtAbs.toLocaleString("en-NG")} (added to Mama Put Pot).`);
+      if (action.amount < 0) {
+        const amtAbs = Math.abs(action.amount);
+        if (state.settings.freeParkingJackpot) {
+          addDebt(state, player.id, "pot", amtAbs);
+          state.log.push(`${player.name} lost ₦${amtAbs.toLocaleString("en-NG")} (added to Mama Put Pot).`);
+        } else {
+          addDebt(state, player.id, "bank", amtAbs);
+          state.log.push(`${player.name} lost ₦${amtAbs.toLocaleString("en-NG")}.`);
+        }
       } else {
-        state.log.push(`${player.name} ${verb} ₦${amtAbs.toLocaleString("en-NG")}.`);
+        player.cash += action.amount;
+        state.bank -= action.amount;
+        state.log.push(`${player.name} received ₦${action.amount.toLocaleString("en-NG")}.`);
       }
       state.phase = "awaiting-end-turn";
       break;
@@ -1400,6 +1597,7 @@ function applyCardAction(
       const targetPos = action.pos;
       if (action.collectIfPass && targetPos < currentPos) {
         player.cash += GO_SALARY;
+        state.bank -= GO_SALARY;
         state.log.push(`${player.name} passed START and collected ₦200,000.`);
       }
       player.position = targetPos;
@@ -1435,35 +1633,33 @@ function applyCardAction(
     }
 
     case "collectFromEach": {
+      // Each non-bankrupt opponent pays the card holder. Non-current players
+      // who can't afford it pay what they can (shortfall written off).
       let totalCollected = 0;
       state.players.forEach((p) => {
         if (p.id !== player.id && !p.bankrupt) {
-          p.cash -= action.amount;
-          if (p.cash < 0) {
-            state.owedToId = player.id;
-          }
-          totalCollected += action.amount;
+          // Use addDebt which handles solvent (immediate) vs insolvent (capped)
+          // For non-current players, addDebt auto-settles inline.
+          const beforeCash = player.cash;
+          addDebt(state, p.id, player.id, action.amount);
+          // Track how much was actually received by the collector
+          totalCollected += player.cash - beforeCash;
           state.log.push(`${p.name} paid ₦${action.amount.toLocaleString("en-NG")} to ${player.name}.`);
         }
       });
-      player.cash += totalCollected;
       state.phase = "awaiting-end-turn";
       break;
     }
 
     case "payEach": {
+      // Current player pays each non-bankrupt opponent.
+      // Each payment is a separate debt — uses addDebt per recipient.
       state.players.forEach((p) => {
         if (p.id !== player.id && !p.bankrupt) {
-          p.cash += action.amount;
-          player.cash -= action.amount;
+          addDebt(state, player.id, p.id, action.amount);
           state.log.push(`${player.name} paid ₦${action.amount.toLocaleString("en-NG")} to ${p.name}.`);
         }
       });
-      // The player owes multiple creditors — route insolvency to the bank so
-      // bankruptcy resolution has a single, unambiguous creditor.
-      if (player.cash < 0) {
-        state.owedToId = "bank";
-      }
       state.phase = "awaiting-end-turn";
       break;
     }
@@ -1483,16 +1679,13 @@ function applyCardAction(
       });
 
       const totalCost = housesCount * action.perHouse + hotelsCount * action.perHotel;
-      player.cash -= totalCost;
-      if (player.cash < 0) {
-        state.owedToId = "bank";
-      }
       if (state.settings.freeParkingJackpot) {
-        state.freeParkingPot += totalCost;
+        addDebt(state, player.id, "pot", totalCost);
         state.log.push(
           `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} Bungalow/Duplex/Mansion/Estate(s), ${hotelsCount} Hotel(s)) (added to Mama Put Pot).`
         );
       } else {
+        addDebt(state, player.id, "bank", totalCost);
         state.log.push(
           `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} Bungalow/Duplex/Mansion/Estate(s), ${hotelsCount} Hotel(s)).`
         );
@@ -1511,6 +1704,7 @@ function applyCardAction(
       const currentPos = player.position;
       if (targetPos < currentPos) {
         player.cash += GO_SALARY;
+        state.bank -= GO_SALARY;
         state.log.push(`${player.name} passed START and collected ₦200,000.`);
       }
 
@@ -1530,6 +1724,7 @@ function applyCardAction(
       const currentPos = player.position;
       if (targetPos < currentPos) {
         player.cash += GO_SALARY;
+        state.bank -= GO_SALARY;
         state.log.push(`${player.name} passed START and collected ₦200,000.`);
       }
 
@@ -1551,9 +1746,13 @@ function applyCardAction(
         const owner = state.players.find((p) => p.id === tileState.ownerId)!;
         player.cash -= rent;
         if (player.cash < 0) {
-          state.owedToId = owner.id;
+          // Insolvent: revert and use addDebt
+          player.cash += rent;
+          addDebt(state, player.id, owner.id, rent);
+        } else {
+          // Solvent: immediate transfer
+          owner.cash += rent;
         }
-        owner.cash += rent;
 
         state.log.push(
           `${player.name} rolled [${rd1}, ${rd2}] for utility rent. Paid ₦${rent.toLocaleString("en-NG")} to ${owner.name}.`
@@ -1598,6 +1797,7 @@ function applyCardAction(
 
       const bonus = housesCount * action.perHouse + hotelsCount * action.perHotel;
       player.cash += bonus;
+      state.bank -= bonus;
       
       if (bonus > 0) {
         state.log.push(`📈 Market Boom! ${player.name} collected ₦${bonus.toLocaleString("en-NG")} for owning ${housesCount} house(s) and ${hotelsCount} hotel(s).`);
