@@ -5,6 +5,7 @@ import { Room } from "colyseus.js";
 import { ChatMessage } from "../../shared/chat";
 import { RoomState, RoomSettings, LobbyPlayerView } from "../../shared/room";
 import { ALL_TRIVIA } from "../../data/facts";
+import { countHumans } from "../lib/players";
 
 interface RoomLobbyViewProps {
   room: Room;
@@ -33,6 +34,7 @@ export default function RoomLobbyView({
   const playerCount = roomState?.lobbyPlayers?.size ?? 0;
   const roomFull = playerCount >= 6;
   const myTokenId = roomState?.lobbyPlayers?.get(room.sessionId)?.tokenId;
+  const humanCount = countHumans(roomState?.lobbyPlayers ? roomState.lobbyPlayers.keys() : []);
 
   const [triviaIdx, setTriviaIdx] = useState(() => Math.floor(Math.random() * ALL_TRIVIA.length));
 
@@ -47,18 +49,22 @@ export default function RoomLobbyView({
     <div className="lobby-columns-container">
       <div className="lobby-card glass-panel">
         <h2 className="lobby-title">Room Lobby</h2>
+        <button
+          className="button-secondary full-width-btn"
+          style={{ border: "1px solid var(--color-gold, #e8b64a)" }}
+          onClick={onCopyRoomCode}
+        >
+          🔗 Invite Players
+        </button>
         <p style={{ textAlign: "center", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-          Share code{" "}
-          <strong
-            style={{ color: "#3b82f6", cursor: "pointer" }}
-            onClick={onCopyRoomCode}
-            title="Click to copy"
-          >
-            {room.roomId} 📋
-          </strong>{" "}
-          with friends to join.
+          Share code {room.roomId} — tap the button to copy the invite link.
         </p>
-        
+        {isHost && (
+          <p style={{ textAlign: "center", color: "var(--color-gold, #e8b64a)", fontSize: "0.85rem" }}>
+            Invite friends before you start — the room locks once the game begins.
+          </p>
+        )}
+
         <div className="form-group">
           <label>Select Your Token Piece:</label>
           <div className="token-grid">
@@ -195,16 +201,23 @@ export default function RoomLobbyView({
         )}
 
         {isHost ? (
-          <button
-            className="button-primary full-width-btn"
-            style={{ padding: "1rem", fontSize: "1.1rem" }}
-            onClick={onStartGame}
-            disabled={playerCount < 2}
-          >
-            {playerCount < 2
-              ? "Waiting for more players..."
-              : "Start Game 🎲"}
-          </button>
+          <>
+            <button
+              className="button-primary full-width-btn"
+              style={{ padding: "1rem", fontSize: "1.1rem" }}
+              onClick={onStartGame}
+              disabled={playerCount < 2}
+            >
+              {playerCount < 2
+                ? "Waiting for more players..."
+                : "Start Game 🎲"}
+            </button>
+            {humanCount === 1 && playerCount >= 2 && (
+              <span style={{ display: "block", fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center", marginTop: "0.5rem" }}>
+                Playing solo with bots — friends can't join once you start.
+              </span>
+            )}
+          </>
         ) : (
           <div className="status-indicator" style={{ padding: "1rem", textAlign: "center", background: "rgba(0,0,0,0.2)", borderRadius: "8px" }}>
             ⏳ Waiting for host to start the game...

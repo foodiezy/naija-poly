@@ -513,7 +513,7 @@ export class GameRoom extends Room<GameRoomState> {
     // in a running game. (Reconnections don't go through onJoin, so they're
     // unaffected.)
     if (this.state.status !== "lobby") {
-      throw new Error("This game has already started.");
+      throw new Error("This game don start already — ask your friend to create a new room.");
     }
 
     const rawName = (options.name || "").trim().substring(0, 20);

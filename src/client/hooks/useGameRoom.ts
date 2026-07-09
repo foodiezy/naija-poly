@@ -209,7 +209,12 @@ export function useGameRoom() {
       handleRoomJoined(roomInstance);
     } catch (e) {
       console.error(e);
-      showError(errText(e, `Failed to join room "${roomId}"`));
+      const msg = errText(e, `Failed to join room "${roomId}"`);
+      showError(
+        /don start|already started/i.test(msg)
+          ? "This game don start already — ask your friend to create a new room."
+          : msg
+      );
     }
   };
 
