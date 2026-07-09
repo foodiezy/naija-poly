@@ -13,8 +13,7 @@
     "build:client": "vite build",
     "preview:client": "vite preview",
     "start": "tsx src/server/index.ts",
-    "prepare": "git config core.hooksPath .githooks || exit 0",
-    "postinstall": "npm run build"
+    "prepare": "git config core.hooksPath .githooks || exit 0"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
