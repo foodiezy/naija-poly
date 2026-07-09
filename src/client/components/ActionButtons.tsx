@@ -58,7 +58,7 @@ export default function ActionButtons({
           className="sidebar-action-btn sidebar-action-btn-primary"
           onClick={() => onSendAction({ type: "ROLL" })}
           whileTap={{ scale: 0.94 }}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", borderRadius: "2px", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", boxShadow: "0 4px 12px rgba(16,185,129,0.25)" }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", borderRadius: "2px", background: "linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%)", boxShadow: "0 4px 12px rgba(70,199,141,0.25)" }}
         >
           <IconRoll size={18} /> Roll Dice
         </motion.button>
@@ -72,7 +72,7 @@ export default function ActionButtons({
     const price = tile && "price" in tile ? tile.price : 0;
     return (
       <>
-        <button className="sidebar-action-btn sidebar-action-btn-primary" disabled={(me?.cash || 0) < price} onClick={() => onSendAction({ type: "BUY" })} style={{ borderRadius: "2px", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}>
+        <button className="sidebar-action-btn sidebar-action-btn-primary" disabled={(me?.cash || 0) < price} onClick={() => onSendAction({ type: "BUY" })} style={{ borderRadius: "2px", background: "linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%)" }}>
           Buy ₦{(price / 1000).toFixed(0)}k
         </button>
         <button className="sidebar-action-btn sidebar-action-btn-outline" onClick={() => onSendAction({ type: "DECLINE_BUY" })} style={{ borderRadius: "2px" }}>

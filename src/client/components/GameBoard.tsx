@@ -274,17 +274,17 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
           {engineState.settings?.freeParkingJackpot && (
             <motion.div
               className="mama-put-pot-display"
-              style={{ margin: 0, padding: "0.35rem 0.75rem", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "2px", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", color: "var(--color-naira)", boxShadow: "0 0 10px rgba(16, 185, 129, 0.15)", zIndex: 5 }}
+              style={{ margin: 0, padding: "0.35rem 0.75rem", background: "rgba(70, 199, 141, 0.1)", border: "1px solid rgba(70, 199, 141, 0.25)", borderRadius: "2px", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", color: "var(--color-naira)", boxShadow: "0 0 10px rgba(70, 199, 141, 0.15)", zIndex: 5 }}
               key={engineState.freeParkingPot}
               animate={engineState.freeParkingPot > 0 ? {
-                boxShadow: ["0 0 10px rgba(16,185,129,0.15)", "0 0 22px rgba(16,185,129,0.45)", "0 0 10px rgba(16,185,129,0.15)"],
+                boxShadow: ["0 0 10px rgba(70,199,141,0.15)", "0 0 22px rgba(70,199,141,0.45)", "0 0 10px rgba(70,199,141,0.15)"],
               } : {}}
               transition={{ duration: 1.5, repeat: Infinity }}
             >
               <span>🍲 Mama Put Pot:</span>
               <motion.span
                 key={engineState.freeParkingPot}
-                initial={{ scale: 1.3, color: "#10b981" }}
+                initial={{ scale: 1.3, color: "#46c78d" }}
                 animate={{ scale: 1, color: "var(--color-naira)" }}
                 transition={{ duration: 0.4 }}
               >
@@ -297,9 +297,9 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
           {engineState.blackout && (
             <motion.div
               className="blackout-display"
-              style={{ margin: 0, padding: "0.35rem 0.75rem", background: "rgba(245, 158, 11, 0.12)", border: "1px solid rgba(245, 158, 11, 0.4)", borderRadius: "2px", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", color: "var(--color-gold, #f59e0b)", zIndex: 5 }}
+              style={{ margin: 0, padding: "0.35rem 0.75rem", background: "rgba(232, 182, 74, 0.12)", border: "1px solid rgba(232, 182, 74, 0.4)", borderRadius: "2px", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", color: "var(--color-gold, #e8b64a)", zIndex: 5 }}
               initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0, boxShadow: ["0 0 8px rgba(245,158,11,0.15)", "0 0 20px rgba(245,158,11,0.5)", "0 0 8px rgba(245,158,11,0.15)"] }}
+              animate={{ opacity: 1, y: 0, boxShadow: ["0 0 8px rgba(232,182,74,0.15)", "0 0 20px rgba(232,182,74,0.5)", "0 0 8px rgba(232,182,74,0.15)"] }}
               transition={{ boxShadow: { duration: 1.4, repeat: Infinity } }}
               title="NEPA don take light — rent is frozen until the round comes back around."
             >
@@ -375,7 +375,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
               exit={{ opacity: 0 }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              style={{ padding: "0.6rem 2rem", fontSize: "1rem", fontWeight: 700, borderRadius: "2px", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", boxShadow: "0 4px 15px rgba(16, 185, 129, 0.4)", border: "none", color: "#fff", cursor: "pointer" }}
+              style={{ padding: "0.6rem 2rem", fontSize: "1rem", fontWeight: 700, borderRadius: "2px", background: "linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%)", boxShadow: "0 4px 15px rgba(70, 199, 141, 0.4)", border: "none", color: "#fff", cursor: "pointer" }}
             >
               End Turn
             </motion.button>

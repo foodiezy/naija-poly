@@ -114,7 +114,7 @@ export default function GameOverModal({ engineState, roomState, mySessionId, onR
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: "spring", bounce: 0.5 }}
                 >
-                  <h1 style={{ fontSize: "3.5rem", color: "var(--color-gold)", textShadow: "0 0 20px rgba(245, 158, 11, 0.5)", margin: "0.5rem 0", textTransform: "uppercase", fontWeight: "900", lineHeight: 1.1 }}>
+                  <h1 style={{ fontSize: "3.5rem", color: "var(--color-gold)", textShadow: "0 0 20px rgba(232, 182, 74, 0.5)", margin: "0.5rem 0", textTransform: "uppercase", fontWeight: "900", lineHeight: 1.1 }}>
                     {winner.id === mySessionId ? "You Are The Odogwu! 👑" : `${winner.name} is the Odogwu! 👑`}
                   </h1>
                 </motion.div>
@@ -148,7 +148,7 @@ export default function GameOverModal({ engineState, roomState, mySessionId, onR
                 <motion.div
                   key={p.id}
                   className={`leaderboard-row ${p.id === engineState.winnerId ? "winner-row" : ""}`}
-                  style={{ display: "flex", alignItems: "center", padding: "0.75rem 0", borderBottom: "1px solid rgba(255,255,255,0.05)", background: p.id === engineState.winnerId ? "rgba(245, 158, 11, 0.05)" : "transparent" }}
+                  style={{ display: "flex", alignItems: "center", padding: "0.75rem 0", borderBottom: "1px solid rgba(255,255,255,0.05)", background: p.id === engineState.winnerId ? "rgba(232, 182, 74, 0.05)" : "transparent" }}
                   initial={{ opacity: 0, x: -30 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.6 + index * 0.1, duration: 0.35, ease: "easeOut" }}

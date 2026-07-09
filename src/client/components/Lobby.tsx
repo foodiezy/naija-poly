@@ -13,13 +13,13 @@ interface LobbyProps {
 const HOW_TO_PLAY = [
   {
     emoji: "💰",
-    color: "#10b981",
+    color: "#46c78d",
     title: "Start with ₦1,500,000",
     desc: "Every player kicks off with a bag of Naira. Don't finish am!",
   },
   {
     emoji: "🎲",
-    color: "#f59e0b",
+    color: "#e8b64a",
     title: "Roll dice to move",
     desc: "Land on properties across Lagos, Abuja, and Port Harcourt. Roll doubles? You waka again!",
   },
@@ -43,7 +43,7 @@ const HOW_TO_PLAY = [
   },
   {
     emoji: "🏆",
-    color: "#f59e0b",
+    color: "#e8b64a",
     title: "Last man standing wins",
     desc: "Bankrupt all your opponents to become the Odogwu. E get level!",
   },
@@ -118,11 +118,11 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch, initialR
             marginBottom: "1rem",
             padding: "1rem 1.25rem",
             textAlign: "center",
-            border: "1px solid var(--color-gold, #f59e0b)",
-            background: "rgba(245, 158, 11, 0.08)",
+            border: "1px solid var(--color-gold, #e8b64a)",
+            background: "rgba(232, 182, 74, 0.08)",
           }}
         >
-          <div style={{ fontWeight: 800, color: "var(--color-gold, #f59e0b)" }}>
+          <div style={{ fontWeight: 800, color: "var(--color-gold, #e8b64a)" }}>
             🎉 You've been invited to Room {initialRoomId}
           </div>
           <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>

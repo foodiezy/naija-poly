@@ -12,9 +12,9 @@
   --border-glow: rgba(99, 102, 241, 0.18);
   --border-glow-active: rgba(99, 102, 241, 0.5);
 
-  --color-gold: #f59e0b;
-  --color-gold-hover: #d97706;
-  --color-naira: #10b981;
+  --color-gold: #e8b64a;
+  --color-gold-hover: #c9962f;
+  --color-naira: #46c78d;
   --color-danger: #ef4444;
 
   /* Rethemed property-group colors — retuned to read clearly on the dark UI:
@@ -97,7 +97,7 @@ body {
   background-color: var(--bg-main);
   background-image:
     radial-gradient(ellipse at 0% 0%, rgba(79, 110, 245, 0.12) 0, transparent 55%),
-    radial-gradient(ellipse at 100% 100%, rgba(16, 185, 129, 0.07) 0, transparent 55%),
+    radial-gradient(ellipse at 100% 100%, rgba(70, 199, 141, 0.07) 0, transparent 55%),
     radial-gradient(ellipse at 50% 50%, rgba(14, 19, 32, 0.6) 0, transparent 80%);
   background-attachment: fixed;
   color: var(--text-primary);
@@ -194,8 +194,8 @@ h6 {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(70, 199, 141, 0.08);
+  border: 1px solid rgba(70, 199, 141, 0.2);
   padding: 0.25rem 0.65rem;
   border-radius: var(--radius-full);
   font-size: 0.72rem;
@@ -226,7 +226,7 @@ h6 {
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: 0.02em;
-  background: linear-gradient(to right, #10b981, #f59e0b);
+  background: linear-gradient(to right, #46c78d, #e8b64a);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -264,14 +264,14 @@ h6 {
 }
 
 .header-btn-gold {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(135deg, #e8b64a 0%, #c9962f 100%);
   color: #000;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+  box-shadow: 0 2px 8px rgba(232, 182, 74, 0.25);
 }
 
 .header-btn-gold:hover {
   filter: brightness(1.1);
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+  box-shadow: 0 4px 14px rgba(232, 182, 74, 0.35);
 }
 
 .header-btn-outline {
@@ -462,7 +462,7 @@ h6 {
 
 .input-field:focus {
   border-color: var(--color-naira);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+  box-shadow: 0 0 0 3px rgba(70, 199, 141, 0.18);
 }
 
 .token-grid {
@@ -491,9 +491,9 @@ h6 {
 }
 
 .token-option.selected {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(70, 199, 141, 0.15);
   border-color: var(--color-naira);
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 10px rgba(70, 199, 141, 0.25);
 }
 
 .token-option.taken {
@@ -525,7 +525,7 @@ h6 {
 }
 
 .button-primary {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%);
   color: #fff;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -536,12 +536,12 @@ h6 {
   transition: filter 0.2s, transform 0.1s, box-shadow 0.2s;
   text-align: center;
   display: inline-block;
-  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 2px 10px rgba(70, 199, 141, 0.25);
 }
 
 .button-primary:hover {
   filter: brightness(1.08);
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 16px rgba(70, 199, 141, 0.35);
 }
 
 .button-primary:active {
@@ -595,7 +595,7 @@ h6 {
 
 .host-tag {
   font-size: 0.7rem;
-  background: #f59e0b;
+  background: #e8b64a;
   color: #000;
   padding: 0.1rem 0.3rem;
   border-radius: 4px;
@@ -958,10 +958,10 @@ h6 {
   grid-template-columns: repeat(11, 1fr);
   grid-template-rows: repeat(11, 1fr);
   background:
-    radial-gradient(ellipse at 50% 45%, rgba(16, 185, 129, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse at 50% 45%, rgba(70, 199, 141, 0.12) 0%, transparent 70%),
     #0f172a;
-  border: 6px solid rgba(245, 158, 11, 0.25);
-  box-shadow: 0 25px 65px rgba(0, 0, 0, 0.75), 0 0 40px rgba(16, 185, 129, 0.15), inset 0 0 80px rgba(0, 0, 0, 0.8);
+  border: 6px solid rgba(232, 182, 74, 0.25);
+  box-shadow: 0 25px 65px rgba(0, 0, 0, 0.75), 0 0 40px rgba(70, 199, 141, 0.15), inset 0 0 80px rgba(0, 0, 0, 0.8);
   border-radius: 2px;
   /* Authentic sharp tabletop boxes */
   position: relative;
@@ -973,7 +973,7 @@ h6 {
   grid-column: 2 / 11;
   grid-row: 2 / 11;
   background: linear-gradient(135deg, #0d1527 0%, #070b16 100%),
-    radial-gradient(rgba(16, 185, 129, 0.08) 8%, transparent 8%);
+    radial-gradient(rgba(70, 199, 141, 0.08) 8%, transparent 8%);
   background-size: 100% 100%, 20px 20px;
   display: flex;
   flex-direction: column;
@@ -981,8 +981,8 @@ h6 {
   align-items: center;
   padding: 1.5rem;
   position: relative;
-  border: 2px solid rgba(245, 158, 11, 0.2);
-  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.8), 0 0 25px rgba(16, 185, 129, 0.12);
+  border: 2px solid rgba(232, 182, 74, 0.2);
+  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.8), 0 0 25px rgba(70, 199, 141, 0.12);
   border-radius: 0;
   /* Perfectly flush with inner square tile circuit */
   overflow: hidden;
@@ -1074,7 +1074,7 @@ h6 {
   font-size: 3.8rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-  background: linear-gradient(135deg, #10b981 0%, #f59e0b 100%);
+  background: linear-gradient(135deg, #46c78d 0%, #e8b64a 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1143,13 +1143,13 @@ h6 {
   background: rgba(11, 13, 26, 0.97);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(245, 158, 11, 0.25);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(232, 182, 74, 0.25);
   text-align: center;
 }
 
 .card-draw-overlay.hustle {
   border-color: var(--color-naira);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(70, 199, 141, 0.25);
 }
 
 @keyframes cardFadeIn {
@@ -1466,71 +1466,71 @@ h6 {
 
 /* Your own token — bright cyan ring */
 .player-token-me {
-  border-color: #22d3ee;
-  box-shadow: 0 0 8px rgba(34, 211, 238, 0.6), 0 0 16px rgba(34, 211, 238, 0.3), 0 2px 6px rgba(0, 0, 0, 0.6);
+  border-color: #37d6c2;
+  box-shadow: 0 0 8px rgba(55, 214, 194, 0.6), 0 0 16px rgba(55, 214, 194, 0.3), 0 2px 6px rgba(0, 0, 0, 0.6);
   animation: myTokenPulse 1.5s ease-in-out infinite;
 }
 
 @keyframes myTokenPulse {
   0% {
-    box-shadow: 0 0 8px rgba(34, 211, 238, 0.6), 0 0 16px rgba(34, 211, 238, 0.3), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 8px rgba(55, 214, 194, 0.6), 0 0 16px rgba(55, 214, 194, 0.3), 0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1);
   }
 
   50% {
-    box-shadow: 0 0 14px rgba(34, 211, 238, 0.8), 0 0 28px rgba(34, 211, 238, 0.4), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 14px rgba(55, 214, 194, 0.8), 0 0 28px rgba(55, 214, 194, 0.4), 0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1.12);
   }
 
   100% {
-    box-shadow: 0 0 8px rgba(34, 211, 238, 0.6), 0 0 16px rgba(34, 211, 238, 0.3), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 8px rgba(55, 214, 194, 0.6), 0 0 16px rgba(55, 214, 194, 0.3), 0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1);
   }
 }
 
 /* Active turn player's token — gold ring */
 .player-token-active {
-  border-color: #f59e0b;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.7), 0 0 18px rgba(245, 158, 11, 0.35), 0 2px 6px rgba(0, 0, 0, 0.6);
+  border-color: #e8b64a;
+  box-shadow: 0 0 8px rgba(232, 182, 74, 0.7), 0 0 18px rgba(232, 182, 74, 0.35), 0 2px 6px rgba(0, 0, 0, 0.6);
   animation: activeTokenPulse 1.2s ease-in-out infinite;
 }
 
 @keyframes activeTokenPulse {
   0% {
-    box-shadow: 0 0 8px rgba(245, 158, 11, 0.7), 0 0 18px rgba(245, 158, 11, 0.35), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 8px rgba(232, 182, 74, 0.7), 0 0 18px rgba(232, 182, 74, 0.35), 0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1);
   }
 
   50% {
-    box-shadow: 0 0 14px rgba(245, 158, 11, 0.9), 0 0 30px rgba(245, 158, 11, 0.5), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 14px rgba(232, 182, 74, 0.9), 0 0 30px rgba(232, 182, 74, 0.5), 0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1.15);
   }
 
   100% {
-    box-shadow: 0 0 8px rgba(245, 158, 11, 0.7), 0 0 18px rgba(245, 158, 11, 0.35), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 8px rgba(232, 182, 74, 0.7), 0 0 18px rgba(232, 182, 74, 0.35), 0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1);
   }
 }
 
 /* Both me AND active — layered cyan + gold */
 .player-token-me.player-token-active {
-  border-color: #22d3ee;
+  border-color: #37d6c2;
   animation: myActiveTokenPulse 1.3s ease-in-out infinite;
 }
 
 @keyframes myActiveTokenPulse {
   0% {
-    box-shadow: 0 0 8px rgba(34, 211, 238, 0.7), 0 0 20px rgba(245, 158, 11, 0.4), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 8px rgba(55, 214, 194, 0.7), 0 0 20px rgba(232, 182, 74, 0.4), 0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1);
   }
 
   50% {
-    box-shadow: 0 0 16px rgba(34, 211, 238, 0.9), 0 0 32px rgba(245, 158, 11, 0.6), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 16px rgba(55, 214, 194, 0.9), 0 0 32px rgba(232, 182, 74, 0.6), 0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1.18);
   }
 
   100% {
-    box-shadow: 0 0 8px rgba(34, 211, 238, 0.7), 0 0 20px rgba(245, 158, 11, 0.4), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 8px rgba(55, 214, 194, 0.7), 0 0 20px rgba(232, 182, 74, 0.4), 0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1);
   }
 }
@@ -1542,23 +1542,23 @@ h6 {
 
 /* Tile where YOUR token is sitting — bright cyan glow border */
 .tile-has-me {
-  background-color: rgba(34, 211, 238, 0.08) !important;
-  box-shadow: inset 0 0 12px rgba(34, 211, 238, 0.15), 0 0 6px rgba(34, 211, 238, 0.2);
-  border-color: rgba(34, 211, 238, 0.4) !important;
+  background-color: rgba(55, 214, 194, 0.08) !important;
+  box-shadow: inset 0 0 12px rgba(55, 214, 194, 0.15), 0 0 6px rgba(55, 214, 194, 0.2);
+  border-color: rgba(55, 214, 194, 0.4) !important;
 }
 
 /* Tile where the active turn player is — gold accent */
 .tile-active-player {
-  background-color: rgba(245, 158, 11, 0.06) !important;
-  box-shadow: inset 0 0 10px rgba(245, 158, 11, 0.1), 0 0 4px rgba(245, 158, 11, 0.15);
-  border-color: rgba(245, 158, 11, 0.3) !important;
+  background-color: rgba(232, 182, 74, 0.06) !important;
+  box-shadow: inset 0 0 10px rgba(232, 182, 74, 0.1), 0 0 4px rgba(232, 182, 74, 0.15);
+  border-color: rgba(232, 182, 74, 0.3) !important;
 }
 
 /* When it's YOUR tile AND you're the active player — layered effect */
 .tile-has-me.tile-active-player {
-  background-color: rgba(34, 211, 238, 0.1) !important;
-  box-shadow: inset 0 0 14px rgba(34, 211, 238, 0.2), 0 0 8px rgba(245, 158, 11, 0.25);
-  border-color: rgba(34, 211, 238, 0.5) !important;
+  background-color: rgba(55, 214, 194, 0.1) !important;
+  box-shadow: inset 0 0 14px rgba(55, 214, 194, 0.2), 0 0 8px rgba(232, 182, 74, 0.25);
+  border-color: rgba(55, 214, 194, 0.5) !important;
 }
 
 /* Right Control & HUD Panel */
@@ -1654,7 +1654,7 @@ h6 {
   font-weight: 800;
   color: var(--color-gold);
   letter-spacing: 0.01em;
-  text-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+  text-shadow: 0 0 12px rgba(232, 182, 74, 0.2);
 }
 
 /* Properties list — compact with color dots */
@@ -1774,7 +1774,7 @@ h6 {
 }
 
 .settings-pill.on {
-  background: rgba(16, 185, 129, 0.16);
+  background: rgba(70, 199, 141, 0.16);
   color: var(--color-naira);
 }
 
@@ -1813,7 +1813,7 @@ h6 {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: var(--color-gold, #f59e0b);
+  background: var(--color-gold, #e8b64a);
   cursor: pointer;
   transition: transform 0.1s ease;
 }
@@ -1827,7 +1827,7 @@ h6 {
   height: 12px;
   border: none;
   border-radius: 50%;
-  background: var(--color-gold, #f59e0b);
+  background: var(--color-gold, #e8b64a);
   cursor: pointer;
   transition: transform 0.1s ease;
 }
@@ -1878,15 +1878,15 @@ html.high-contrast .glass-panel {
 }
 
 .sidebar-action-btn-primary {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(135deg, #e8b64a 0%, #c9962f 100%);
   color: #000;
   border: none;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+  box-shadow: 0 2px 8px rgba(232, 182, 74, 0.2);
 }
 
 .sidebar-action-btn-primary:hover {
   filter: brightness(1.1);
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+  box-shadow: 0 4px 14px rgba(232, 182, 74, 0.35);
 }
 
 .sidebar-action-btn-primary:disabled {
@@ -1968,7 +1968,7 @@ html.high-contrast .glass-panel {
 
 .sidebar-player-row-avatar.active-turn {
   border-color: var(--color-gold);
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 0 8px rgba(232, 182, 74, 0.3);
 }
 
 .sidebar-player-row-name {
@@ -2161,13 +2161,13 @@ html.high-contrast .glass-panel {
 .log-entry-system {
   color: var(--color-gold);
   border-left-color: var(--color-gold);
-  background: rgba(245, 158, 11, 0.06);
+  background: rgba(232, 182, 74, 0.06);
 }
 
 .log-entry-buy {
   color: var(--color-naira);
   border-left-color: var(--color-naira);
-  background: rgba(16, 185, 129, 0.06);
+  background: rgba(70, 199, 141, 0.06);
 }
 
 .log-entry-rent {
@@ -2215,7 +2215,7 @@ html.high-contrast .glass-panel {
   padding: 1rem;
   border: 1px solid var(--color-gold);
   border-radius: 2px;
-  background: rgba(245, 158, 11, 0.03);
+  background: rgba(232, 182, 74, 0.03);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -2285,7 +2285,7 @@ html.high-contrast .glass-panel {
 
 .auction-timer-fill {
   height: 100%;
-  background: var(--color-naira, #10b981);
+  background: var(--color-naira, #46c78d);
   border-radius: 999px;
   transition: width 0.12s linear;
 }
@@ -2360,9 +2360,9 @@ html.high-contrast .glass-panel {
 }
 
 .chat-channel-chip.active {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: var(--color-naira, #10b981);
-  color: var(--color-naira, #10b981);
+  background: rgba(70, 199, 141, 0.15);
+  border-color: var(--color-naira, #46c78d);
+  color: var(--color-naira, #46c78d);
 }
 
 .chat-channel-dot {
@@ -2798,7 +2798,7 @@ html.high-contrast .glass-panel {
   -webkit-text-fill-color: transparent;
   margin: 0;
   letter-spacing: 2px;
-  text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+  text-shadow: 0 0 10px rgba(232, 182, 74, 0.3);
 }
 
 .winner-announcement {
@@ -2870,11 +2870,11 @@ html.high-contrast .glass-panel {
 }
 
 .leaderboard-row.winner-row {
-  background: rgba(245, 158, 11, 0.06);
+  background: rgba(232, 182, 74, 0.06);
 }
 
 .leaderboard-row.winner-row:hover {
-  background: rgba(245, 158, 11, 0.09);
+  background: rgba(232, 182, 74, 0.09);
 }
 
 .leaderboard-row:hover {
@@ -2898,7 +2898,7 @@ html.high-contrast .glass-panel {
 }
 
 .player-status.active {
-  color: #10b981;
+  color: #46c78d;
   font-size: 0.8rem;
 }
 
@@ -2975,11 +2975,11 @@ html.high-contrast .glass-panel {
 
   0%,
   100% {
-    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+    box-shadow: 0 0 10px rgba(232, 182, 74, 0.4);
   }
 
   50% {
-    box-shadow: 0 0 20px rgba(245, 158, 11, 0.7);
+    box-shadow: 0 0 20px rgba(232, 182, 74, 0.7);
   }
 }
 
@@ -3163,7 +3163,7 @@ html.high-contrast .glass-panel {
   max-width: 330px;
   background: rgba(15, 23, 42, 0.97) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(245, 158, 11, 0.05);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(232, 182, 74, 0.05);
   border-radius: 10px;
   overflow: hidden;
   padding: 0 !important;
@@ -3226,7 +3226,7 @@ html.high-contrast .glass-panel {
 .deed-rent-row.highlight {
   font-weight: 700;
   color: var(--color-gold);
-  border-bottom-color: rgba(245, 158, 11, 0.2);
+  border-bottom-color: rgba(232, 182, 74, 0.2);
 }
 
 .deed-divider {
@@ -3381,7 +3381,7 @@ html.high-contrast .glass-panel {
   box-shadow:
     0 30px 80px rgba(0, 0, 0, 0.7),
     0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 0 60px rgba(245, 158, 11, 0.12);
+    0 0 60px rgba(232, 182, 74, 0.12);
   overflow: hidden;
   position: relative;
   transform-style: preserve-3d;
@@ -3392,7 +3392,7 @@ html.high-contrast .glass-panel {
   top: -14px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(135deg, #e8b64a 0%, #c9962f 100%);
   color: #1a0d00;
   font-family: var(--font-display);
   font-size: 0.75rem;
@@ -3401,7 +3401,7 @@ html.high-contrast .glass-panel {
   letter-spacing: 0.12em;
   padding: 0.3rem 1rem;
   border-radius: 999px;
-  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.45);
+  box-shadow: 0 6px 18px rgba(232, 182, 74, 0.45);
   z-index: 2;
   white-space: nowrap;
 }
@@ -3472,7 +3472,7 @@ html.high-contrast .glass-panel {
 .buy-deed-rent-row.base {
   color: #fff;
   font-weight: 700;
-  background: rgba(245, 158, 11, 0.08);
+  background: rgba(232, 182, 74, 0.08);
 }
 
 .buy-deed-rent-row span:last-child {
@@ -3490,8 +3490,8 @@ html.high-contrast .glass-panel {
   font-size: 0.74rem;
   font-weight: 700;
   color: var(--color-naira);
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(70, 199, 141, 0.1);
+  border: 1px solid rgba(70, 199, 141, 0.3);
   padding: 0.3rem 0.5rem;
   border-radius: 6px;
   margin: 0.4rem 0;
@@ -3509,8 +3509,8 @@ html.high-contrast .glass-panel {
 .buy-deed-price-block {
   margin-top: 1rem;
   padding: 0.85rem 0.75rem;
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.02) 100%);
-  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: linear-gradient(135deg, rgba(232, 182, 74, 0.1) 0%, rgba(232, 182, 74, 0.02) 100%);
+  border: 1px solid rgba(232, 182, 74, 0.28);
   border-radius: 10px;
   text-align: center;
 }
@@ -3529,7 +3529,7 @@ html.high-contrast .glass-panel {
   color: var(--color-gold);
   letter-spacing: 0.02em;
   line-height: 1.1;
-  text-shadow: 0 0 22px rgba(245, 158, 11, 0.35);
+  text-shadow: 0 0 22px rgba(232, 182, 74, 0.35);
   margin: 4px 0 6px;
 }
 
@@ -3577,9 +3577,9 @@ html.high-contrast .glass-panel {
 }
 
 .buy-deed-btn.buy {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%);
   color: #fff;
-  box-shadow: 0 6px 22px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 6px 22px rgba(70, 199, 141, 0.35);
 }
 
 .buy-deed-btn.buy:hover {
@@ -3654,18 +3654,18 @@ html.high-contrast .glass-panel {
   align-items: center;
   gap: 0.85rem;
   padding: 0.65rem 1.1rem 0.65rem 0.7rem;
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(11, 16, 32, 0.5) 70%);
-  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: linear-gradient(135deg, rgba(232, 182, 74, 0.14) 0%, rgba(11, 16, 32, 0.5) 70%);
+  border: 1px solid rgba(232, 182, 74, 0.28);
   border-radius: 999px;
-  box-shadow: 0 6px 24px rgba(245, 158, 11, 0.18);
+  box-shadow: 0 6px 24px rgba(232, 182, 74, 0.18);
   margin-top: 0.25rem;
   max-width: 100%;
 }
 
 .active-player-hero.is-me {
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.18) 0%, rgba(11, 16, 32, 0.5) 70%);
-  border-color: rgba(34, 211, 238, 0.45);
-  box-shadow: 0 6px 26px rgba(34, 211, 238, 0.28);
+  background: linear-gradient(135deg, rgba(55, 214, 194, 0.18) 0%, rgba(11, 16, 32, 0.5) 70%);
+  border-color: rgba(55, 214, 194, 0.45);
+  box-shadow: 0 6px 26px rgba(55, 214, 194, 0.28);
 }
 
 /* ── Lobby trivia ticker ── */
@@ -3691,7 +3691,7 @@ html.high-contrast .glass-panel {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #10b981;
+  color: #46c78d;
 }
 
 .trivia-text {
@@ -3711,14 +3711,14 @@ html.high-contrast .glass-panel {
   font-size: 1.9rem;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.45);
-  border: 2px solid rgba(245, 158, 11, 0.55);
-  box-shadow: 0 0 14px rgba(245, 158, 11, 0.4);
+  border: 2px solid rgba(232, 182, 74, 0.55);
+  box-shadow: 0 0 14px rgba(232, 182, 74, 0.4);
   flex-shrink: 0;
 }
 
 .active-player-hero.is-me .active-player-hero-avatar {
-  border-color: rgba(34, 211, 238, 0.7);
-  box-shadow: 0 0 14px rgba(34, 211, 238, 0.5);
+  border-color: rgba(55, 214, 194, 0.7);
+  box-shadow: 0 0 14px rgba(55, 214, 194, 0.5);
 }
 
 .active-player-hero-meta {
@@ -3843,12 +3843,12 @@ html.high-contrast .glass-panel {
 }
 
 .holdings-card-clickable:hover {
-  border-color: var(--color-gold, #f59e0b);
+  border-color: var(--color-gold, #e8b64a);
 }
 
 .holdings-card.full-set {
-  border-color: rgba(245, 158, 11, 0.35);
-  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.12), 0 4px 14px rgba(245, 158, 11, 0.12);
+  border-color: rgba(232, 182, 74, 0.35);
+  box-shadow: 0 0 0 1px rgba(232, 182, 74, 0.12), 0 4px 14px rgba(232, 182, 74, 0.12);
 }
 
 .holdings-card.mortgaged {
@@ -3910,7 +3910,7 @@ html.high-contrast .glass-panel {
 .holdings-set-pill {
   font-size: 0.58rem;
   font-weight: 800;
-  background: rgba(245, 158, 11, 0.18);
+  background: rgba(232, 182, 74, 0.18);
   color: var(--color-gold);
   padding: 1px 6px;
   border-radius: 999px;
@@ -3969,7 +3969,7 @@ html.high-contrast .glass-panel {
 }
 
 .dev-pip.dev-house {
-  background: linear-gradient(to bottom, #34d399 0%, #059669 100%);
+  background: linear-gradient(to bottom, #34d399 0%, #2f9e6b 100%);
   clip-path: polygon(50% 0%, 100% 38%, 100% 100%, 0% 100%, 0% 38%);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
@@ -4067,19 +4067,19 @@ html.high-contrast .glass-panel {
 }
 
 .player-card.is-active {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(0, 0, 0, 0.3) 100%);
-  border-color: rgba(245, 158, 11, 0.4);
-  box-shadow: 0 4px 18px rgba(245, 158, 11, 0.18), inset 0 0 0 1px rgba(245, 158, 11, 0.06);
+  background: linear-gradient(135deg, rgba(232, 182, 74, 0.12) 0%, rgba(0, 0, 0, 0.3) 100%);
+  border-color: rgba(232, 182, 74, 0.4);
+  box-shadow: 0 4px 18px rgba(232, 182, 74, 0.18), inset 0 0 0 1px rgba(232, 182, 74, 0.06);
 }
 
 .player-card.is-me {
-  border-color: rgba(34, 211, 238, 0.35);
+  border-color: rgba(55, 214, 194, 0.35);
 }
 
 .player-card.is-me.is-active {
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.16) 0%, rgba(0, 0, 0, 0.3) 100%);
-  border-color: rgba(34, 211, 238, 0.55);
-  box-shadow: 0 4px 22px rgba(34, 211, 238, 0.22);
+  background: linear-gradient(135deg, rgba(55, 214, 194, 0.16) 0%, rgba(0, 0, 0, 0.3) 100%);
+  border-color: rgba(55, 214, 194, 0.55);
+  box-shadow: 0 4px 22px rgba(55, 214, 194, 0.22);
 }
 
 .player-card.is-bankrupt {
@@ -4108,13 +4108,13 @@ html.high-contrast .glass-panel {
 }
 
 .player-card-avatar.tone-active {
-  border-color: rgba(245, 158, 11, 0.7);
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.18), 0 0 14px rgba(245, 158, 11, 0.4);
+  border-color: rgba(232, 182, 74, 0.7);
+  box-shadow: 0 0 0 2px rgba(232, 182, 74, 0.18), 0 0 14px rgba(232, 182, 74, 0.4);
 }
 
 .player-card.is-me .player-card-avatar.tone-active {
-  border-color: rgba(34, 211, 238, 0.8);
-  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.18), 0 0 14px rgba(34, 211, 238, 0.45);
+  border-color: rgba(55, 214, 194, 0.8);
+  box-shadow: 0 0 0 2px rgba(55, 214, 194, 0.18), 0 0 14px rgba(55, 214, 194, 0.45);
 }
 
 .player-card-avatar.tone-jail {
@@ -4176,11 +4176,11 @@ html.high-contrast .glass-panel {
   font-size: 0.58rem;
   font-weight: 800;
   letter-spacing: 0.12em;
-  background: rgba(34, 211, 238, 0.18);
+  background: rgba(55, 214, 194, 0.18);
   color: #67e8f9;
   padding: 1px 6px;
   border-radius: 999px;
-  border: 1px solid rgba(34, 211, 238, 0.35);
+  border: 1px solid rgba(55, 214, 194, 0.35);
 }
 
 .player-card-ai-tag {
@@ -4210,7 +4210,7 @@ html.high-contrast .glass-panel {
 }
 
 .player-card-status.status-active {
-  background: rgba(245, 158, 11, 0.15);
+  background: rgba(232, 182, 74, 0.15);
   color: var(--color-gold);
 }
 
@@ -4242,7 +4242,7 @@ html.high-contrast .glass-panel {
 }
 
 .player-card-chip.is-monopoly {
-  background: rgba(245, 158, 11, 0.16);
+  background: rgba(232, 182, 74, 0.16);
   color: var(--color-gold);
 }
 
@@ -4285,21 +4285,21 @@ html.high-contrast .glass-panel {
 
 .player-card-wealthbar-fill {
   height: 100%;
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.55) 0%, rgba(245, 158, 11, 0.9) 100%);
+  background: linear-gradient(90deg, rgba(232, 182, 74, 0.55) 0%, rgba(232, 182, 74, 0.9) 100%);
   transition: width 0.35s ease;
   border-radius: 999px;
 }
 
 .player-card-wealthbar-fill.active {
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.9) 0%, rgba(252, 211, 77, 1) 100%);
+  background: linear-gradient(90deg, rgba(232, 182, 74, 0.9) 0%, rgba(252, 211, 77, 1) 100%);
 }
 
 .player-card-wealthbar-fill.me {
-  background: linear-gradient(90deg, rgba(34, 211, 238, 0.55) 0%, rgba(34, 211, 238, 0.9) 100%);
+  background: linear-gradient(90deg, rgba(55, 214, 194, 0.55) 0%, rgba(55, 214, 194, 0.9) 100%);
 }
 
 .player-card-wealthbar-fill.me.active {
-  background: linear-gradient(90deg, rgba(34, 211, 238, 0.9) 0%, rgba(125, 211, 252, 1) 100%);
+  background: linear-gradient(90deg, rgba(55, 214, 194, 0.9) 0%, rgba(125, 211, 252, 1) 100%);
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -4330,7 +4330,7 @@ html.high-contrast .glass-panel {
   border-radius: 16px;
   box-shadow:
     0 30px 80px rgba(0, 0, 0, 0.7),
-    0 0 60px rgba(245, 158, 11, 0.1),
+    0 0 60px rgba(232, 182, 74, 0.1),
     0 0 0 1px rgba(255, 255, 255, 0.03) inset;
   overflow: hidden;
   display: flex;
@@ -4340,8 +4340,8 @@ html.high-contrast .glass-panel {
 .trade-card-premium.incoming {
   box-shadow:
     0 30px 80px rgba(0, 0, 0, 0.7),
-    0 0 60px rgba(34, 211, 238, 0.18),
-    0 0 0 1px rgba(34, 211, 238, 0.12) inset;
+    0 0 60px rgba(55, 214, 194, 0.18),
+    0 0 0 1px rgba(55, 214, 194, 0.12) inset;
 }
 
 .trade-card-header {
@@ -4350,11 +4350,11 @@ html.high-contrast .glass-panel {
   justify-content: space-between;
   padding: 0.95rem 1.3rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, transparent 80%);
+  background: linear-gradient(135deg, rgba(232, 182, 74, 0.08) 0%, transparent 80%);
 }
 
 .trade-card-premium.incoming .trade-card-header {
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.1) 0%, transparent 80%);
+  background: linear-gradient(135deg, rgba(55, 214, 194, 0.1) 0%, transparent 80%);
 }
 
 .trade-card-title {
@@ -4375,12 +4375,12 @@ html.high-contrast .glass-panel {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(245, 158, 11, 0.18);
+  background: rgba(232, 182, 74, 0.18);
   color: var(--color-gold);
 }
 
 .trade-card-premium.incoming .trade-card-title-icon {
-  background: rgba(34, 211, 238, 0.2);
+  background: rgba(55, 214, 194, 0.2);
   color: #67e8f9;
 }
 
@@ -4451,9 +4451,9 @@ html.high-contrast .glass-panel {
 }
 
 .trade-player-pick.selected {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.16) 0%, rgba(245, 158, 11, 0.04) 100%);
-  border-color: rgba(245, 158, 11, 0.55);
-  box-shadow: 0 0 14px rgba(245, 158, 11, 0.22);
+  background: linear-gradient(135deg, rgba(232, 182, 74, 0.16) 0%, rgba(232, 182, 74, 0.04) 100%);
+  border-color: rgba(232, 182, 74, 0.55);
+  box-shadow: 0 0 14px rgba(232, 182, 74, 0.22);
 }
 
 .trade-player-pick-avatar {
@@ -4470,7 +4470,7 @@ html.high-contrast .glass-panel {
 }
 
 .trade-player-pick.selected .trade-player-pick-avatar {
-  border-color: rgba(245, 158, 11, 0.7);
+  border-color: rgba(232, 182, 74, 0.7);
 }
 
 .trade-player-pick-meta {
@@ -4601,8 +4601,8 @@ html.high-contrast .glass-panel {
 }
 
 .trade-cash-input:focus {
-  border-color: rgba(245, 158, 11, 0.5);
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+  border-color: rgba(232, 182, 74, 0.5);
+  box-shadow: 0 0 0 3px rgba(232, 182, 74, 0.12);
 }
 
 .trade-bump-row {
@@ -4625,14 +4625,14 @@ html.high-contrast .glass-panel {
 }
 
 .trade-bump:hover {
-  background: rgba(245, 158, 11, 0.16);
+  background: rgba(232, 182, 74, 0.16);
   color: var(--color-gold);
 }
 
 .trade-bump.max {
-  background: rgba(245, 158, 11, 0.18);
+  background: rgba(232, 182, 74, 0.18);
   color: var(--color-gold);
-  border-color: rgba(245, 158, 11, 0.3);
+  border-color: rgba(232, 182, 74, 0.3);
 }
 
 .trade-cash-display {
@@ -4687,9 +4687,9 @@ html.high-contrast .glass-panel {
 }
 
 .trade-tile-pick.selected {
-  background: rgba(16, 185, 129, 0.08);
-  border-color: rgba(16, 185, 129, 0.5);
-  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.18);
+  background: rgba(70, 199, 141, 0.08);
+  border-color: rgba(70, 199, 141, 0.5);
+  box-shadow: 0 0 0 1px rgba(70, 199, 141, 0.18);
 }
 
 .trade-tile-pick.static {
@@ -4786,8 +4786,8 @@ html.high-contrast .glass-panel {
   align-items: center;
   gap: 0.7rem;
   padding: 0.7rem 0.85rem;
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.1) 0%, rgba(11, 16, 32, 0.4) 80%);
-  border: 1px solid rgba(34, 211, 238, 0.3);
+  background: linear-gradient(135deg, rgba(55, 214, 194, 0.1) 0%, rgba(11, 16, 32, 0.4) 80%);
+  border: 1px solid rgba(55, 214, 194, 0.3);
   border-radius: 10px;
   margin-bottom: 0.9rem;
 }
@@ -4800,7 +4800,7 @@ html.high-contrast .glass-panel {
   justify-content: center;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.4);
-  border: 2px solid rgba(34, 211, 238, 0.5);
+  border: 2px solid rgba(55, 214, 194, 0.5);
   font-size: 1.5rem;
 }
 
@@ -4878,9 +4878,9 @@ html.high-contrast .glass-panel {
 }
 
 .trade-action-btn.propose {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%);
   color: #fff;
-  box-shadow: 0 6px 22px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 6px 22px rgba(70, 199, 141, 0.35);
 }
 
 .trade-action-btn.propose:hover {

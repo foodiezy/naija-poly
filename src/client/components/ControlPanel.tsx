@@ -114,7 +114,7 @@ export default function ControlPanel({
 
       {/* Per-turn AFK countdown */}
       {isMyTurn && !isBankrupt && !isAuctionActive && turnDeadline && turnDeadline > 0 && (
-        <div style={{ padding: "0.5rem 1rem", background: "rgba(16,185,129,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        <div style={{ padding: "0.5rem 1rem", background: "rgba(70,199,141,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--text-secondary)", marginBottom: "0.3rem", fontWeight: 600 }}>
             <span style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}><IconTimer size={14} /> Turn timer</span>
             <span style={{ fontWeight: "bold", color: turnPct < 20 ? "var(--color-danger)" : turnPct < 50 ? "var(--color-gold)" : "var(--color-naira)" }}>{turnSecsLeft}s</span>
@@ -183,7 +183,7 @@ export default function ControlPanel({
 
       {/* Trade pending notices */}
       {activeTrade && activeTrade.fromId === mySessionId && (
-        <div style={{ margin: "0.75rem", padding: "0.4rem", fontSize: "0.72rem", textAlign: "center", color: "var(--text-secondary)", border: "1px solid rgba(245,158,11,0.15)", borderRadius: "2px", background: "rgba(245,158,11,0.03)" }}>
+        <div style={{ margin: "0.75rem", padding: "0.4rem", fontSize: "0.72rem", textAlign: "center", color: "var(--text-secondary)", border: "1px solid rgba(232,182,74,0.15)", borderRadius: "2px", background: "rgba(232,182,74,0.03)" }}>
           🤝 Waiting for trade response...
         </div>
       )}
