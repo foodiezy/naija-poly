@@ -7,6 +7,7 @@
 
 import { BOARD, PropertyTile, JAIL_FINE } from "../data/board";
 import type { GameState, PlayerId, Action } from "./types";
+import { canBuildOn } from "./queries";
 // Default cash buffer to keep on hand rather than spending to zero.
 const DEFAULT_CASH_BUFFER = 50_000;
 
@@ -54,11 +55,22 @@ function findSellableHouse(state: GameState, playerId: PlayerId): number | null 
   return null;
 }
 
+export interface AIOptions {
+  // GameState carries no memory of declined trades, so a pure function of
+  // state would re-propose the same trade forever. The server remembers that
+  // this AI already proposed a trade this round and sets this to break the loop.
+  suppressTradeProposal?: boolean;
+}
+
 /**
  * Decide the AI player's next move. Returns null when it's not their turn and
  * they have no auction action pending.
  */
-export function getAIAction(state: GameState, playerId: PlayerId): Action | null {
+export function getAIAction(
+  state: GameState,
+  playerId: PlayerId,
+  opts?: AIOptions,
+): Action | null {
   const me = state.players.find((p) => p.id === playerId);
   if (!me || me.bankrupt) return null;
 
@@ -150,26 +162,18 @@ export function getAIAction(state: GameState, playerId: PlayerId): Action | null
       if (style === "Builder") buildBuffer = 0; // Builder spends all cash on houses
 
       for (const tile of BOARD) {
-        if (isProperty(tile.pos)) {
-          // Re-implement canBuild check with custom buildBuffer
-          const ts = state.tiles[tile.pos];
-          if (ts && ts.ownerId === playerId && !ts.mortgaged && ts.houses < 5) {
-            const group = groupTiles(tile as PropertyTile);
-            if (group.every((t) => state.tiles[t.pos]?.ownerId === playerId)) {
-              if (!group.some((t) => state.tiles[t.pos]?.mortgaged)) {
-                if (!group.some((t) => (state.tiles[t.pos]?.houses ?? 0) < ts.houses)) {
-                  if (me.cash >= (tile as PropertyTile).houseCost + buildBuffer) {
-                    return { type: "BUILD", pos: tile.pos };
-                  }
-                }
-              }
-            }
+        if (isProperty(tile.pos) && canBuildOn(state, playerId, tile.pos)) {
+          if (me.cash >= (tile as PropertyTile).houseCost + buildBuffer) {
+            return { type: "BUILD", pos: tile.pos };
           }
         }
       }
-      
-      // Trader might randomly propose a trade if they have some cash but need properties
-      if (style === "Trader" && Math.random() < 0.3) {
+
+      // Trader proposes a trade if they have some cash but need properties.
+      // Skip while a trade is already pending, and skip once we've already
+      // proposed this round (see AIOptions) — otherwise a decline would make
+      // us re-propose the identical trade forever and never end the turn.
+      if (style === "Trader" && !state.activeTrade && !opts?.suppressTradeProposal) {
         // Find a property we need to complete a set
         for (const tile of BOARD) {
           if (isProperty(tile.pos) && state.tiles[tile.pos]?.ownerId && state.tiles[tile.pos]?.ownerId !== playerId) {

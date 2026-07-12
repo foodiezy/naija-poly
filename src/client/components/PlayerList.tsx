@@ -32,6 +32,7 @@ function monopolyCount(tiles: GameState["tiles"], playerId: string): number {
 }
 
 function statusLabel(p: Player, isActive: boolean): { text: string; tone: string } {
+  if (p.kicked) return { text: "Voted Out", tone: "bankrupt" };
   if (p.bankrupt) return { text: "Bankrupt", tone: "bankrupt" };
   if (p.inJail) return { text: "In Jail", tone: "jail" };
   if (isActive) return { text: "Playing", tone: "active" };

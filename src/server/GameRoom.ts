@@ -40,6 +40,10 @@ export class GameRoom extends Room<GameRoomState> {
   private auctionTimer?: ReturnType<typeof this.clock.setTimeout>;
   // Pending scheduled move for a computer player.
   private aiTimer?: ReturnType<typeof this.clock.setTimeout>;
+  // Last AI trade proposal (actor + round). The engine is pure and a declined
+  // trade leaves no trace in state, so without this memory a "Trader" bot
+  // whose offer was declined would re-propose the identical trade forever.
+  private lastAITradeProposal?: { actorId: string; round: number };
   // Per-turn AFK timeout (optional, host-configured).
   private turnTimer?: ReturnType<typeof this.clock.setTimeout>;
 
@@ -209,10 +213,16 @@ export class GameRoom extends Room<GameRoomState> {
     const engineState = this.fullState;
     if (!engineState) return;
 
-    const action = getAIAction(engineState, actorId);
+    const suppressTradeProposal =
+      this.lastAITradeProposal?.actorId === actorId &&
+      this.lastAITradeProposal.round === engineState.currentTurn;
+    const action = getAIAction(engineState, actorId, { suppressTradeProposal });
     if (!action) {
       this.scheduleAIIfNeeded();
       return;
+    }
+    if (action.type === "PROPOSE_TRADE") {
+      this.lastAITradeProposal = { actorId, round: engineState.currentTurn };
     }
     try {
       this.runEngineAction(actorId, action); // persists + reschedules the next AI move
