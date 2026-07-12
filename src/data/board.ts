@@ -124,7 +124,6 @@ export const STARTING_CASH = 1_500_000;
 export const GO_SALARY = 200_000;
 export const JAIL_POSITION = 10;
 export const JAIL_FINE = 50_000;
-export const MAX_HOUSES = 4; // 5th build = hotel
 export const HOUSE_SUPPLY = 32;
 export const HOTEL_SUPPLY = 12;
 
@@ -290,10 +289,6 @@ export const BOARD: Tile[] = [
     price: 400_000, rent: [50_000, 200_000, 600_000, 1_400_000, 1_700_000, 2_000_000],
     houseCost: 200_000, mortgage: 200_000 },
 ];
-
-// Convenience: how many tiles of each type exist where count matters.
-export const AIRPORT_COUNT = BOARD.filter((t) => t.type === "airport").length; // 4
-export const UTILITY_COUNT = BOARD.filter((t) => t.type === "utility").length; // 2
 
 // ----------------------------- Card Decks ------------------------------------
 // Shuffle these at game start. "getOutOfJailFree" cards are removed from the

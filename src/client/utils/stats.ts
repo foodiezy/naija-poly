@@ -43,11 +43,3 @@ export function recordGameResult(won: boolean, netWorth: number): void {
     // localStorage full or unavailable — silently ignore
   }
 }
-
-export function clearStats(): void {
-  try {
-    localStorage.removeItem(STATS_KEY);
-  } catch {
-    // ignore
-  }
-}

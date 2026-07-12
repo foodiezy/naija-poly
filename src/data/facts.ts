@@ -147,7 +147,3 @@ export const ALL_TRIVIA: string[] = [
 /** Get a fact for a tile by its board position. Returns undefined for non-ownable tiles. */
 export const getFactForTile = (pos: number): string | undefined =>
   PROPERTY_FACTS[pos];
-
-/** Pick a random item from the combined trivia pool. */
-export const getRandomTrivia = (): string =>
-  ALL_TRIVIA[Math.floor(Math.random() * ALL_TRIVIA.length)];

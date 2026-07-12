@@ -16,18 +16,6 @@ export const IconRoll: React.FC<IconProps> = ({ size = 20, ...props }) => (
   </svg>
 );
 
-export const IconBuild: React.FC<IconProps> = ({ size = 16, ...props }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
-    <path d="M19.4 13C18.8 12.8 18.2 13 17.8 13.5L15 17L11.5 13.5L15 10.7C15.5 10.3 15.7 9.7 15.5 9.1C15.3 8.5 14.8 8.1 14.2 8C13 7.8 11.8 8 10.8 8.6L14 11.8L8.7 17.1L4.8 13.2C4.4 12.8 3.8 12.8 3.4 13.2C3 13.6 3 14.2 3.4 14.6L8 19.2C8.2 19.4 8.5 19.5 8.7 19.5C9 19.5 9.2 19.4 9.4 19.2L15.3 13.3L18.4 16.4C19 15.4 19.2 14.2 19 13ZM21 4H3C2.4 4 2 4.4 2 5V7C2 7.6 2.4 8 3 8H21C21.6 8 22 7.6 22 7V5C22 4.4 21.6 4 21 4Z" fill="currentColor" />
-  </svg>
-);
-
-export const IconSell: React.FC<IconProps> = ({ size = 16, ...props }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
-    <path d="M19 13L13.7 18.3C13.3 18.7 12.7 18.7 12.3 18.3L8.5 14.5L3.7 19.3C3.3 19.7 2.7 19.7 2.3 19.3C1.9 18.9 1.9 18.3 2.3 17.9L7.8 12.4C8.2 12 8.8 12 9.2 12.4L13 16.2L17.6 11.6H15C14.4 11.6 14 11.2 14 10.6C14 10 14.4 9.6 15 9.6H20C20.6 9.6 21 10 21 10.6V15.6C21 16.2 20.6 16.6 20 16.6C19.4 16.6 19 16.2 19 15.6V13Z" fill="currentColor" />
-  </svg>
-);
-
 export const IconMortgage: React.FC<IconProps> = ({ size = 16, ...props }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
     <path d="M17 9H16V7C16 4.8 14.2 3 12 3C9.8 3 8 4.8 8 7V9H7C5.9 9 5 9.9 5 11V20C5 21.1 5.9 22 7 22H17C18.1 22 19 21.1 19 20V11C19 9.9 18.1 9 17 9ZM10 7C10 5.9 10.9 5 12 5C13.1 5 14 5.9 14 7V9H10V7ZM17 20H7V11H17V20ZM12 17C12.8 17 13.5 16.3 13.5 15.5C13.5 14.7 12.8 14 12 14C11.2 14 10.5 14.7 10.5 15.5C10.5 16.3 11.2 17 12 17Z" fill="currentColor" />
@@ -60,13 +48,6 @@ export const IconTimer: React.FC<IconProps> = ({ size = 16, ...props }) => (
     <path d="M15 1H9C8.4 1 8 1.4 8 2C8 2.6 8.4 3 9 3H15C15.6 3 16 2.6 16 2C16 1.4 15.6 1 15 1Z" fill="currentColor" />
     <path d="M19.8 4.2C19.4 3.8 18.8 3.8 18.4 4.2L17.1 5.5C15.7 4.3 13.9 3.6 12 3.6C7.4 3.6 3.6 7.4 3.6 12C3.6 16.6 7.4 20.4 12 20.4C16.6 20.4 20.4 16.6 20.4 12C20.4 9.6 19.4 7.4 17.8 5.8L19.8 3.8C20.2 3.4 20.2 2.8 19.8 4.2ZM12 18.4C8.5 18.4 5.6 15.5 5.6 12C5.6 8.5 8.5 5.6 12 5.6C15.5 5.6 18.4 8.5 18.4 12C18.4 15.5 15.5 18.4 12 18.4Z" fill="currentColor" />
     <path d="M12 7.6C11.4 7.6 11 8 11 8.6V12C11 12.6 11.4 13 12 13H15C15.6 13 16 12.6 16 12C16 11.4 15.6 11 15 11H13V8.6C13 8 12.6 7.6 12 7.6Z" fill="currentColor" />
-  </svg>
-);
-
-export const IconPlayer: React.FC<IconProps> = ({ size = 16, ...props }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
-    <path d="M12 12C14.2 12 16 10.2 16 8C16 5.8 14.2 4 12 4C9.8 4 8 5.8 8 8C8 10.2 9.8 12 12 12ZM12 6C13.1 6 14 6.9 14 8C14 9.1 13.1 10 12 10C10.9 10 10 9.1 10 8C10 6.9 10.9 6 12 6Z" fill="currentColor" />
-    <path d="M18.4 15.6C16.6 14.1 14.4 13.4 12 13.4C9.6 13.4 7.4 14.2 5.6 15.6C4.4 16.6 3.7 18.2 3.7 19.9C3.7 20.5 4.1 21 4.7 21H19.3C19.9 21 20.3 20.5 20.3 19.9C20.3 18.1 19.6 16.6 18.4 15.6ZM5.8 19C6.2 18.1 6.8 17.3 7.7 16.7C8.9 15.8 10.4 15.4 12 15.4C13.6 15.4 15.1 15.8 16.3 16.7C17.2 17.4 17.8 18.2 18.2 19H5.8Z" fill="currentColor" />
   </svg>
 );
 

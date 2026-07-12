@@ -3,8 +3,6 @@ import {
   BOARD,
   CHANCE_CARDS,
   HUSTLE_CARDS,
-  AIRPORT_COUNT,
-  UTILITY_COUNT,
   type PropertyTile,
 } from "./board";
 
@@ -20,8 +18,8 @@ describe("Nigerian board data", () => {
   it("has 22 properties, 4 airports, 2 utilities", () => {
     const props = BOARD.filter((t) => t.type === "property");
     expect(props).toHaveLength(22);
-    expect(AIRPORT_COUNT).toBe(4);
-    expect(UTILITY_COUNT).toBe(2);
+    expect(BOARD.filter((t) => t.type === "airport")).toHaveLength(4);
+    expect(BOARD.filter((t) => t.type === "utility")).toHaveLength(2);
   });
 
   it("every property has a 6-entry rent table and positive price", () => {

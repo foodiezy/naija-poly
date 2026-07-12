@@ -5,10 +5,10 @@ import { getDevelopmentName } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
-import { ALL_TRIVIA } from "../../data/facts";
 import TileImage from "./TileImage";
 import { tileImageUrl } from "../tileImages";
 import { IconHouse, IconHotel } from "./icons";
+import { useTriviaRotation } from "../hooks/useTriviaRotation";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
 // type, so drop the redundant "Airport"/"Corporation" suffix; the full name
@@ -132,14 +132,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   const prevDiceKey = useRef<string>("");
 
   // In-game trivia rotation — shown during other players' turns
-  const [boardTriviaIdx, setBoardTriviaIdx] = useState(() => Math.floor(Math.random() * ALL_TRIVIA.length));
-  useEffect(() => {
-    if (isMyTurn) return; // no trivia during your own turn
-    const interval = setInterval(() => {
-      setBoardTriviaIdx(prev => (prev + 1) % ALL_TRIVIA.length);
-    }, 14000);
-    return () => clearInterval(interval);
-  }, [isMyTurn]);
+  const boardTrivia = useTriviaRotation(14000, isMyTurn);
 
   // Keep the game feed pinned to the newest line WITHOUT scrolling the page.
   // scrollIntoView() walks every scrollable ancestor (including the window),
@@ -387,14 +380,14 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
               <span className="trivia-label">🇳🇬 Did you know?</span>
               <AnimatePresence mode="wait">
                 <motion.p
-                  key={boardTriviaIdx}
+                  key={boardTrivia}
                   className="trivia-text"
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.35 }}
                 >
-                  {ALL_TRIVIA[boardTriviaIdx]}
+                  {boardTrivia}
                 </motion.p>
               </AnimatePresence>
             </div>

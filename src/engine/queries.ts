@@ -1,6 +1,7 @@
 // engine/queries.ts — pure, read-only predicates over GameState.
-// Single source of truth for what property actions are legal; imported by
-// both the client (to enable/disable buttons) and the engine (to validate).
+// Used by the client (to enable/disable buttons) and by the AI (to decide
+// its next move). The engine's own action handlers re-validate independently
+// so they can throw specific, user-facing error messages per failure reason.
 
 import { BOARD, HOUSE_SUPPLY, HOTEL_SUPPLY } from "../data/board";
 import type { PropertyTile } from "../data/board";
