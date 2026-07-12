@@ -26,25 +26,42 @@ function groupColorVar(tile: Tile): string {
 }
 
 function tileSubLabel(tile: Tile): string {
-  if (tile.type === "property") return (tile as PropertyTile).group.replace(/^\w/, (c) => c.toUpperCase());
+  if (tile.type === "property")
+    return (tile as PropertyTile).group.replace(/^\w/, (c) => c.toUpperCase());
   if (tile.type === "airport") return "Airport";
   if (tile.type === "utility") return "Utility";
   return "";
 }
 
-export default function TradeBuilder({ engineState, mySessionId, onSendAction, onClose, liveState, initialOffer }: Props) {
+export default function TradeBuilder({
+  engineState,
+  mySessionId,
+  onSendAction,
+  onClose,
+  liveState,
+  initialOffer,
+}: Props) {
   const { players, tiles } = engineState;
   const me = players.find((p) => p.id === mySessionId);
 
   const [tradeTargetId, setTradeTargetId] = useState(initialOffer ? initialOffer.toId : "");
   const [tradeGiveCash, setTradeGiveCash] = useState(initialOffer ? initialOffer.giveCash : 0);
   const [tradeGetCash, setTradeGetCash] = useState(initialOffer ? initialOffer.getCash : 0);
-  const [tradeGiveTiles, setTradeGiveTiles] = useState<number[]>(initialOffer ? initialOffer.giveTiles : []);
-  const [tradeGetTiles, setTradeGetTiles] = useState<number[]>(initialOffer ? initialOffer.getTiles : []);
+  const [tradeGiveTiles, setTradeGiveTiles] = useState<number[]>(
+    initialOffer ? initialOffer.giveTiles : [],
+  );
+  const [tradeGetTiles, setTradeGetTiles] = useState<number[]>(
+    initialOffer ? initialOffer.getTiles : [],
+  );
 
-  useEffect(() => { 
-    if (initialOffer && tradeTargetId === initialOffer.toId && tradeGetTiles.length === initialOffer.getTiles.length) return;
-    setTradeGetTiles([]); 
+  useEffect(() => {
+    if (
+      initialOffer &&
+      tradeTargetId === initialOffer.toId &&
+      tradeGetTiles.length === initialOffer.getTiles.length
+    )
+      return;
+    setTradeGetTiles([]);
   }, [tradeTargetId]);
 
   const getToken = (id: string) => tokenEmoji(liveState?.lobbyPlayers?.get(id)?.tokenId);
@@ -52,20 +69,28 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
   const tradeablePartners = players.filter((p) => p.id !== mySessionId && !p.bankrupt);
 
   const myTradeableTiles = useMemo(
-    () => BOARD.filter((t: Tile) => tiles[t.pos]?.ownerId === mySessionId && (tiles[t.pos] as TileState).houses === 0),
-    [tiles, mySessionId]
+    () =>
+      BOARD.filter(
+        (t: Tile) =>
+          tiles[t.pos]?.ownerId === mySessionId && (tiles[t.pos] as TileState).houses === 0,
+      ),
+    [tiles, mySessionId],
   );
   const targetTradeableTiles = useMemo(
-    () => tradeTargetId
-      ? BOARD.filter((t: Tile) => tiles[t.pos]?.ownerId === tradeTargetId && (tiles[t.pos] as TileState).houses === 0)
-      : [],
-    [tiles, tradeTargetId]
+    () =>
+      tradeTargetId
+        ? BOARD.filter(
+            (t: Tile) =>
+              tiles[t.pos]?.ownerId === tradeTargetId && (tiles[t.pos] as TileState).houses === 0,
+          )
+        : [],
+    [tiles, tradeTargetId],
   );
 
   const target = players.find((p) => p.id === tradeTargetId);
 
   const toggle = (setter: React.Dispatch<React.SetStateAction<number[]>>, pos: number) =>
-    setter((prev) => prev.includes(pos) ? prev.filter((p) => p !== pos) : [...prev, pos]);
+    setter((prev) => (prev.includes(pos) ? prev.filter((p) => p !== pos) : [...prev, pos]));
 
   // Bump-buttons for cash inputs
   const cashSteps = (max: number): number[] => {
@@ -90,7 +115,11 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
   const giveValue = tradeGiveCash + tradeGiveTiles.reduce((s, p) => s + tileValue(p, tiles), 0);
   const getValue = tradeGetCash + tradeGetTiles.reduce((s, p) => s + tileValue(p, tiles), 0);
 
-  const isEmpty = tradeGiveTiles.length === 0 && tradeGetTiles.length === 0 && tradeGiveCash === 0 && tradeGetCash === 0;
+  const isEmpty =
+    tradeGiveTiles.length === 0 &&
+    tradeGetTiles.length === 0 &&
+    tradeGiveCash === 0 &&
+    tradeGetCash === 0;
 
   // Portal to <body>: the sidebar ancestor has backdrop-filter + overflow:hidden,
   // which creates a new containing block for position:fixed descendants and
@@ -112,10 +141,14 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
       >
         <div className="trade-card-header">
           <div className="trade-card-title">
-            <span className="trade-card-title-icon"><IconTrade size={20} /></span>
+            <span className="trade-card-title-icon">
+              <IconTrade size={20} />
+            </span>
             <span>Propose a Deal</span>
           </div>
-          <button className="trade-card-close" onClick={onClose} aria-label="Close">×</button>
+          <button className="trade-card-close" onClick={onClose} aria-label="Close">
+            ×
+          </button>
         </div>
 
         <div className="trade-card-body">
@@ -170,7 +203,11 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
                       step={10000}
                       value={tradeGiveCash || ""}
                       placeholder="0"
-                      onChange={(e) => setTradeGiveCash(Math.max(0, Math.min(me?.cash || 0, Number(e.target.value))))}
+                      onChange={(e) =>
+                        setTradeGiveCash(
+                          Math.max(0, Math.min(me?.cash || 0, Number(e.target.value))),
+                        )
+                      }
                     />
                     <div className="trade-bump-row">
                       {cashSteps(me?.cash || 0).map((step) => (
@@ -187,15 +224,18 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
                         type="button"
                         className="trade-bump max"
                         onClick={() => setTradeGiveCash(me?.cash || 0)}
-                      >Max</button>
+                      >
+                        Max
+                      </button>
                     </div>
                   </div>
 
                   <label className="trade-cash-label">Properties</label>
                   <div className="trade-tile-list">
-                    {myTradeableTiles.length === 0
-                      ? <div className="trade-empty-row">No unimproved properties.</div>
-                      : myTradeableTiles.map((t: Tile) => {
+                    {myTradeableTiles.length === 0 ? (
+                      <div className="trade-empty-row">No unimproved properties.</div>
+                    ) : (
+                      myTradeableTiles.map((t: Tile) => {
                         const selected = tradeGiveTiles.includes(t.pos);
                         return (
                           <button
@@ -204,15 +244,21 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
                             className={`trade-tile-pick${selected ? " selected" : ""}`}
                             onClick={() => toggle(setTradeGiveTiles, t.pos)}
                           >
-                            <span className="trade-tile-band" style={{ background: groupColorVar(t) }} />
+                            <span
+                              className="trade-tile-band"
+                              style={{ background: groupColorVar(t) }}
+                            />
                             <span className="trade-tile-info">
                               <span className="trade-tile-name">{t.name}</span>
                               <span className="trade-tile-sub">{tileSubLabel(t)}</span>
                             </span>
-                            <span className="trade-tile-value">₦{tileValue(t.pos, tiles).toLocaleString()}</span>
+                            <span className="trade-tile-value">
+                              ₦{tileValue(t.pos, tiles).toLocaleString()}
+                            </span>
                           </button>
                         );
-                      })}
+                      })
+                    )}
                   </div>
                 </div>
 
@@ -236,7 +282,11 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
                       step={10000}
                       value={tradeGetCash || ""}
                       placeholder="0"
-                      onChange={(e) => setTradeGetCash(Math.max(0, Math.min(target.cash || 0, Number(e.target.value))))}
+                      onChange={(e) =>
+                        setTradeGetCash(
+                          Math.max(0, Math.min(target.cash || 0, Number(e.target.value))),
+                        )
+                      }
                     />
                     <div className="trade-bump-row">
                       {cashSteps(target.cash || 0).map((step) => (
@@ -244,7 +294,9 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
                           key={step}
                           type="button"
                           className="trade-bump"
-                          onClick={() => setTradeGetCash((c) => Math.min(target.cash || 0, c + step))}
+                          onClick={() =>
+                            setTradeGetCash((c) => Math.min(target.cash || 0, c + step))
+                          }
                         >
                           +₦{step >= 1_000_000 ? `${step / 1_000_000}M` : `${step / 1000}k`}
                         </button>
@@ -253,15 +305,18 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
                         type="button"
                         className="trade-bump max"
                         onClick={() => setTradeGetCash(target.cash || 0)}
-                      >Max</button>
+                      >
+                        Max
+                      </button>
                     </div>
                   </div>
 
                   <label className="trade-cash-label">Properties</label>
                   <div className="trade-tile-list">
-                    {targetTradeableTiles.length === 0
-                      ? <div className="trade-empty-row">They have no unimproved properties.</div>
-                      : targetTradeableTiles.map((t: Tile) => {
+                    {targetTradeableTiles.length === 0 ? (
+                      <div className="trade-empty-row">They have no unimproved properties.</div>
+                    ) : (
+                      targetTradeableTiles.map((t: Tile) => {
                         const selected = tradeGetTiles.includes(t.pos);
                         return (
                           <button
@@ -270,15 +325,21 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
                             className={`trade-tile-pick${selected ? " selected" : ""}`}
                             onClick={() => toggle(setTradeGetTiles, t.pos)}
                           >
-                            <span className="trade-tile-band" style={{ background: groupColorVar(t) }} />
+                            <span
+                              className="trade-tile-band"
+                              style={{ background: groupColorVar(t) }}
+                            />
                             <span className="trade-tile-info">
                               <span className="trade-tile-name">{t.name}</span>
                               <span className="trade-tile-sub">{tileSubLabel(t)}</span>
                             </span>
-                            <span className="trade-tile-value">₦{tileValue(t.pos, tiles).toLocaleString()}</span>
+                            <span className="trade-tile-value">
+                              ₦{tileValue(t.pos, tiles).toLocaleString()}
+                            </span>
                           </button>
                         );
-                      })}
+                      })
+                    )}
                   </div>
                 </div>
               </div>
@@ -312,6 +373,6 @@ export default function TradeBuilder({ engineState, mySessionId, onSendAction, o
         </div>
       </motion.div>
     </motion.div>,
-    document.body
+    document.body,
   );
 }

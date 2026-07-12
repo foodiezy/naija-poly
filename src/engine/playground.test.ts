@@ -33,7 +33,7 @@ describe("Odogwu Empire Console Playground", () => {
       const pairIndex = Math.floor(rollIndex / 2);
       const isFirst = rollIndex % 2 === 0;
       rollIndex++;
-      return ((mockRolls[pairIndex][isFirst ? 0 : 1] - 0.5) / 6);
+      return (mockRolls[pairIndex][isFirst ? 0 : 1] - 0.5) / 6;
     };
 
     let state = createGame(playerIds);
@@ -296,7 +296,11 @@ function sumCash(state: GameState): number {
 }
 
 function deepFreeze<T>(obj: T): T {
-  if (obj !== null && (typeof obj === "object" || typeof obj === "function") && !Object.isFrozen(obj)) {
+  if (
+    obj !== null &&
+    (typeof obj === "object" || typeof obj === "function") &&
+    !Object.isFrozen(obj)
+  ) {
     Object.getOwnPropertyNames(obj).forEach((prop) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       deepFreeze((obj as any)[prop]);
@@ -352,7 +356,7 @@ function findLegalBuild(state: GameState, playerId: PlayerId, buffer: number): n
 }
 
 // When a player owes money they can't cover (unsettled debt) or has negative cash:
-// mortgage unmortgaged, unbuilt-on properties one at a time (selling houses first 
+// mortgage unmortgaged, unbuilt-on properties one at a time (selling houses first
 // if needed to unblock a mortgage), then declare bankruptcy if still unresolved.
 function resolveNegativeCash(
   state: GameState,
@@ -362,9 +366,9 @@ function resolveNegativeCash(
   let current = state;
   let player = current.players.find((p) => p.id === playerId)!;
   let guard = 0;
-  
+
   const hasDebts = () => current.debtLedger.some((d) => d.debtorId === playerId);
-  
+
   while ((player.cash < 0 || hasDebts()) && guard < 100) {
     guard += 1;
     // First, sell any houses this player owns (frees cash, unblocks mortgaging).
@@ -471,7 +475,9 @@ printLogs.lastLength = 0;
 function printState(state: any) {
   console.log("\nPlayers:");
   state.players.forEach((p: any) => {
-    console.log(`- ${p.name}: Cash: ${formatNaira(p.cash)}, Position: ${p.position} (Tile: ${p.inJail ? "Jail" : "Active"})`);
+    console.log(
+      `- ${p.name}: Cash: ${formatNaira(p.cash)}, Position: ${p.position} (Tile: ${p.inJail ? "Jail" : "Active"})`,
+    );
   });
   console.log(`Current Player: ${state.players[state.currentPlayerIndex].name}`);
   console.log(`Current Phase: ${state.phase}`);

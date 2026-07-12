@@ -13,16 +13,27 @@ export function useSoundEffects(engineState: GameState | null, mySessionId: stri
 
       newLogs.forEach((logLine: string) => {
         if (logLine === "Game started.") {
-          toast.success(" Game started! Let the hustle begin!", { toastId: "game-start", autoClose: 3000 });
+          toast.success(" Game started! Let the hustle begin!", {
+            toastId: "game-start",
+            autoClose: 3000,
+          });
           return;
         }
 
         // Sounds
         if (logLine.includes("rolled")) {
           sound.playRoll();
-        } else if (logLine.includes("bought") || logLine.includes("passed START") || logLine.includes("collected the Mama Put Pot")) {
+        } else if (
+          logLine.includes("bought") ||
+          logLine.includes("passed START") ||
+          logLine.includes("collected the Mama Put Pot")
+        ) {
           sound.playCash();
-        } else if (logLine.includes("paid ₦") || logLine.includes("lost ₦") || logLine.includes("tax")) {
+        } else if (
+          logLine.includes("paid ₦") ||
+          logLine.includes("lost ₦") ||
+          logLine.includes("tax")
+        ) {
           sound.playRentPay();
         } else if (logLine.includes("drew Chance") || logLine.includes("drew Hustle")) {
           sound.playDraw();
@@ -40,7 +51,11 @@ export function useSoundEffects(engineState: GameState | null, mySessionId: stri
           if (myName && logLine.includes(`It is now ${myName}'s turn`)) {
             sound.playYourTurn();
             // Browser notification for tabbed-away players
-            if (document.hidden && "Notification" in window && Notification.permission === "granted") {
+            if (
+              document.hidden &&
+              "Notification" in window &&
+              Notification.permission === "granted"
+            ) {
               new Notification("Odogwu Empire", { body: "It's your turn! 🎲", icon: "🎲" });
             }
           }
@@ -56,7 +71,9 @@ export function useSoundEffects(engineState: GameState | null, mySessionId: stri
               if (logLine.includes("bought")) {
                 const propMatch = logLine.match(/bought (.+) for ₦([\.\d,]+)/);
                 if (propMatch) {
-                  toast.success(`🏘️ You bought ${propMatch[1]} for ₦${propMatch[2]}!`, { autoClose: 3500 });
+                  toast.success(`🏘️ You bought ${propMatch[1]} for ₦${propMatch[2]}!`, {
+                    autoClose: 3500,
+                  });
                 }
               } else if (logLine.includes("drew Chance")) {
                 const cardMatch = logLine.match(/Chance: "([^"]+)"/);
@@ -87,7 +104,10 @@ export function useSoundEffects(engineState: GameState | null, mySessionId: stri
                 const winnerMatch = logLine.match(/^(.+?) wins the game/);
                 if (winnerMatch) {
                   if (winnerMatch[1] === myName) {
-                    toast.success("🏆 YOU WIN! E no easy, but you rule Naija!", { autoClose: false, closeOnClick: false });
+                    toast.success("🏆 YOU WIN! E no easy, but you rule Naija!", {
+                      autoClose: false,
+                      closeOnClick: false,
+                    });
                   } else {
                     toast(`🏆 ${winnerMatch[1]} wins the game!`, { autoClose: 5000 });
                   }

@@ -15,7 +15,12 @@ interface ChatPanelProps {
 // Left-column room chat: a "General" channel plus a private channel per other
 // player. Lifted out of ControlPanel so chat lives on the left while the game
 // controls live on the right.
-export default function ChatPanel({ room, engineState, chatMessages, onSendChatMessage }: ChatPanelProps) {
+export default function ChatPanel({
+  room,
+  engineState,
+  chatMessages,
+  onSendChatMessage,
+}: ChatPanelProps) {
   const [chatChannel, setChatChannel] = useState<string>("general");
   const [channelUnread, setChannelUnread] = useState<Record<string, number>>({});
   const [lastMessageCount, setLastMessageCount] = useState(0);
@@ -71,10 +76,27 @@ export default function ChatPanel({ room, engineState, chatMessages, onSendChatM
       : players.find((p: Player) => p.id === chatChannel)?.name || "Player";
 
   return (
-    <div className="console-panel glass-panel" style={{ background: "#1c1835", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "2px" }}>
+    <div
+      className="console-panel glass-panel"
+      style={{
+        background: "#1c1835",
+        border: "1px solid rgba(255, 255, 255, 0.08)",
+        borderRadius: "2px",
+      }}
+    >
       <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "150px" }}>
         {/* Chat Header/Title */}
-        <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "0.5rem", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "0.5rem" }}>
+        <div
+          style={{
+            fontSize: "0.9rem",
+            fontWeight: "bold",
+            color: "var(--text-secondary)",
+            textTransform: "uppercase",
+            marginBottom: "0.5rem",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            paddingBottom: "0.5rem",
+          }}
+        >
           💬 Room Chat
         </div>
 
@@ -108,15 +130,33 @@ export default function ChatPanel({ room, engineState, chatMessages, onSendChatM
 
         <div id="game-chat-box" className="console-logs" style={{ flex: 1, minHeight: "100px" }}>
           {visibleMessages.length === 0 ? (
-            <div className="chat-empty-msg" style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "1rem" }}>
+            <div
+              className="chat-empty-msg"
+              style={{
+                fontSize: "0.75rem",
+                color: "var(--text-muted)",
+                fontStyle: "italic",
+                textAlign: "center",
+                padding: "1rem",
+              }}
+            >
               {chatChannel === "general"
                 ? "No messages yet. Chat with everyone!"
                 : `No private messages with ${activeChannelName} yet.`}
             </div>
           ) : (
             visibleMessages.map((msg: ChatMessage, idx: number) => (
-              <div key={idx} className="chat-msg-row" style={{ fontSize: "0.8rem", margin: "2px 0", border: "none" }}>
-                <strong style={{ color: msg.senderId === mySessionId ? "var(--color-naira)" : "var(--color-gold)" }}>
+              <div
+                key={idx}
+                className="chat-msg-row"
+                style={{ fontSize: "0.8rem", margin: "2px 0", border: "none" }}
+              >
+                <strong
+                  style={{
+                    color:
+                      msg.senderId === mySessionId ? "var(--color-naira)" : "var(--color-gold)",
+                  }}
+                >
                   {msg.toId && "🔒 "}
                   {tokenEmoji(msg.tokenId)} {msg.senderId === mySessionId ? "You" : msg.senderName}:
                 </strong>{" "}
@@ -140,12 +180,25 @@ export default function ChatPanel({ room, engineState, chatMessages, onSendChatM
           <input
             type="text"
             name="chatText"
-            placeholder={chatChannel === "general" ? "Message everyone…" : `Whisper to ${activeChannelName}…`}
+            placeholder={
+              chatChannel === "general" ? "Message everyone…" : `Whisper to ${activeChannelName}…`
+            }
             className="input-field"
             autoComplete="off"
-            style={{ flex: 1, padding: "0.4rem 0.6rem", fontSize: "0.8rem", background: "rgba(0,0,0,0.4)" }}
+            style={{
+              flex: 1,
+              padding: "0.4rem 0.6rem",
+              fontSize: "0.8rem",
+              background: "rgba(0,0,0,0.4)",
+            }}
           />
-          <button type="submit" className="button-primary" style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", width: "auto" }}>Send</button>
+          <button
+            type="submit"
+            className="button-primary"
+            style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", width: "auto" }}
+          >
+            Send
+          </button>
         </form>
       </div>
     </div>

@@ -42,7 +42,7 @@ function statusLabel(p: Player, isActive: boolean): { text: string; tone: string
 export default function PlayerList({ engineState, mySessionId, liveState, onSendAction }: Props) {
   const { players, currentPlayerIndex, currentTurn, settings, tiles, votekicks } = engineState;
   const currentPlayer = players[currentPlayerIndex];
-  const me = players.find(p => p.id === mySessionId);
+  const me = players.find((p) => p.id === mySessionId);
 
   const getToken = (id: string) => {
     const lp = liveState?.lobbyPlayers?.get(id);
@@ -69,9 +69,7 @@ export default function PlayerList({ engineState, mySessionId, liveState, onSend
         <div className="players-panel-round">
           <span className="round-label">Round</span>
           <span className="round-number">{currentTurn ?? 1}</span>
-          {settings?.turnLimit > 0 && (
-            <span className="round-limit">/ {settings.turnLimit}</span>
-          )}
+          {settings?.turnLimit > 0 && <span className="round-limit">/ {settings.turnLimit}</span>}
         </div>
       </div>
 
@@ -92,7 +90,11 @@ export default function PlayerList({ engineState, mySessionId, liveState, onSend
               <div className="player-card-row">
                 <div className={`player-card-avatar tone-${status.tone}`}>
                   <span className="player-card-avatar-emoji">{getToken(p.id)}</span>
-                  {p.inJail && <span className="player-card-jail-badge" title="In Kirikiri Prison">🔒</span>}
+                  {p.inJail && (
+                    <span className="player-card-jail-badge" title="In Kirikiri Prison">
+                      🔒
+                    </span>
+                  )}
                 </div>
 
                 <div className="player-card-middle">
@@ -101,9 +103,18 @@ export default function PlayerList({ engineState, mySessionId, liveState, onSend
                     {isMe && <span className="player-card-you-tag">YOU</span>}
                     {!isMe && isAI(p.name) && <span className="player-card-ai-tag">BOT</span>}
                     {!isMe && !p.bankrupt && !isAI(p.name) && !me?.bankrupt && onSendAction && (
-                      <button 
+                      <button
                         className="votekick-btn"
-                        style={{ marginLeft: 'auto', fontSize: '0.6rem', padding: '0.1rem 0.3rem', background: 'transparent', border: '1px solid var(--color-danger)', color: 'var(--color-danger)', borderRadius: '2px', cursor: 'pointer' }}
+                        style={{
+                          marginLeft: "auto",
+                          fontSize: "0.6rem",
+                          padding: "0.1rem 0.3rem",
+                          background: "transparent",
+                          border: "1px solid var(--color-danger)",
+                          color: "var(--color-danger)",
+                          borderRadius: "2px",
+                          cursor: "pointer",
+                        }}
                         onClick={() => {
                           if (window.confirm(`Vote to commot ${p.name}?`)) {
                             onSendAction({ type: "VOTE_KICK", targetId: p.id });
@@ -112,12 +123,15 @@ export default function PlayerList({ engineState, mySessionId, liveState, onSend
                         title={`Votes: ${votekicks?.[p.id]?.length || 0}`}
                         disabled={votekicks?.[p.id]?.includes(mySessionId)}
                       >
-                        {votekicks?.[p.id]?.includes(mySessionId) ? "Voted" : "Commot"} ({votekicks?.[p.id]?.length || 0})
+                        {votekicks?.[p.id]?.includes(mySessionId) ? "Voted" : "Commot"} (
+                        {votekicks?.[p.id]?.length || 0})
                       </button>
                     )}
                   </div>
                   <div className="player-card-status-row">
-                    <span className={`player-card-status status-${status.tone}`}>{status.text}</span>
+                    <span className={`player-card-status status-${status.tone}`}>
+                      {status.text}
+                    </span>
                     <span className="player-card-chip" title="Properties owned">
                       🏘️ {stats.properties}
                     </span>

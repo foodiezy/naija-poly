@@ -137,13 +137,9 @@ export const HISTORY_GEOGRAPHY_TRIVIA: string[] = [
 // ─── Combined pool (for contexts where we don't need to filter) ─────────────
 
 /** All general trivia combined from both decks. */
-export const ALL_TRIVIA: string[] = [
-  ...LANGUAGE_CULTURE_TRIVIA,
-  ...HISTORY_GEOGRAPHY_TRIVIA,
-];
+export const ALL_TRIVIA: string[] = [...LANGUAGE_CULTURE_TRIVIA, ...HISTORY_GEOGRAPHY_TRIVIA];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Get a fact for a tile by its board position. Returns undefined for non-ownable tiles. */
-export const getFactForTile = (pos: number): string | undefined =>
-  PROPERTY_FACTS[pos];
+export const getFactForTile = (pos: number): string | undefined => PROPERTY_FACTS[pos];

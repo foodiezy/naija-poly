@@ -49,11 +49,8 @@ export default function BuyDeedModal({ engineState, mySessionId, onSendAction }:
     tile.type === "property"
       ? BOARD.filter(
           (bt): bt is PropertyTile =>
-            bt.type === "property" && bt.group === (tile as PropertyTile).group
-        ).every(
-          (gt) =>
-            gt.pos === tile.pos || tiles?.[gt.pos]?.ownerId === currentPlayer.id
-        )
+            bt.type === "property" && bt.group === (tile as PropertyTile).group,
+        ).every((gt) => gt.pos === tile.pos || tiles?.[gt.pos]?.ownerId === currentPlayer.id)
       : false;
 
   return (
@@ -74,9 +71,7 @@ export default function BuyDeedModal({ engineState, mySessionId, onSendAction }:
         <div className="buy-deed-photo-wrap">
           <TileImage pos={currentPlayer.position} className="buy-deed-photo" />
           <div className="buy-deed-photo-scrim" />
-          <div className="buy-deed-landed-pill">
-            You landed on
-          </div>
+          <div className="buy-deed-landed-pill">You landed on</div>
         </div>
 
         <div className="buy-deed-header" style={{ background: headerColor }}>
@@ -109,7 +104,8 @@ export default function BuyDeedModal({ engineState, mySessionId, onSendAction }:
                 ))}
               </div>
               <div className="buy-deed-meta">
-                Building cost ₦{(tile as PropertyTile).houseCost.toLocaleString()} · Mortgage ₦{(tile as PropertyTile).mortgage.toLocaleString()}
+                Building cost ₦{(tile as PropertyTile).houseCost.toLocaleString()} · Mortgage ₦
+                {(tile as PropertyTile).mortgage.toLocaleString()}
               </div>
             </>
           )}

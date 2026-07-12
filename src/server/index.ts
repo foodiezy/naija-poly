@@ -40,8 +40,7 @@ app.use(
         return;
       }
       const isLocalDev =
-        origin.startsWith("http://localhost:") ||
-        origin.startsWith("http://127.0.0.1:");
+        origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:");
       const isAllowed = isLocalDev || allowedOrigins.includes(origin);
 
       if (isAllowed) {
@@ -52,7 +51,7 @@ app.use(
       }
     },
     credentials: true,
-  })
+  }),
 );
 
 app.use(express.json());

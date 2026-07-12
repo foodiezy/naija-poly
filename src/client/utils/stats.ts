@@ -7,9 +7,9 @@ const STATS_KEY = "odogwu_empire_stats";
 export interface PlayerStats {
   gamesPlayed: number;
   wins: number;
-  totalEarnings: number;  // cumulative net worth across all games
-  bestNetWorth: number;   // highest single-game net worth
-  lastPlayed: string;     // ISO date string
+  totalEarnings: number; // cumulative net worth across all games
+  bestNetWorth: number; // highest single-game net worth
+  lastPlayed: string; // ISO date string
 }
 
 const DEFAULT_STATS: PlayerStats = {

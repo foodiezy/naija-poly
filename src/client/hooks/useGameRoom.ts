@@ -10,8 +10,8 @@ const isDev = import.meta.env.DEV;
 const endpoint = import.meta.env.VITE_SERVER_URL
   ? import.meta.env.VITE_SERVER_URL
   : isDev
-  ? "ws://localhost:2567"
-  : window.location.origin.replace(/^http/, "ws");
+    ? "ws://localhost:2567"
+    : window.location.origin.replace(/^http/, "ws");
 
 // The 0.16.22 matchmaking seat-reservation response, minus the `room` field
 // that the 0.17 server omits and we synthesize below.
@@ -28,13 +28,17 @@ interface SeatReservation {
 // single cast; the wrapper itself is fully typed.
 function patchClientForV017(client: Client) {
   const internals = client as unknown as {
-    consumeSeatReservation: (response: SeatReservation, rootSchema: unknown, reuse: unknown) => unknown;
+    consumeSeatReservation: (
+      response: SeatReservation,
+      rootSchema: unknown,
+      reuse: unknown,
+    ) => unknown;
   };
   const originalConsume = internals.consumeSeatReservation.bind(client);
   internals.consumeSeatReservation = function (
     response: SeatReservation,
     rootSchema: unknown,
-    reuseRoomInstance: unknown
+    reuseRoomInstance: unknown,
   ) {
     if (response && !response.room) {
       response.room = {
@@ -177,13 +181,18 @@ export function useGameRoom() {
     const token = sessionStorage.getItem("odogwu-reconnection-token");
     if (token) {
       setReconnecting(true);
-      reconnectWithRetry(token).then((rejoinedRoom) => {
-        handleRoomJoined(rejoinedRoom);
-        toast.success("✅ Restored game session!", { autoClose: 2000, toastId: "reconnected-mount" });
-      }).catch(() => {
-        setReconnecting(false);
-        sessionStorage.removeItem("odogwu-reconnection-token");
-      });
+      reconnectWithRetry(token)
+        .then((rejoinedRoom) => {
+          handleRoomJoined(rejoinedRoom);
+          toast.success("✅ Restored game session!", {
+            autoClose: 2000,
+            toastId: "reconnected-mount",
+          });
+        })
+        .catch(() => {
+          setReconnecting(false);
+          sessionStorage.removeItem("odogwu-reconnection-token");
+        });
     }
   }, [handleRoomJoined]);
 
@@ -213,7 +222,7 @@ export function useGameRoom() {
       showError(
         /don start|already started/i.test(msg)
           ? "This game don start already — ask your friend to create a new room."
-          : msg
+          : msg,
       );
     }
   };

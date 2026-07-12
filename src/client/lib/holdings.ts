@@ -13,7 +13,8 @@ export function tileValue(pos: number, tiles: Tiles): number {
   const ts = tiles[pos];
   if (ts?.mortgaged) return tile.mortgage;
   let v = tile.price;
-  if (tile.type === "property" && ts && ts.houses > 0) v += ts.houses * (tile as PropertyTile).houseCost;
+  if (tile.type === "property" && ts && ts.houses > 0)
+    v += ts.houses * (tile as PropertyTile).houseCost;
   return v;
 }
 
@@ -32,7 +33,9 @@ export function ownsFullGroup(pos: number, tiles: Tiles, playerId: string): bool
   const tile = BOARD[pos];
   if (!tile || tile.type !== "property") return false;
   const group = tile.group;
-  const groupTiles = BOARD.filter((t): t is PropertyTile => t.type === "property" && t.group === group);
+  const groupTiles = BOARD.filter(
+    (t): t is PropertyTile => t.type === "property" && t.group === group,
+  );
   return groupTiles.every((t) => tiles[t.pos]?.ownerId === playerId);
 }
 

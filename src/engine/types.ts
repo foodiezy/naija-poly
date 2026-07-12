@@ -8,7 +8,8 @@ import type { ColorGroup } from "../data/board";
 
 export type PlayerId = string;
 
-export type Objective = "own_2_airports" | "complete_color_set" | "cash_2m" | "own_4_properties" | "first_hotel";
+export type Objective =
+  "own_2_airports" | "complete_color_set" | "cash_2m" | "own_4_properties" | "first_hotel";
 
 export interface Player {
   id: PlayerId;
@@ -99,12 +100,15 @@ export interface GameState {
   // Chaos-mode "Airport Strike": while set, no rent is collected on airports.
   airportStrike?: { untilRound: number } | null;
   votekicks: Record<PlayerId, PlayerId[]>; // targetId -> array of voterIds
-  stats: Record<PlayerId, {
-    rentPaid: number;
-    highestAuctionBid: number;
-    propertiesBought: number;
-    jailTimes: number;
-  }>;
+  stats: Record<
+    PlayerId,
+    {
+      rentPaid: number;
+      highestAuctionBid: number;
+      propertiesBought: number;
+      jailTimes: number;
+    }
+  >;
 }
 
 // ---- Actions the reducer will accept -------------------------------------

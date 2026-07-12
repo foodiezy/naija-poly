@@ -357,7 +357,10 @@ describe("Game Engine", () => {
       // We need a sequence of rolls:
       // Roll 1: [1, 1] to land on Chance (pos 7)
       // Roll 2 (inside nearestUtility action): [3, 4] (total 7) for utility rent
-      const mockRng = MockRNG.makeSequence([[1, 1], [3, 4]]);
+      const mockRng = MockRNG.makeSequence([
+        [1, 1],
+        [3, 4],
+      ]);
       const nextState = applyAction(state, "p1", { type: "ROLL" }, mockRng.getRNG());
 
       // Moved to pos 12. Paid 7 * 10 = 70 Naira.
@@ -407,14 +410,16 @@ describe("Game Engine", () => {
       const state = createGame(["p1", "p2"]);
       state.tiles[1].ownerId = "p1"; // Ajegunle
       state.tiles[3].ownerId = "p1"; // Mushin
-      
+
       // Build 1st house on Ajegunle
       let nextState = applyAction(state, "p1", { type: "BUILD", pos: 1 });
       expect(nextState.tiles[1].houses).toBe(1);
       expect(nextState.players[0].cash).toBe(STARTING_CASH - 50_000); // houseCost is 50,000
 
       // Cannot build 2nd house on Ajegunle until Mushin has 1st house
-      expect(() => applyAction(nextState, "p1", { type: "BUILD", pos: 1 })).toThrow("You must build evenly");
+      expect(() => applyAction(nextState, "p1", { type: "BUILD", pos: 1 })).toThrow(
+        "You must build evenly",
+      );
 
       // Build 1st house on Mushin
       nextState = applyAction(nextState, "p1", { type: "BUILD", pos: 3 });
@@ -432,7 +437,7 @@ describe("Game Engine", () => {
       state.tiles[3].mortgaged = true;
 
       expect(() => applyAction(state, "p1", { type: "BUILD", pos: 1 })).toThrow(
-        "Cannot build when any property in the group is mortgaged"
+        "Cannot build when any property in the group is mortgaged",
       );
     });
 
@@ -448,7 +453,7 @@ describe("Game Engine", () => {
 
       // Cannot sell another house from Ajegunle because Mushin still has 2
       expect(() => applyAction(nextState, "p1", { type: "SELL_HOUSE", pos: 1 })).toThrow(
-        "You must sell buildings evenly"
+        "You must sell buildings evenly",
       );
 
       // Sell house from Mushin
@@ -472,7 +477,7 @@ describe("Game Engine", () => {
 
       // Try to mortgage Mushin (has 0 houses, but Ajegunle has 1)
       expect(() => applyAction(state, "p1", { type: "MORTGAGE", pos: 3 })).toThrow(
-        "Must sell all buildings in the color group before mortgaging"
+        "Must sell all buildings in the color group before mortgaging",
       );
     });
 
@@ -647,9 +652,9 @@ describe("Game Engine", () => {
         giveTiles: [3],
         getTiles: [1],
       };
-      expect(() => applyAction(proposed, "p2", { type: "PROPOSE_TRADE", trade: counterOffer })).toThrow(
-        "It is not player p2's turn"
-      );
+      expect(() =>
+        applyAction(proposed, "p2", { type: "PROPOSE_TRADE", trade: counterOffer }),
+      ).toThrow("It is not player p2's turn");
 
       // The original trade remains intact and untouched.
       expect(proposed.activeTrade).toEqual(tradeOffer);
@@ -673,11 +678,18 @@ describe("Game Engine", () => {
 
       // Fractional Naira breaks the integer-money invariant.
       const floatOffer = { ...nanOffer, giveCash: 0.5 };
-      expect(() => applyAction(state, "p1", { type: "PROPOSE_TRADE", trade: floatOffer })).toThrow();
+      expect(() =>
+        applyAction(state, "p1", { type: "PROPOSE_TRADE", trade: floatOffer }),
+      ).toThrow();
 
       // Missing tile arrays.
       const badTiles = { fromId: "p1", toId: "p2", giveCash: 0, getCash: 0 } as unknown as {
-        fromId: string; toId: string; giveCash: number; getCash: number; giveTiles: number[]; getTiles: number[];
+        fromId: string;
+        toId: string;
+        giveCash: number;
+        getCash: number;
+        giveTiles: number[];
+        getTiles: number[];
       };
       expect(() => applyAction(state, "p1", { type: "PROPOSE_TRADE", trade: badTiles })).toThrow();
     });
@@ -724,10 +736,10 @@ describe("Game Engine", () => {
 
     it("allows negative cash players to roll but blocks END_TURN", () => {
       const state = createGame(["p1", "p2"]);
-      
+
       // Let's set p1 to own Mushin (pos 3)
       state.tiles[3] = { ownerId: "p1", houses: 0, mortgaged: false };
-      
+
       // Set p1 cash to -50k, and start p1's turn at awaiting-roll
       state.players[0].cash = -50_000;
       state.currentPlayerIndex = 0;
@@ -736,7 +748,7 @@ describe("Game Engine", () => {
       // 1. Verify player can roll while negative
       const mockRng = MockRNG.makeRoll(1, 2); // rolls 3 -> land on Mushin (pos 3)
       let nextState = applyAction(state, "p1", { type: "ROLL" }, mockRng.getRNG());
-      
+
       expect(nextState.players[0].position).toBe(3);
       // Since p1 owns Mushin, landing on it resolves and transitions directly to awaiting-end-turn
       expect(nextState.phase).toBe("awaiting-end-turn");
@@ -744,7 +756,7 @@ describe("Game Engine", () => {
 
       // 2. Verify p1 cannot end turn with negative cash
       expect(() => applyAction(nextState, "p1", { type: "END_TURN" })).toThrow(
-        "Cannot end turn with negative cash"
+        "Cannot end turn with negative cash",
       );
 
       // 3. Mortgage property to raise cash
@@ -754,7 +766,7 @@ describe("Game Engine", () => {
 
       // 4. Verify cannot end turn yet
       expect(() => applyAction(nextState, "p1", { type: "END_TURN" })).toThrow(
-        "Cannot end turn with negative cash"
+        "Cannot end turn with negative cash",
       );
 
       // 5. Give some cash (e.g. from trade or gift) to make positive
@@ -798,37 +810,41 @@ describe("Game Engine", () => {
 
       expect(nextState.players[0].cash).toBe(STARTING_CASH + 350_000);
       expect(nextState.freeParkingPot).toBe(0);
-      expect(nextState.log[nextState.log.length - 1]).toContain("collected the Mama Put Pot of ₦350,000");
+      expect(nextState.log[nextState.log.length - 1]).toContain(
+        "collected the Mama Put Pot of ₦350,000",
+      );
     });
 
     it("ends game and calculates winner by net worth when turn limit is reached", () => {
       // Set turn limit to 1 round
       const state = createGame(["p1", "p2"], { turnLimit: 1 });
-      
+
       // Let's make p1 own surulere (pos 9, price 120k) and built a Bungalow (houseCost 50k)
       state.tiles[9] = { ownerId: "p1", houses: 1, mortgaged: false };
       state.players[0].cash = 1_500_000 - 120_000 - 50_000;
-      
+
       // Let's make p1 own another unmortgaged property to ensure p1 has higher net worth
       state.tiles[1] = { ownerId: "p1", houses: 0, mortgaged: false }; // Ajegunle (price 60k)
       state.players[0].cash -= 60_000;
       state.players[0].cash += 5_000; // p1 has 1,505,000 net worth
-      
+
       state.currentPlayerIndex = 0;
       state.phase = "awaiting-end-turn";
-      
+
       // End p1's turn
       let nextState = applyAction(state, "p1", { type: "END_TURN" });
       expect(nextState.currentPlayerIndex).toBe(1);
       expect(nextState.currentTurn).toBe(1);
-      
+
       // Now it's p2's turn. End p2's turn. This completes Round 1 and wraps around back to p1 (index 0 < current index 1).
       nextState.phase = "awaiting-end-turn";
       const finalState = applyAction(nextState, "p2", { type: "END_TURN" });
-      
+
       expect(finalState.phase).toBe("game-over");
       expect(finalState.winnerId).toBe("p1"); // p1 wins due to higher net worth
-      expect(finalState.log[finalState.log.length - 1]).toContain("wins the game with a net worth of ₦1,505,000");
+      expect(finalState.log[finalState.log.length - 1]).toContain(
+        "wins the game with a net worth of ₦1,505,000",
+      );
     });
   });
 
@@ -1013,7 +1029,7 @@ describe("Game Engine", () => {
 
       expect(state.players[2].bankrupt).toBe(true);
       expect(state.currentPlayerIndex).toBe(0);
-      expect(state.debtLedger.filter(d => d.debtorId === "p3")).toHaveLength(0);
+      expect(state.debtLedger.filter((d) => d.debtorId === "p3")).toHaveLength(0);
     });
 
     it("does not misroute a later bankruptcy to a stale creditor", () => {

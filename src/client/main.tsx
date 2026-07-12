@@ -14,5 +14,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <App />
       </MotionConfig>
     </ErrorBoundary>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

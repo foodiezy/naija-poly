@@ -23,14 +23,7 @@ const buffers = new Map<SfxName, AudioBuffer>();
 let preloadStarted = false;
 
 export type SfxName =
-  | "roll"
-  | "cash"
-  | "rent"
-  | "draw"
-  | "jail"
-  | "build"
-  | "your-turn"
-  | "game-over";
+  "roll" | "cash" | "rent" | "draw" | "jail" | "build" | "your-turn" | "game-over";
 
 // Where each event's sample lives (served from public/sfx/). BASE_URL keeps
 // paths correct when the app is deployed under a sub-path.
@@ -65,8 +58,9 @@ export function getVolume(): number {
 
 function getAudioContext(): AudioContext {
   if (!audioCtx) {
-    const Ctor = window.AudioContext
-      ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    const Ctor =
+      window.AudioContext ??
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     audioCtx = new Ctor();
   }
   if (audioCtx.state === "suspended") {
@@ -111,7 +105,7 @@ export async function preloadSounds(): Promise<void> {
       } catch {
         // Missing/corrupt/unsupported file — fall back to synth for this event.
       }
-    })
+    }),
   );
 }
 

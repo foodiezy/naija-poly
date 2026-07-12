@@ -49,7 +49,12 @@ const HOW_TO_PLAY = [
   },
 ];
 
-export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch, initialRoomId }: LobbyProps) {
+export default function Lobby({
+  onCreateRoom,
+  onJoinRoom,
+  onQuickMatch,
+  initialRoomId,
+}: LobbyProps) {
   const [name, setName] = useState("");
   const [roomId, setRoomId] = useState(initialRoomId ?? "");
   const [loading, setLoading] = useState(false);
@@ -125,7 +130,9 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch, initialR
           <div style={{ fontWeight: 800, color: "var(--color-gold, #e8b64a)" }}>
             🎉 You've been invited to Room {initialRoomId}
           </div>
-          <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+          <div
+            style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}
+          >
             Enter your name below and tap Join Room to play.
           </div>
         </motion.div>
@@ -171,11 +178,18 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch, initialR
             <motion.button
               type="button"
               className="button-primary"
-              style={{ background: "linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)", boxShadow: "0 2px 10px rgba(139, 92, 246, 0.25)" }}
+              style={{
+                background: "linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)",
+                boxShadow: "0 2px 10px rgba(139, 92, 246, 0.25)",
+              }}
               onClick={async () => {
                 if (!name.trim()) return;
                 setLoading(true);
-                try { await onQuickMatch(name.trim()); } finally { setLoading(false); }
+                try {
+                  await onQuickMatch(name.trim());
+                } finally {
+                  setLoading(false);
+                }
               }}
               disabled={loading || !name.trim()}
               whileHover={{ scale: 1.02 }}
@@ -188,7 +202,16 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch, initialR
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <hr style={{ flex: 1, border: "0.5px solid rgba(255, 255, 255, 0.1)" }} />
-            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "700", letterSpacing: "0.08em" }}>OR JOIN EXISTING</span>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                color: "var(--text-muted)",
+                fontWeight: "700",
+                letterSpacing: "0.08em",
+              }}
+            >
+              OR JOIN EXISTING
+            </span>
             <hr style={{ flex: 1, border: "0.5px solid rgba(255, 255, 255, 0.1)" }} />
           </div>
 
@@ -228,7 +251,12 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch, initialR
       >
         <button
           className="button-secondary"
-          style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.12)", padding: "0.5rem 1.5rem", fontSize: "0.9rem" }}
+          style={{
+            background: "transparent",
+            border: "1px solid rgba(255,255,255,0.12)",
+            padding: "0.5rem 1.5rem",
+            fontSize: "0.9rem",
+          }}
           onClick={() => setShowHowToPlay((v) => !v)}
         >
           {showHowToPlay ? "Hide Rules ▲" : "How to Play 📖"}
@@ -257,9 +285,13 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch, initialR
                   transition={{ delay: 0.05 * i, duration: 0.3 }}
                   whileHover={{ y: -4, boxShadow: `0 8px 30px -8px ${step.color}40` }}
                 >
-                  <div className="how-to-play-icon" style={{ color: step.color }}>{step.emoji}</div>
+                  <div className="how-to-play-icon" style={{ color: step.color }}>
+                    {step.emoji}
+                  </div>
                   <div className="how-to-play-content">
-                    <div className="how-to-play-card-title" style={{ color: step.color }}>{step.title}</div>
+                    <div className="how-to-play-card-title" style={{ color: step.color }}>
+                      {step.title}
+                    </div>
                     <div className="how-to-play-card-desc">{step.desc}</div>
                   </div>
                 </motion.div>
@@ -277,26 +309,57 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch, initialR
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
         >
-          <div className="glass-panel" style={{ padding: "1rem 1.5rem", border: "1px solid rgba(255,255,255,0.06)" }}>
-            <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "0.5rem", textAlign: "center" }}>
+          <div
+            className="glass-panel"
+            style={{ padding: "1rem 1.5rem", border: "1px solid rgba(255,255,255,0.06)" }}
+          >
+            <div
+              style={{
+                fontSize: "0.8rem",
+                fontWeight: "bold",
+                color: "var(--text-secondary)",
+                textTransform: "uppercase",
+                marginBottom: "0.5rem",
+                textAlign: "center",
+              }}
+            >
               📊 Your Stats
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.5rem", textAlign: "center" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: "0.5rem",
+                textAlign: "center",
+              }}
+            >
               <div>
-                <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--color-gold)" }}>{stats.gamesPlayed}</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--color-gold)" }}>
+                  {stats.gamesPlayed}
+                </div>
                 <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Games</div>
               </div>
               <div>
-                <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--color-naira)" }}>{stats.wins}</div>
+                <div
+                  style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--color-naira)" }}
+                >
+                  {stats.wins}
+                </div>
                 <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Wins</div>
               </div>
               <div>
-                <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#3b82f6" }}>{stats.gamesPlayed > 0 ? Math.round((stats.wins / stats.gamesPlayed) * 100) : 0}%</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#3b82f6" }}>
+                  {stats.gamesPlayed > 0 ? Math.round((stats.wins / stats.gamesPlayed) * 100) : 0}%
+                </div>
                 <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Win Rate</div>
               </div>
               <div>
-                <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--color-gold)" }}>₦{(stats.bestNetWorth / 1000).toFixed(0)}k</div>
-                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Best Net Worth</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--color-gold)" }}>
+                  ₦{(stats.bestNetWorth / 1000).toFixed(0)}k
+                </div>
+                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+                  Best Net Worth
+                </div>
               </div>
             </div>
           </div>
@@ -305,7 +368,13 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onQuickMatch, initialR
 
       {/* Footer */}
       <motion.p
-        style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.75rem", marginTop: "2rem", paddingBottom: "2rem" }}
+        style={{
+          textAlign: "center",
+          color: "var(--text-muted)",
+          fontSize: "0.75rem",
+          marginTop: "2rem",
+          paddingBottom: "2rem",
+        }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.7 }}

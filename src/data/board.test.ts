@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  BOARD,
-  CHANCE_CARDS,
-  HUSTLE_CARDS,
-  type PropertyTile,
-} from "./board";
+import { BOARD, CHANCE_CARDS, HUSTLE_CARDS, type PropertyTile } from "./board";
 
 describe("Nigerian board data", () => {
   it("has 40 tiles", () => {

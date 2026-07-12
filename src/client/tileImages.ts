@@ -13,15 +13,21 @@
 
 import { PropertyTile, Tile } from "../data/board";
 
-
 // Reused zone landmarks (a few towns share their region's photo).
-const MAIDUGURI = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Indimi_Mosque_Maiduguri_Borno_State_Nigeria.jpg/330px-Indimi_Mosque_Maiduguri_Borno_State_Nigeria.jpg";
-const ILORIN = "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Sobi_hills%2C_Kwara_State%2C_Nigeria._01.jpg/330px-Sobi_hills%2C_Kwara_State%2C_Nigeria._01.jpg";
-const ENUGU = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Climate_and_weather_in_Nigeria_11.jpg/330px-Climate_and_weather_in_Nigeria_11.jpg";
-const KADUNA = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Lugard_Hall%2C_Kaduna._Parliamentary_house_of_assembly_Capital_of_North_Region.jpg/330px-Lugard_Hall%2C_Kaduna._Parliamentary_house_of_assembly_Capital_of_North_Region.jpg";
-const PORT_HARCOURT = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Pitakwa.jpg/330px-Pitakwa.jpg";
-const ABUJA = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Abuja_heritages_30.jpg/330px-Abuja_heritages_30.jpg";
-const LAGOS_SKYLINE = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Ikoyi_and_Beyond.jpg/330px-Ikoyi_and_Beyond.jpg";
+const MAIDUGURI =
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Indimi_Mosque_Maiduguri_Borno_State_Nigeria.jpg/330px-Indimi_Mosque_Maiduguri_Borno_State_Nigeria.jpg";
+const ILORIN =
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Sobi_hills%2C_Kwara_State%2C_Nigeria._01.jpg/330px-Sobi_hills%2C_Kwara_State%2C_Nigeria._01.jpg";
+const ENUGU =
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Climate_and_weather_in_Nigeria_11.jpg/330px-Climate_and_weather_in_Nigeria_11.jpg";
+const KADUNA =
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Lugard_Hall%2C_Kaduna._Parliamentary_house_of_assembly_Capital_of_North_Region.jpg/330px-Lugard_Hall%2C_Kaduna._Parliamentary_house_of_assembly_Capital_of_North_Region.jpg";
+const PORT_HARCOURT =
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Pitakwa.jpg/330px-Pitakwa.jpg";
+const ABUJA =
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Abuja_heritages_30.jpg/330px-Abuja_heritages_30.jpg";
+const LAGOS_SKYLINE =
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Ikoyi_and_Beyond.jpg/330px-Ikoyi_and_Beyond.jpg";
 
 export const TILE_IMAGES: Record<number, string> = {
   // ── Borno ──────────────────────────────────────────────────────────────
@@ -94,18 +100,28 @@ const GROUP_COLORS: Record<string, string> = {
 
 export function tileFallbackEmoji(tile: Tile): string {
   switch (tile.type) {
-    case "airport": return "✈️";
+    case "airport":
+      return "✈️";
     case "utility":
       return tile.name.toLowerCase().includes("nepa") ? "⚡" : "🧪";
-    case "property": return "🏙️";
-    case "go": return "🚀";
-    case "jail": return "🔒";
-    case "free": return "🍲";
-    case "gotojail": return "👮";
-    case "chance": return "❓";
-    case "hustle": return "💼";
-    case "tax": return "💰";
-    default: return "📍";
+    case "property":
+      return "🏙️";
+    case "go":
+      return "🚀";
+    case "jail":
+      return "🔒";
+    case "free":
+      return "🍲";
+    case "gotojail":
+      return "👮";
+    case "chance":
+      return "❓";
+    case "hustle":
+      return "💼";
+    case "tax":
+      return "💰";
+    default:
+      return "📍";
   }
 }
 

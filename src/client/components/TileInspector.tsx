@@ -21,7 +21,15 @@ interface TileInspectorProps {
   onSendAction?: (action: Action) => void;
 }
 
-export default function TileInspector({ tilePos, engineState, roomState, onClose, mySessionId, canManage, onSendAction }: TileInspectorProps) {
+export default function TileInspector({
+  tilePos,
+  engineState,
+  roomState,
+  onClose,
+  mySessionId,
+  canManage,
+  onSendAction,
+}: TileInspectorProps) {
   const tile = BOARD[tilePos];
   if (!tile) return null;
 
@@ -33,8 +41,6 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
   const ownerToken = owner ? tokenEmoji(lobbyPlayers.get(owner.id)?.tokenId) : null;
 
   const playersOnTile = players.filter((p: Player) => p.position === tilePos && !p.bankrupt);
-
-
 
   // Color map for property groups
   const groupColorMap: Record<string, string> = {
@@ -65,7 +71,11 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
     const houseCost = "houseCost" in tile ? (tile as PropertyTile).houseCost : 0;
 
     const levelLabel =
-      houses === 5 ? "Hotel (max)" : houses === 0 ? "Unimproved" : `${getDevelopmentName(houses)} · ${houses}/4`;
+      houses === 5
+        ? "Hotel (max)"
+        : houses === 0
+          ? "Unimproved"
+          : `${getDevelopmentName(houses)} · ${houses}/4`;
 
     return (
       <div className="deed-manage">
@@ -76,19 +86,29 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
               className="deed-arrow"
               disabled={!sell}
               onClick={() => sell && onSendAction({ type: "SELL_HOUSE", pos: tilePos })}
-              title={sell ? `Sell one level (+₦${Math.floor(houseCost / 2).toLocaleString()})` : "Nothing to sell"}
+              title={
+                sell
+                  ? `Sell one level (+₦${Math.floor(houseCost / 2).toLocaleString()})`
+                  : "Nothing to sell"
+              }
             >
               <IconArrowDown size={20} />
             </button>
             <div className="deed-upgrade-level">
-              <span className="deed-upgrade-badge">{houses === 5 ? "🏨" : houses > 0 ? "🏠" : "—"}</span>
+              <span className="deed-upgrade-badge">
+                {houses === 5 ? "🏨" : houses > 0 ? "🏠" : "—"}
+              </span>
               <span className="deed-upgrade-text">{levelLabel}</span>
             </div>
             <button
               className="deed-arrow up"
               disabled={!build}
               onClick={() => build && onSendAction({ type: "BUILD", pos: tilePos })}
-              title={build ? `${houses === 4 ? "Build hotel" : "Build a house"} (₦${houseCost.toLocaleString()})` : "Can't build yet"}
+              title={
+                build
+                  ? `${houses === 4 ? "Build hotel" : "Build a house"} (₦${houseCost.toLocaleString()})`
+                  : "Can't build yet"
+              }
             >
               <IconArrowUp size={20} />
             </button>
@@ -105,7 +125,15 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
               else if (mort) onSendAction({ type: "MORTGAGE", pos: tilePos });
             }}
           >
-            {mortgaged ? <><IconUnmortgage size={15} /> Redeem mortgage</> : <><IconMortgage size={15} /> Mortgage</>}
+            {mortgaged ? (
+              <>
+                <IconUnmortgage size={15} /> Redeem mortgage
+              </>
+            ) : (
+              <>
+                <IconMortgage size={15} /> Mortgage
+              </>
+            )}
           </button>
         )}
       </div>
@@ -118,8 +146,11 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
     const isMortgaged = tileState?.mortgaged ?? false;
 
     // Check if owner has full group
-    const groupTiles = BOARD.filter((bt): bt is PropertyTile => bt.type === "property" && bt.group === t.group);
-    const ownsFullGroup = owner && groupTiles.every(gt => engineState?.tiles?.[gt.pos]?.ownerId === owner.id);
+    const groupTiles = BOARD.filter(
+      (bt): bt is PropertyTile => bt.type === "property" && bt.group === t.group,
+    );
+    const ownsFullGroup =
+      owner && groupTiles.every((gt) => engineState?.tiles?.[gt.pos]?.ownerId === owner.id);
 
     return (
       <>
@@ -134,7 +165,14 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
               <span>₦{t.rent[0].toLocaleString()}</span>
             </div>
             {ownsFullGroup && houses === 0 && (
-              <div style={{ fontSize: "0.7rem", color: "var(--color-naira)", fontStyle: "italic", padding: "0.15rem 0.25rem" }}>
+              <div
+                style={{
+                  fontSize: "0.7rem",
+                  color: "var(--color-naira)",
+                  fontStyle: "italic",
+                  padding: "0.15rem 0.25rem",
+                }}
+              >
                 ↑ Doubled to ₦{(t.rent[0] * 2).toLocaleString()} (full group)
               </div>
             )}
@@ -149,33 +187,63 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
           <div className="deed-divider" />
 
           <div className="deed-cost-info">
-            <div>Building Cost: <strong>₦{t.houseCost.toLocaleString()}</strong> each</div>
-            <div>Mortgage Value: <strong>₦{t.mortgage.toLocaleString()}</strong></div>
-            <div>Unmortgage Cost: <strong>₦{Math.round(t.mortgage * 1.1).toLocaleString()}</strong></div>
-            <div>Purchase Price: <strong>₦{t.price.toLocaleString()}</strong></div>
+            <div>
+              Building Cost: <strong>₦{t.houseCost.toLocaleString()}</strong> each
+            </div>
+            <div>
+              Mortgage Value: <strong>₦{t.mortgage.toLocaleString()}</strong>
+            </div>
+            <div>
+              Unmortgage Cost: <strong>₦{Math.round(t.mortgage * 1.1).toLocaleString()}</strong>
+            </div>
+            <div>
+              Purchase Price: <strong>₦{t.price.toLocaleString()}</strong>
+            </div>
           </div>
 
           {/* Color group info */}
-          <div style={{ marginTop: "0.75rem", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.25rem" }}>
-              <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: groupColor, display: "inline-block" }} />
+          <div
+            style={{ marginTop: "0.75rem", fontSize: "0.78rem", color: "var(--text-secondary)" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                marginBottom: "0.25rem",
+              }}
+            >
+              <span
+                style={{
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "50%",
+                  background: groupColor,
+                  display: "inline-block",
+                }}
+              />
               <span style={{ textTransform: "capitalize" }}>{t.group} Group</span>
-              {ownsFullGroup && <span style={{ color: "var(--color-naira)", fontWeight: "bold" }}>✓ Complete</span>}
+              {ownsFullGroup && (
+                <span style={{ color: "var(--color-naira)", fontWeight: "bold" }}>✓ Complete</span>
+              )}
             </div>
             <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-              {groupTiles.map(gt => {
+              {groupTiles.map((gt) => {
                 const gts = engineState?.tiles?.[gt.pos];
                 const isOwned = gts?.ownerId != null;
                 return (
-                  <span key={gt.pos} style={{
-                    fontSize: "0.7rem",
-                    padding: "1px 6px",
-                    borderRadius: "3px",
-                    background: gt.pos === tilePos ? "rgba(255,255,255,0.1)" : "transparent",
-                    border: `1px solid ${isOwned ? groupColor : "rgba(255,255,255,0.1)"}`,
-                    color: isOwned ? "#fff" : "var(--text-muted)",
-                    fontWeight: gt.pos === tilePos ? "bold" : "normal",
-                  }}>
+                  <span
+                    key={gt.pos}
+                    style={{
+                      fontSize: "0.7rem",
+                      padding: "1px 6px",
+                      borderRadius: "3px",
+                      background: gt.pos === tilePos ? "rgba(255,255,255,0.1)" : "transparent",
+                      border: `1px solid ${isOwned ? groupColor : "rgba(255,255,255,0.1)"}`,
+                      color: isOwned ? "#fff" : "var(--text-muted)",
+                      fontWeight: gt.pos === tilePos ? "bold" : "normal",
+                    }}
+                  >
                     {gt.name}
                   </span>
                 );
@@ -187,23 +255,47 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
               icon row — a bare unlabeled pip looked broken) */}
           <div className="deed-status-box">
             {owner ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem", background: "rgba(255,255,255,0.03)", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.5rem",
+                  background: "rgba(255,255,255,0.03)",
+                  borderRadius: "6px",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
                 <span style={{ fontSize: "1.2rem" }}>{ownerToken}</span>
                 <div>
-                  <div style={{ fontSize: "0.85rem", fontWeight: "bold" }}>Owned by {owner.name}</div>
+                  <div style={{ fontSize: "0.85rem", fontWeight: "bold" }}>
+                    Owned by {owner.name}
+                  </div>
                   {isMortgaged ? (
-                    <div style={{ fontSize: "0.75rem", color: "var(--color-danger)" }}>🔒 Mortgaged</div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--color-danger)" }}>
+                      🔒 Mortgaged
+                    </div>
                   ) : houses > 0 ? (
                     <div style={{ fontSize: "0.75rem", color: "var(--color-gold)" }}>
                       {getDevelopmentName(houses)} ({houses === 5 ? "MAX" : `${houses}/5`})
                     </div>
                   ) : (
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Unimproved</div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                      Unimproved
+                    </div>
                   )}
                 </div>
               </div>
             ) : (
-              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "0.4rem" }}>
+              <div
+                style={{
+                  fontSize: "0.8rem",
+                  color: "var(--text-muted)",
+                  fontStyle: "italic",
+                  textAlign: "center",
+                  padding: "0.4rem",
+                }}
+              >
                 🏷️ Available for purchase
               </div>
             )}
@@ -234,11 +326,21 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
       </div>
       <div className="deed-body">
         <div className="deed-rent-list">
-          {[1, 2, 3, 4].map(count => {
-            const ownedCount = owner ? BOARD.filter(bt => bt.type === "airport" && engineState?.tiles?.[bt.pos]?.ownerId === owner.id).length : 0;
+          {[1, 2, 3, 4].map((count) => {
+            const ownedCount = owner
+              ? BOARD.filter(
+                  (bt) =>
+                    bt.type === "airport" && engineState?.tiles?.[bt.pos]?.ownerId === owner.id,
+                ).length
+              : 0;
             return (
-              <div key={count} className={`deed-rent-row ${ownedCount === count ? "highlight" : ""}`}>
-                <span>{count} Airport{count > 1 ? "s" : ""} owned</span>
+              <div
+                key={count}
+                className={`deed-rent-row ${ownedCount === count ? "highlight" : ""}`}
+              >
+                <span>
+                  {count} Airport{count > 1 ? "s" : ""} owned
+                </span>
                 <span>₦{t.rent[count - 1].toLocaleString()}</span>
               </div>
             );
@@ -246,8 +348,12 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
         </div>
         <div className="deed-divider" />
         <div className="deed-cost-info">
-          <div>Purchase Price: <strong>₦{t.price.toLocaleString()}</strong></div>
-          <div>Mortgage Value: <strong>₦{t.mortgage.toLocaleString()}</strong></div>
+          <div>
+            Purchase Price: <strong>₦{t.price.toLocaleString()}</strong>
+          </div>
+          <div>
+            Mortgage Value: <strong>₦{t.mortgage.toLocaleString()}</strong>
+          </div>
         </div>
         {renderOwnerStatus()}
         {getFactForTile(tilePos) && (
@@ -266,7 +372,10 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
   );
 
   const renderUtilityDeed = (t: UtilityTile) => {
-    const icon = t.name.toLowerCase().includes("electric") || t.name.toLowerCase().includes("phcn") ? "⚡" : "📡";
+    const icon =
+      t.name.toLowerCase().includes("electric") || t.name.toLowerCase().includes("phcn")
+        ? "⚡"
+        : "📡";
     return (
       <>
         <div className="deed-header generic">
@@ -275,19 +384,27 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
         </div>
         <div className="deed-body">
           <div className="deed-rent-list">
-            <div className={`deed-rent-row ${owner && BOARD.filter(bt => bt.type === "utility" && engineState?.tiles?.[bt.pos]?.ownerId === owner.id).length === 1 ? "highlight" : ""}`}>
+            <div
+              className={`deed-rent-row ${owner && BOARD.filter((bt) => bt.type === "utility" && engineState?.tiles?.[bt.pos]?.ownerId === owner.id).length === 1 ? "highlight" : ""}`}
+            >
               <span>1 Utility owned</span>
               <span>Dice × {t.multiplier[0]}</span>
             </div>
-            <div className={`deed-rent-row ${owner && BOARD.filter(bt => bt.type === "utility" && engineState?.tiles?.[bt.pos]?.ownerId === owner.id).length === 2 ? "highlight" : ""}`}>
+            <div
+              className={`deed-rent-row ${owner && BOARD.filter((bt) => bt.type === "utility" && engineState?.tiles?.[bt.pos]?.ownerId === owner.id).length === 2 ? "highlight" : ""}`}
+            >
               <span>2 Utilities owned</span>
               <span>Dice × {t.multiplier[1]}</span>
             </div>
           </div>
           <div className="deed-divider" />
           <div className="deed-cost-info">
-            <div>Purchase Price: <strong>₦{t.price.toLocaleString()}</strong></div>
-            <div>Mortgage Value: <strong>₦{t.mortgage.toLocaleString()}</strong></div>
+            <div>
+              Purchase Price: <strong>₦{t.price.toLocaleString()}</strong>
+            </div>
+            <div>
+              Mortgage Value: <strong>₦{t.mortgage.toLocaleString()}</strong>
+            </div>
           </div>
           {renderOwnerStatus()}
           {getFactForTile(tilePos) && (
@@ -308,8 +425,13 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
 
   const renderSpecialDeed = () => {
     const iconMap: Record<string, string> = {
-      go: "🚀", jail: "🔒", free: "🍲", gotojail: "👮",
-      chance: "❓", hustle: "💼", tax: "💰"
+      go: "🚀",
+      jail: "🔒",
+      free: "🍲",
+      gotojail: "👮",
+      chance: "❓",
+      hustle: "💼",
+      tax: "💰",
     };
     const descMap: Record<string, string> = {
       go: "Collect ₦200,000 salary each time you pass or land here.",
@@ -325,15 +447,24 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
     return (
       <>
         <div className="deed-header generic">
-          <div className="deed-title">{iconMap[tile.type] || "📍"} {tile.type.toUpperCase()}</div>
+          <div className="deed-title">
+            {iconMap[tile.type] || "📍"} {tile.type.toUpperCase()}
+          </div>
           <div className="deed-name">{tile.name}</div>
         </div>
         <div className="deed-body">
-          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.5, textAlign: "center", padding: "0.5rem 0" }}>
+          <p
+            style={{
+              fontSize: "0.85rem",
+              color: "var(--text-secondary)",
+              lineHeight: 1.5,
+              textAlign: "center",
+              padding: "0.5rem 0",
+            }}
+          >
             {tile.type === "tax"
               ? `Pay ₦${(tile as TaxTile).amount.toLocaleString()} to the bank${engineState?.settings?.freeParkingJackpot ? " (added to Mama Put Pot)" : ""}.`
-              : descMap[tile.type] || "A special board space."
-            }
+              : descMap[tile.type] || "A special board space."}
           </p>
         </div>
       </>
@@ -343,15 +474,35 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
   const renderOwnerStatus = () => (
     <div className="deed-status-box">
       {owner ? (
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem", background: "rgba(255,255,255,0.03)", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.06)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            padding: "0.5rem",
+            background: "rgba(255,255,255,0.03)",
+            borderRadius: "6px",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
           <span style={{ fontSize: "1.2rem" }}>{ownerToken}</span>
           <div>
             <div style={{ fontSize: "0.85rem", fontWeight: "bold" }}>Owned by {owner.name}</div>
-            {tileState?.mortgaged && <div style={{ fontSize: "0.75rem", color: "var(--color-danger)" }}>🔒 Mortgaged</div>}
+            {tileState?.mortgaged && (
+              <div style={{ fontSize: "0.75rem", color: "var(--color-danger)" }}>🔒 Mortgaged</div>
+            )}
           </div>
         </div>
       ) : (
-        <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "0.4rem" }}>
+        <div
+          style={{
+            fontSize: "0.8rem",
+            color: "var(--text-muted)",
+            fontStyle: "italic",
+            textAlign: "center",
+            padding: "0.4rem",
+          }}
+        >
           🏷️ Available for purchase
         </div>
       )}
@@ -376,11 +527,7 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
-        <button
-          className="tile-inspector-close"
-          onClick={onClose}
-          title="Close"
-        >
+        <button className="tile-inspector-close" onClick={onClose} title="Close">
           ✕
         </button>
 
@@ -398,19 +545,29 @@ export default function TileInspector({ tilePos, engineState, roomState, onClose
         {!["property", "airport", "utility"].includes(tile.type) && renderSpecialDeed()}
 
         {/* Owner management actions — upgrade / sell / mortgage from the card */}
-        {(tile.type === "property" || tile.type === "airport" || tile.type === "utility") && renderActions()}
+        {(tile.type === "property" || tile.type === "airport" || tile.type === "utility") &&
+          renderActions()}
 
         {/* Players currently on this tile */}
         {playersOnTile.length > 0 && (
           <div style={{ padding: "0 1.25rem 1rem", fontSize: "0.8rem" }}>
-            <div style={{ color: "var(--text-secondary)", marginBottom: "0.35rem" }}>Players here:</div>
+            <div style={{ color: "var(--text-secondary)", marginBottom: "0.35rem" }}>
+              Players here:
+            </div>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
               {playersOnTile.map((p: Player) => (
-                <span key={p.id} style={{
-                  display: "flex", alignItems: "center", gap: "0.3rem",
-                  padding: "2px 8px", background: "rgba(255,255,255,0.04)",
-                  borderRadius: "12px", border: "1px solid rgba(255,255,255,0.08)"
-                }}>
+                <span
+                  key={p.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.3rem",
+                    padding: "2px 8px",
+                    background: "rgba(255,255,255,0.04)",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
                   {tokenEmoji(lobbyPlayers.get(p.id)?.tokenId)} {p.name}
                 </span>
               ))}

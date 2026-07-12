@@ -26,7 +26,7 @@ export function useAutoEndTurn(
   engineState: GameState | null,
   room: Room | null,
   mySessionId: string | null,
-  autoEndTurnEnabled: boolean
+  autoEndTurnEnabled: boolean,
 ) {
   const autoEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -36,12 +36,7 @@ export function useAutoEndTurn(
       autoEndTimerRef.current = null;
     }
 
-    if (
-      autoEndTurnEnabled &&
-      engineState?.phase === "awaiting-end-turn" &&
-      room &&
-      mySessionId
-    ) {
+    if (autoEndTurnEnabled && engineState?.phase === "awaiting-end-turn" && room && mySessionId) {
       const me = engineState.players?.find((p: Player) => p.id === mySessionId);
       const isMyTurn = engineState.players?.[engineState.currentPlayerIndex]?.id === mySessionId;
       const hasPending = hasPendingPropertyAction(engineState, mySessionId);
@@ -65,6 +60,15 @@ export function useAutoEndTurn(
         autoEndTimerRef.current = null;
       }
     };
-  }, [autoEndTurnEnabled, engineState?.phase, engineState?.currentPlayerIndex, engineState?.activeTrade, engineState?.tiles, room, mySessionId, engineState?.players, engineState]);
-
+  }, [
+    autoEndTurnEnabled,
+    engineState?.phase,
+    engineState?.currentPlayerIndex,
+    engineState?.activeTrade,
+    engineState?.tiles,
+    room,
+    mySessionId,
+    engineState?.players,
+    engineState,
+  ]);
 }

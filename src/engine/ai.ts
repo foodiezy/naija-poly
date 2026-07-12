@@ -23,9 +23,7 @@ function tilePrice(pos: number): number {
 
 // Properties in the same colour group as the given property tile.
 function groupTiles(tile: PropertyTile): PropertyTile[] {
-  return BOARD.filter(
-    (t): t is PropertyTile => t.type === "property" && t.group === tile.group,
-  );
+  return BOARD.filter((t): t is PropertyTile => t.type === "property" && t.group === tile.group);
 }
 
 // A mortgageable property the player owns (unmortgaged, no buildings in group).
@@ -66,11 +64,7 @@ export interface AIOptions {
  * Decide the AI player's next move. Returns null when it's not their turn and
  * they have no auction action pending.
  */
-export function getAIAction(
-  state: GameState,
-  playerId: PlayerId,
-  opts?: AIOptions,
-): Action | null {
+export function getAIAction(state: GameState, playerId: PlayerId, opts?: AIOptions): Action | null {
   const me = state.players.find((p) => p.id === playerId);
   if (!me || me.bankrupt) return null;
 
@@ -87,12 +81,12 @@ export function getAIAction(
     const receive = t.giveCash + t.giveTiles.reduce((s, p) => s + tilePrice(p), 0);
     const giveUp = t.getCash + t.getTiles.reduce((s, p) => s + tilePrice(p), 0);
     let accept = t.getCash <= me.cash && receive >= giveUp;
-    
+
     // Trader accepts slight losses to keep things moving
     if (style === "Trader" && t.getCash <= me.cash && receive >= giveUp * 0.9) {
       accept = true;
     }
-    
+
     return { type: "RESPOND_TRADE", accept };
   }
 
@@ -104,12 +98,12 @@ export function getAIAction(
 
     const tile = BOARD[a.tilePos];
     const value = "price" in tile ? tile.price : 0;
-    
+
     let capMultiplier = 0.8;
     if (style === "AggressiveBidder") capMultiplier = 1.2;
     if (style === "PropertyHoarder") capMultiplier = 1.0;
     if (style === "CashSaver") capMultiplier = 0.6;
-    
+
     const cap = Math.floor(value * capMultiplier);
     const inc = a.bidIncrements[0];
     const nextBid = a.highestBid + inc;
@@ -142,14 +136,16 @@ export function getAIAction(
         groupTiles(tile as PropertyTile).some(
           (t) => t.pos !== me.position && state.tiles[t.pos]?.ownerId === playerId,
         );
-      const threshold = completesGroup ? price + cashBuffer : price * (style === "PropertyHoarder" ? 1 : 2);
+      const threshold = completesGroup
+        ? price + cashBuffer
+        : price * (style === "PropertyHoarder" ? 1 : 2);
       if (me.cash >= threshold) return { type: "BUY" };
       return { type: "DECLINE_BUY" };
     }
 
     case "awaiting-end-turn": {
       // Resolve debt first: check for unsettled debts in the ledger OR negative cash.
-      const hasDebts = state.debtLedger?.some(d => d.debtorId === playerId);
+      const hasDebts = state.debtLedger?.some((d) => d.debtorId === playerId);
       if (me.cash < 0 || hasDebts) {
         const sell = findSellableHouse(state, playerId);
         if (sell !== null) return { type: "SELL_HOUSE", pos: sell };
@@ -176,9 +172,15 @@ export function getAIAction(
       if (style === "Trader" && !state.activeTrade && !opts?.suppressTradeProposal) {
         // Find a property we need to complete a set
         for (const tile of BOARD) {
-          if (isProperty(tile.pos) && state.tiles[tile.pos]?.ownerId && state.tiles[tile.pos]?.ownerId !== playerId) {
+          if (
+            isProperty(tile.pos) &&
+            state.tiles[tile.pos]?.ownerId &&
+            state.tiles[tile.pos]?.ownerId !== playerId
+          ) {
             const group = groupTiles(tile as PropertyTile);
-            const ownedInGroup = group.filter((t) => state.tiles[t.pos]?.ownerId === playerId).length;
+            const ownedInGroup = group.filter(
+              (t) => state.tiles[t.pos]?.ownerId === playerId,
+            ).length;
             if (ownedInGroup > 0) {
               const targetOwner = state.tiles[tile.pos]!.ownerId!;
               // propose trade for this tile
@@ -190,8 +192,8 @@ export function getAIAction(
                   giveCash: Math.min(me.cash, tilePrice(tile.pos) + 20000),
                   getCash: 0,
                   giveTiles: [],
-                  getTiles: [tile.pos]
-                }
+                  getTiles: [tile.pos],
+                },
               };
             }
           }
