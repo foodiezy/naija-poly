@@ -1,8 +1,8 @@
 /* src/client/index.css */
 
 :root {
-  --font-display: 'Yanone Kaffeesatz', 'Nunito', system-ui, sans-serif;
-  --font-sans: 'Nunito', system-ui, -apple-system, sans-serif;
+  --font-display: "Yanone Kaffeesatz", "Nunito", system-ui, sans-serif;
+  --font-sans: "Nunito", system-ui, -apple-system, sans-serif;
 
   /* Theme Colors — "Refined Midnight": clean indigo-slate, not purple */
   --bg-main: #0e1320;
@@ -20,14 +20,14 @@
   /* Rethemed property-group colors — retuned to read clearly on the dark UI:
      the old raw web colors (#FF0000, #008000, #000080…) were either neon or
      near-invisible. These keep the classic group identities but harmonized. */
-  --color-brown: #A56C3F;
-  --color-lightblue: #7FC4E8;
-  --color-pink: #E86AA6;
-  --color-orange: #F2933C;
-  --color-red: #E5544B;
-  --color-yellow: #EAC54F;
-  --color-green: #43B581;
-  --color-darkblue: #4C6EF5;
+  --color-brown: #a56c3f;
+  --color-lightblue: #7fc4e8;
+  --color-pink: #e86aa6;
+  --color-orange: #f2933c;
+  --color-red: #e5544b;
+  --color-yellow: #eac54f;
+  --color-green: #43b581;
+  --color-darkblue: #4c6ef5;
 
   /* Text Colors */
   --text-primary: #f9fafb;
@@ -122,7 +122,6 @@ h6 {
 /* Honor the OS "reduce motion" preference: kill the infinite CSS pulses/glows
    and collapse transitions. Pairs with <MotionConfig reducedMotion="user">. */
 @media (prefers-reduced-motion: reduce) {
-
   *,
   *::before,
   *::after {
@@ -222,7 +221,7 @@ h6 {
 }
 
 .logo-text {
-  font-family: 'Yanone Kaffeesatz', var(--font-display);
+  font-family: "Yanone Kaffeesatz", var(--font-display);
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -317,7 +316,7 @@ h6 {
 }
 
 .lobby-logo-text {
-  font-family: 'Yanone Kaffeesatz', var(--font-display);
+  font-family: "Yanone Kaffeesatz", var(--font-display);
   font-size: 3.5rem;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -330,7 +329,7 @@ h6 {
 }
 
 .lobby-tagline {
-  font-family: 'Yanone Kaffeesatz', var(--font-display);
+  font-family: "Yanone Kaffeesatz", var(--font-display);
   font-size: 1.35rem;
   font-weight: 400;
   color: var(--text-secondary);
@@ -370,7 +369,7 @@ h6 {
 }
 
 .lobby-title {
-  font-family: 'Yanone Kaffeesatz', var(--font-display);
+  font-family: "Yanone Kaffeesatz", var(--font-display);
   text-align: center;
   font-size: 2.2rem;
   font-weight: 700;
@@ -388,7 +387,7 @@ h6 {
 }
 
 .how-to-play-title {
-  font-family: 'Yanone Kaffeesatz', var(--font-display);
+  font-family: "Yanone Kaffeesatz", var(--font-display);
   text-align: center;
   font-size: 2rem;
   font-weight: 600;
@@ -409,7 +408,10 @@ h6 {
   gap: 1rem;
   padding: 1.25rem;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: border-color 0.2s, box-shadow 0.3s, transform 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.3s,
+    transform 0.2s;
   cursor: default;
 }
 
@@ -457,7 +459,9 @@ h6 {
   color: #fff;
   font-size: 1rem;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .input-field:focus {
@@ -533,7 +537,10 @@ h6 {
   font-weight: 700;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: filter 0.2s, transform 0.1s, box-shadow 0.2s;
+  transition:
+    filter 0.2s,
+    transform 0.1s,
+    box-shadow 0.2s;
   text-align: center;
   display: inline-block;
   box-shadow: 0 2px 10px rgba(70, 199, 141, 0.25);
@@ -958,10 +965,12 @@ h6 {
   grid-template-columns: repeat(11, 1fr);
   grid-template-rows: repeat(11, 1fr);
   background:
-    radial-gradient(ellipse at 50% 45%, rgba(70, 199, 141, 0.12) 0%, transparent 70%),
-    #0f172a;
+    radial-gradient(ellipse at 50% 45%, rgba(70, 199, 141, 0.12) 0%, transparent 70%), #0f172a;
   border: 6px solid rgba(232, 182, 74, 0.25);
-  box-shadow: 0 25px 65px rgba(0, 0, 0, 0.75), 0 0 40px rgba(70, 199, 141, 0.15), inset 0 0 80px rgba(0, 0, 0, 0.8);
+  box-shadow:
+    0 25px 65px rgba(0, 0, 0, 0.75),
+    0 0 40px rgba(70, 199, 141, 0.15),
+    inset 0 0 80px rgba(0, 0, 0, 0.8);
   border-radius: 2px;
   /* Authentic sharp tabletop boxes */
   position: relative;
@@ -972,9 +981,12 @@ h6 {
 .board-center {
   grid-column: 2 / 11;
   grid-row: 2 / 11;
-  background: linear-gradient(135deg, #0d1527 0%, #070b16 100%),
+  background:
+    linear-gradient(135deg, #0d1527 0%, #070b16 100%),
     radial-gradient(rgba(70, 199, 141, 0.08) 8%, transparent 8%);
-  background-size: 100% 100%, 20px 20px;
+  background-size:
+    100% 100%,
+    20px 20px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -982,7 +994,9 @@ h6 {
   padding: 1.5rem;
   position: relative;
   border: 2px solid rgba(232, 182, 74, 0.2);
-  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.8), 0 0 25px rgba(70, 199, 141, 0.12);
+  box-shadow:
+    inset 0 0 50px rgba(0, 0, 0, 0.8),
+    0 0 25px rgba(70, 199, 141, 0.12);
   border-radius: 0;
   /* Perfectly flush with inner square tile circuit */
   overflow: hidden;
@@ -1070,7 +1084,7 @@ h6 {
 }
 
 .board-center-logo {
-  font-family: 'Yanone Kaffeesatz', var(--font-display);
+  font-family: "Yanone Kaffeesatz", var(--font-display);
   font-size: 3.8rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -1124,7 +1138,7 @@ h6 {
   }
 
   100% {
-    transform: rotate(360deg) scale(1.0);
+    transform: rotate(360deg) scale(1);
   }
 }
 
@@ -1143,13 +1157,17 @@ h6 {
   background: rgba(11, 13, 26, 0.97);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(232, 182, 74, 0.25);
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.7),
+    0 0 25px rgba(232, 182, 74, 0.25);
   text-align: center;
 }
 
 .card-draw-overlay.hustle {
   border-color: var(--color-naira);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(70, 199, 141, 0.25);
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.7),
+    0 0 25px rgba(70, 199, 141, 0.25);
 }
 
 @keyframes cardFadeIn {
@@ -1195,8 +1213,13 @@ h6 {
   align-items: stretch;
   padding: 3px 0 0 0;
   cursor: pointer;
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.4);
-  transition: background-color 0.18s ease, box-shadow 0.18s ease, transform 0.1s ease;
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.05),
+    0 2px 6px rgba(0, 0, 0, 0.4);
+  transition:
+    background-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.1s ease;
   overflow: visible;
   min-width: 0;
 }
@@ -1204,11 +1227,11 @@ h6 {
 /* Center area between the color band and the price stripe — name + icon
    share this slot. flex:1 lets the name expand and centre regardless of
    length so the price stripe always sits flush at the bottom edge. */
-.tile>.tile-type-icon {
+.tile > .tile-type-icon {
   flex-shrink: 0;
 }
 
-.tile>.tile-name {
+.tile > .tile-name {
   flex: 1 1 auto;
   width: 100%;
   padding: 2px 3px;
@@ -1221,7 +1244,9 @@ h6 {
 
 .tile:hover {
   background-color: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 0 1px var(--border-strong), 0 4px 12px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    inset 0 0 0 1px var(--border-strong),
+    0 4px 12px rgba(0, 0, 0, 0.5);
   z-index: 30;
 }
 
@@ -1435,7 +1460,6 @@ h6 {
   }
 }
 
-
 /* Tokens positioned inside Tile */
 .tile-tokens-container {
   display: flex;
@@ -1459,31 +1483,47 @@ h6 {
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.6);
   border: 2px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 8px rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.6),
+    0 0 8px rgba(255, 255, 255, 0.15);
   z-index: 10;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 /* Your own token — bright cyan ring */
 .player-token-me {
   border-color: #37d6c2;
-  box-shadow: 0 0 8px rgba(55, 214, 194, 0.6), 0 0 16px rgba(55, 214, 194, 0.3), 0 2px 6px rgba(0, 0, 0, 0.6);
+  box-shadow:
+    0 0 8px rgba(55, 214, 194, 0.6),
+    0 0 16px rgba(55, 214, 194, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.6);
   animation: myTokenPulse 1.5s ease-in-out infinite;
 }
 
 @keyframes myTokenPulse {
   0% {
-    box-shadow: 0 0 8px rgba(55, 214, 194, 0.6), 0 0 16px rgba(55, 214, 194, 0.3), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow:
+      0 0 8px rgba(55, 214, 194, 0.6),
+      0 0 16px rgba(55, 214, 194, 0.3),
+      0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1);
   }
 
   50% {
-    box-shadow: 0 0 14px rgba(55, 214, 194, 0.8), 0 0 28px rgba(55, 214, 194, 0.4), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow:
+      0 0 14px rgba(55, 214, 194, 0.8),
+      0 0 28px rgba(55, 214, 194, 0.4),
+      0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1.12);
   }
 
   100% {
-    box-shadow: 0 0 8px rgba(55, 214, 194, 0.6), 0 0 16px rgba(55, 214, 194, 0.3), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow:
+      0 0 8px rgba(55, 214, 194, 0.6),
+      0 0 16px rgba(55, 214, 194, 0.3),
+      0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1);
   }
 }
@@ -1491,23 +1531,35 @@ h6 {
 /* Active turn player's token — gold ring */
 .player-token-active {
   border-color: #e8b64a;
-  box-shadow: 0 0 8px rgba(232, 182, 74, 0.7), 0 0 18px rgba(232, 182, 74, 0.35), 0 2px 6px rgba(0, 0, 0, 0.6);
+  box-shadow:
+    0 0 8px rgba(232, 182, 74, 0.7),
+    0 0 18px rgba(232, 182, 74, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.6);
   animation: activeTokenPulse 1.2s ease-in-out infinite;
 }
 
 @keyframes activeTokenPulse {
   0% {
-    box-shadow: 0 0 8px rgba(232, 182, 74, 0.7), 0 0 18px rgba(232, 182, 74, 0.35), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow:
+      0 0 8px rgba(232, 182, 74, 0.7),
+      0 0 18px rgba(232, 182, 74, 0.35),
+      0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1);
   }
 
   50% {
-    box-shadow: 0 0 14px rgba(232, 182, 74, 0.9), 0 0 30px rgba(232, 182, 74, 0.5), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow:
+      0 0 14px rgba(232, 182, 74, 0.9),
+      0 0 30px rgba(232, 182, 74, 0.5),
+      0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1.15);
   }
 
   100% {
-    box-shadow: 0 0 8px rgba(232, 182, 74, 0.7), 0 0 18px rgba(232, 182, 74, 0.35), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow:
+      0 0 8px rgba(232, 182, 74, 0.7),
+      0 0 18px rgba(232, 182, 74, 0.35),
+      0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1);
   }
 }
@@ -1520,17 +1572,26 @@ h6 {
 
 @keyframes myActiveTokenPulse {
   0% {
-    box-shadow: 0 0 8px rgba(55, 214, 194, 0.7), 0 0 20px rgba(232, 182, 74, 0.4), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow:
+      0 0 8px rgba(55, 214, 194, 0.7),
+      0 0 20px rgba(232, 182, 74, 0.4),
+      0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1);
   }
 
   50% {
-    box-shadow: 0 0 16px rgba(55, 214, 194, 0.9), 0 0 32px rgba(232, 182, 74, 0.6), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow:
+      0 0 16px rgba(55, 214, 194, 0.9),
+      0 0 32px rgba(232, 182, 74, 0.6),
+      0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1.18);
   }
 
   100% {
-    box-shadow: 0 0 8px rgba(55, 214, 194, 0.7), 0 0 20px rgba(232, 182, 74, 0.4), 0 2px 6px rgba(0, 0, 0, 0.6);
+    box-shadow:
+      0 0 8px rgba(55, 214, 194, 0.7),
+      0 0 20px rgba(232, 182, 74, 0.4),
+      0 2px 6px rgba(0, 0, 0, 0.6);
     transform: scale(1);
   }
 }
@@ -1543,21 +1604,27 @@ h6 {
 /* Tile where YOUR token is sitting — bright cyan glow border */
 .tile-has-me {
   background-color: rgba(55, 214, 194, 0.08) !important;
-  box-shadow: inset 0 0 12px rgba(55, 214, 194, 0.15), 0 0 6px rgba(55, 214, 194, 0.2);
+  box-shadow:
+    inset 0 0 12px rgba(55, 214, 194, 0.15),
+    0 0 6px rgba(55, 214, 194, 0.2);
   border-color: rgba(55, 214, 194, 0.4) !important;
 }
 
 /* Tile where the active turn player is — gold accent */
 .tile-active-player {
   background-color: rgba(232, 182, 74, 0.06) !important;
-  box-shadow: inset 0 0 10px rgba(232, 182, 74, 0.1), 0 0 4px rgba(232, 182, 74, 0.15);
+  box-shadow:
+    inset 0 0 10px rgba(232, 182, 74, 0.1),
+    0 0 4px rgba(232, 182, 74, 0.15);
   border-color: rgba(232, 182, 74, 0.3) !important;
 }
 
 /* When it's YOUR tile AND you're the active player — layered effect */
 .tile-has-me.tile-active-player {
   background-color: rgba(55, 214, 194, 0.1) !important;
-  box-shadow: inset 0 0 14px rgba(55, 214, 194, 0.2), 0 0 8px rgba(232, 182, 74, 0.25);
+  box-shadow:
+    inset 0 0 14px rgba(55, 214, 194, 0.2),
+    0 0 8px rgba(232, 182, 74, 0.25);
   border-color: rgba(55, 214, 194, 0.5) !important;
 }
 
@@ -1723,7 +1790,6 @@ h6 {
   color: var(--color-danger);
 }
 
-
 /* Left-column settings strip */
 .settings-panel {
   gap: 0.4rem;
@@ -1754,7 +1820,9 @@ h6 {
   font-size: 0.78rem;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .settings-row:hover {
@@ -2258,7 +2326,6 @@ html.high-contrast .glass-panel {
 }
 
 @keyframes auction-pulse {
-
   0%,
   100% {
     box-shadow: 0 0 0 rgba(239, 68, 68, 0);
@@ -2506,7 +2573,9 @@ html.high-contrast .glass-panel {
   padding: 3px;
   box-sizing: border-box;
   backface-visibility: hidden;
-  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 0 4px rgba(0, 0, 0, 0.15),
+    0 3px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* Position faces in 3D space */
@@ -2677,13 +2746,17 @@ html.high-contrast .glass-panel {
   width: 280px;
   background: rgba(8, 12, 20, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(59, 130, 246, 0.05);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(59, 130, 246, 0.05);
   border-radius: 2px;
   padding: 0.8rem 1rem;
   z-index: 500;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hud-player-card:hover .hud-player-popover {
@@ -2765,7 +2838,9 @@ html.high-contrast .glass-panel {
   max-width: 680px;
   background: rgba(17, 24, 39, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.15);
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(99, 102, 241, 0.15);
   border-radius: 2px;
   padding: 2.5rem;
   display: flex;
@@ -2779,7 +2854,7 @@ html.high-contrast .glass-panel {
 }
 
 .game-over-modal::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -2960,7 +3035,6 @@ html.high-contrast .glass-panel {
 }
 
 @keyframes bounce {
-
   0%,
   100% {
     transform: translateY(0);
@@ -2972,7 +3046,6 @@ html.high-contrast .glass-panel {
 }
 
 @keyframes pulseGlow {
-
   0%,
   100% {
     box-shadow: 0 0 10px rgba(232, 182, 74, 0.4);
@@ -3147,7 +3220,9 @@ html.high-contrast .glass-panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s, transform 0.1s;
+  transition:
+    background 0.2s,
+    transform 0.1s;
 }
 
 .tile-inspector-close:hover {
@@ -3163,7 +3238,9 @@ html.high-contrast .glass-panel {
   max-width: 330px;
   background: rgba(15, 23, 42, 0.97) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(232, 182, 74, 0.05);
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.5),
+    0 0 25px rgba(232, 182, 74, 0.05);
   border-radius: 10px;
   overflow: hidden;
   padding: 0 !important;
@@ -3276,7 +3353,10 @@ html.high-contrast .glass-panel {
   background: rgba(255, 255, 255, 0.05);
   color: #fca5a5;
   cursor: pointer;
-  transition: filter 0.15s ease, transform 0.1s ease, background 0.15s ease;
+  transition:
+    filter 0.15s ease,
+    transform 0.1s ease,
+    background 0.15s ease;
 }
 
 .deed-arrow.up {
@@ -3330,16 +3410,25 @@ html.high-contrast .glass-panel {
   color: #fff;
   cursor: pointer;
   background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-  transition: filter 0.15s ease, transform 0.1s ease;
+  transition:
+    filter 0.15s ease,
+    transform 0.1s ease;
 }
 
 .deed-mort-btn.redeem {
   background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
 }
 
-.deed-mort-btn:hover:not(:disabled) { filter: brightness(1.12); }
-.deed-mort-btn:active:not(:disabled) { transform: translateY(1px); }
-.deed-mort-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.deed-mort-btn:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+.deed-mort-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.deed-mort-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 .panel-tab-btn {
   transition: all 0.2s ease-in-out;
@@ -3621,7 +3710,6 @@ html.high-contrast .glass-panel {
 }
 
 @keyframes diceShake {
-
   0%,
   100% {
     transform: translate(0, 0) rotate(0);
@@ -3828,7 +3916,10 @@ html.high-contrast .glass-panel {
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 8px;
   overflow: hidden;
-  transition: border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    transform 0.1s ease,
+    box-shadow 0.15s ease;
   position: relative;
 }
 
@@ -3848,7 +3939,9 @@ html.high-contrast .glass-panel {
 
 .holdings-card.full-set {
   border-color: rgba(232, 182, 74, 0.35);
-  box-shadow: 0 0 0 1px rgba(232, 182, 74, 0.12), 0 4px 14px rgba(232, 182, 74, 0.12);
+  box-shadow:
+    0 0 0 1px rgba(232, 182, 74, 0.12),
+    0 4px 14px rgba(232, 182, 74, 0.12);
 }
 
 .holdings-card.mortgaged {
@@ -3996,7 +4089,6 @@ html.high-contrast .glass-panel {
   font-weight: 600;
 }
 
-
 /* ──────────────────────────────────────────────────────────────────────
    Players panel — redesigned cards with stats + wealth bar
    ────────────────────────────────────────────────────────────────────── */
@@ -4062,14 +4154,19 @@ html.high-contrast .glass-panel {
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 10px;
   padding: 0.55rem 0.7rem 0.5rem;
-  transition: background 0.15s ease, border-color 0.2s ease, box-shadow 0.25s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.2s ease,
+    box-shadow 0.25s ease;
   position: relative;
 }
 
 .player-card.is-active {
   background: linear-gradient(135deg, rgba(232, 182, 74, 0.12) 0%, rgba(0, 0, 0, 0.3) 100%);
   border-color: rgba(232, 182, 74, 0.4);
-  box-shadow: 0 4px 18px rgba(232, 182, 74, 0.18), inset 0 0 0 1px rgba(232, 182, 74, 0.06);
+  box-shadow:
+    0 4px 18px rgba(232, 182, 74, 0.18),
+    inset 0 0 0 1px rgba(232, 182, 74, 0.06);
 }
 
 .player-card.is-me {
@@ -4104,17 +4201,24 @@ html.high-contrast .glass-panel {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .player-card-avatar.tone-active {
   border-color: rgba(232, 182, 74, 0.7);
-  box-shadow: 0 0 0 2px rgba(232, 182, 74, 0.18), 0 0 14px rgba(232, 182, 74, 0.4);
+  box-shadow:
+    0 0 0 2px rgba(232, 182, 74, 0.18),
+    0 0 14px rgba(232, 182, 74, 0.4);
 }
 
 .player-card.is-me .player-card-avatar.tone-active {
   border-color: rgba(55, 214, 194, 0.8);
-  box-shadow: 0 0 0 2px rgba(55, 214, 194, 0.18), 0 0 14px rgba(55, 214, 194, 0.45);
+  box-shadow:
+    0 0 0 2px rgba(55, 214, 194, 0.18),
+    0 0 14px rgba(55, 214, 194, 0.45);
 }
 
 .player-card-avatar.tone-jail {
@@ -4396,7 +4500,9 @@ html.high-contrast .glass-panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .trade-card-close:hover {
@@ -4441,7 +4547,10 @@ html.high-contrast .glass-panel {
   border-radius: 10px;
   cursor: pointer;
   font-family: var(--font-sans);
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
   text-align: left;
 }
 
@@ -4621,7 +4730,9 @@ html.high-contrast .glass-panel {
   border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
   font-family: var(--font-sans);
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .trade-bump:hover {
@@ -4678,7 +4789,9 @@ html.high-contrast .glass-panel {
   overflow: hidden;
   text-align: left;
   font-family: var(--font-sans);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .trade-tile-pick:hover {
@@ -4780,7 +4893,6 @@ html.high-contrast .glass-panel {
   margin-top: 1px;
 }
 
-
 .trade-incoming-from {
   display: flex;
   align-items: center;
@@ -4857,7 +4969,9 @@ html.high-contrast .glass-panel {
   cursor: pointer;
   border: 1px solid transparent;
   font-family: var(--font-sans);
-  transition: filter 0.15s ease, background 0.15s ease;
+  transition:
+    filter 0.15s ease,
+    background 0.15s ease;
 }
 
 .trade-action-btn.cancel {
