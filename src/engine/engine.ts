@@ -21,7 +21,15 @@ import {
   auctionIncrements,
   type PropertyTile,
 } from "../data/board";
-import type { Action, GameState, PlayerId, TileState, Player, GameSettings, Objective } from "./types";
+import type {
+  Action,
+  GameState,
+  PlayerId,
+  TileState,
+  Player,
+  GameSettings,
+  Objective,
+} from "./types";
 
 // Move the turn to the next non-bankrupt player and reset per-turn state.
 // Used when the active player can no longer act (e.g. forfeited a turn by
@@ -83,21 +91,29 @@ function evaluateObjectivesAtBoundary(state: GameState): void {
   if (state.activeTrade) return;
   if (state.debtLedger && state.debtLedger.length > 0) return; // bail if any debt unsettled
 
-  state.players.forEach(p => {
+  state.players.forEach((p) => {
     if (p.secretObjective && !p.objectiveCompleted && !p.bankrupt) {
       let completed = false;
       switch (p.secretObjective) {
         case "own_2_airports":
-          completed = BOARD.filter(t => t.type === "airport" && state.tiles[t.pos]?.ownerId === p.id).length >= 2;
+          completed =
+            BOARD.filter((t) => t.type === "airport" && state.tiles[t.pos]?.ownerId === p.id)
+              .length >= 2;
           break;
         case "complete_color_set": {
-          const groups = new Set(BOARD.filter(t => t.type === "property" && state.tiles[t.pos]?.ownerId === p.id).map(t => (t as PropertyTile).group));
+          const groups = new Set(
+            BOARD.filter((t) => t.type === "property" && state.tiles[t.pos]?.ownerId === p.id).map(
+              (t) => (t as PropertyTile).group,
+            ),
+          );
           for (const g of groups) {
-             const allInGroup = BOARD.filter(t => t.type === "property" && (t as PropertyTile).group === g);
-             if (allInGroup.every(t => state.tiles[t.pos]?.ownerId === p.id)) {
-               completed = true;
-               break;
-             }
+            const allInGroup = BOARD.filter(
+              (t) => t.type === "property" && (t as PropertyTile).group === g,
+            );
+            if (allInGroup.every((t) => state.tiles[t.pos]?.ownerId === p.id)) {
+              completed = true;
+              break;
+            }
           }
           break;
         }
@@ -105,10 +121,20 @@ function evaluateObjectivesAtBoundary(state: GameState): void {
           if (p.cash >= 2_000_000) completed = true;
           break;
         case "own_4_properties":
-          completed = BOARD.filter(t => (t.type === "property" || t.type === "airport" || t.type === "utility") && state.tiles[t.pos]?.ownerId === p.id).length >= 4;
+          completed =
+            BOARD.filter(
+              (t) =>
+                (t.type === "property" || t.type === "airport" || t.type === "utility") &&
+                state.tiles[t.pos]?.ownerId === p.id,
+            ).length >= 4;
           break;
         case "first_hotel":
-          completed = BOARD.some(t => t.type === "property" && state.tiles[t.pos]?.ownerId === p.id && state.tiles[t.pos]?.houses === 5);
+          completed = BOARD.some(
+            (t) =>
+              t.type === "property" &&
+              state.tiles[t.pos]?.ownerId === p.id &&
+              state.tiles[t.pos]?.houses === 5,
+          );
           break;
       }
       if (completed) {
@@ -143,13 +169,20 @@ function shuffle<T>(array: T[], rng: () => number): T[] {
 
 export function getDevelopmentName(houses: number): string {
   switch (houses) {
-    case 0: return "Vacant Land";
-    case 1: return "Bungalow";
-    case 2: return "Duplex";
-    case 3: return "Mansion";
-    case 4: return "Mini-Estate";
-    case 5: return "Hotel";
-    default: return "Unknown";
+    case 0:
+      return "Vacant Land";
+    case 1:
+      return "Bungalow";
+    case 2:
+      return "Duplex";
+    case 3:
+      return "Mansion";
+    case 4:
+      return "Mini-Estate";
+    case 5:
+      return "Hotel";
+    default:
+      return "Unknown";
   }
 }
 
@@ -175,21 +208,27 @@ export function getRent(state: GameState, pos: number, diceTotal: number): numbe
 
     // Unimproved color group check: rent[0] is doubled if the owner holds the full group unimproved
     const group = tile.group;
-    const groupTiles = BOARD.filter((t): t is PropertyTile => t.type === "property" && t.group === group);
+    const groupTiles = BOARD.filter(
+      (t): t is PropertyTile => t.type === "property" && t.group === group,
+    );
     const ownsAll = groupTiles.every((t) => state.tiles[t.pos]?.ownerId === ownerId);
     const allUnimproved = groupTiles.every((t) => (state.tiles[t.pos]?.houses ?? 0) === 0);
 
     const baseRent = tile.rent[0];
-    return (ownsAll && allUnimproved) ? baseRent * 2 : baseRent;
+    return ownsAll && allUnimproved ? baseRent * 2 : baseRent;
   }
 
   if (tile.type === "airport") {
-    const ownedCount = BOARD.filter((t) => t.type === "airport" && state.tiles[t.pos]?.ownerId === ownerId).length;
+    const ownedCount = BOARD.filter(
+      (t) => t.type === "airport" && state.tiles[t.pos]?.ownerId === ownerId,
+    ).length;
     return tile.rent[ownedCount - 1] ?? 0;
   }
 
   if (tile.type === "utility") {
-    const ownedCount = BOARD.filter((t) => t.type === "utility" && state.tiles[t.pos]?.ownerId === ownerId).length;
+    const ownedCount = BOARD.filter(
+      (t) => t.type === "utility" && state.tiles[t.pos]?.ownerId === ownerId,
+    ).length;
     const multiplier = tile.multiplier[ownedCount - 1] ?? 0;
     return diceTotal * multiplier;
   }
@@ -218,8 +257,21 @@ export function createGame(
     ...(settings ?? {}),
   };
 
-  const AI_STYLES = ["AggressiveBidder", "PropertyHoarder", "Builder", "CashSaver", "Trader", "Normal"] as const;
-  const OBJECTIVES: Objective[] = ["own_2_airports", "complete_color_set", "cash_2m", "own_4_properties", "first_hotel"];
+  const AI_STYLES = [
+    "AggressiveBidder",
+    "PropertyHoarder",
+    "Builder",
+    "CashSaver",
+    "Trader",
+    "Normal",
+  ] as const;
+  const OBJECTIVES: Objective[] = [
+    "own_2_airports",
+    "complete_color_set",
+    "cash_2m",
+    "own_4_properties",
+    "first_hotel",
+  ];
 
   const players: Player[] = playerIds.map((id, index) => ({
     id,
@@ -232,7 +284,9 @@ export function createGame(
     bankrupt: false,
     order: index,
     aiStyle: id.startsWith("ai_") ? AI_STYLES[Math.floor(rng() * AI_STYLES.length)] : undefined,
-    secretObjective: mergedSettings.secretObjectives ? OBJECTIVES[Math.floor(rng() * OBJECTIVES.length)] : undefined,
+    secretObjective: mergedSettings.secretObjectives
+      ? OBJECTIVES[Math.floor(rng() * OBJECTIVES.length)]
+      : undefined,
     objectiveCompleted: false,
   }));
 
@@ -247,8 +301,11 @@ export function createGame(
     }
   });
 
-  const stats: Record<PlayerId, { rentPaid: number; highestAuctionBid: number; propertiesBought: number; jailTimes: number }> = {};
-  playerIds.forEach(id => {
+  const stats: Record<
+    PlayerId,
+    { rentPaid: number; highestAuctionBid: number; propertiesBought: number; jailTimes: number }
+  > = {};
+  playerIds.forEach((id) => {
     stats[id] = { rentPaid: 0, highestAuctionBid: 0, propertiesBought: 0, jailTimes: 0 };
   });
 
@@ -256,8 +313,14 @@ export function createGame(
   const chancePool = mergedSettings.chaosMode
     ? [...CHANCE_CARDS, ...CHAOS_CHANCE_CARDS]
     : CHANCE_CARDS;
-  const chanceOrder = shuffle(chancePool.map((c) => c.id), rng);
-  const hustleOrder = shuffle(HUSTLE_CARDS.map((c) => c.id), rng);
+  const chanceOrder = shuffle(
+    chancePool.map((c) => c.id),
+    rng,
+  );
+  const hustleOrder = shuffle(
+    HUSTLE_CARDS.map((c) => c.id),
+    rng,
+  );
 
   return {
     players,
@@ -304,7 +367,7 @@ function addDebt(
 ): void {
   if (amount <= 0) return;
 
-  const debtor = state.players.find(p => p.id === debtorId)!;
+  const debtor = state.players.find((p) => p.id === debtorId)!;
   const isCurrentPlayer = state.players[state.currentPlayerIndex].id === debtorId;
 
   if (debtor.cash >= amount) {
@@ -315,7 +378,7 @@ function addDebt(
     } else if (creditorId === "pot") {
       state.freeParkingPot += amount;
     } else {
-      const creditor = state.players.find(p => p.id === creditorId);
+      const creditor = state.players.find((p) => p.id === creditorId);
       if (creditor && !creditor.bankrupt) {
         creditor.cash += amount;
       } else {
@@ -338,7 +401,7 @@ function addDebt(
     } else if (creditorId === "pot") {
       state.freeParkingPot += actualPayout;
     } else if (actualPayout > 0) {
-      const creditor = state.players.find(p => p.id === creditorId);
+      const creditor = state.players.find((p) => p.id === creditorId);
       if (creditor && !creditor.bankrupt) {
         creditor.cash += actualPayout;
       } else {
@@ -348,7 +411,9 @@ function addDebt(
     // Shortfall is written off — genuinely gone, nothing minted.
     const shortfall = amount - actualPayout;
     if (shortfall > 0) {
-      state.log.push(`₦${shortfall.toLocaleString("en-NG")} shortfall written off (${debtor.name} is insolvent).`);
+      state.log.push(
+        `₦${shortfall.toLocaleString("en-NG")} shortfall written off (${debtor.name} is insolvent).`,
+      );
     }
   }
 }
@@ -361,11 +426,11 @@ function addDebt(
  * @returns the total cash actually paid out to creditors.
  */
 function settleDebtsForPlayer(state: GameState, debtorId: PlayerId): number {
-  const debtor = state.players.find(p => p.id === debtorId)!;
+  const debtor = state.players.find((p) => p.id === debtorId)!;
   let totalPaid = 0;
 
   // Settle each debt in order
-  const debts = state.debtLedger.filter(d => d.debtorId === debtorId);
+  const debts = state.debtLedger.filter((d) => d.debtorId === debtorId);
   for (const debt of debts) {
     const available = Math.max(0, debtor.cash);
     const payout = Math.min(debt.amount, available);
@@ -373,7 +438,7 @@ function settleDebtsForPlayer(state: GameState, debtorId: PlayerId): number {
     // Resolve creditor liveness at settlement time
     let resolvedCreditorId = debt.creditorId;
     if (resolvedCreditorId !== "bank" && resolvedCreditorId !== "pot") {
-      const creditor = state.players.find(p => p.id === resolvedCreditorId);
+      const creditor = state.players.find((p) => p.id === resolvedCreditorId);
       if (!creditor || creditor.bankrupt) {
         resolvedCreditorId = "bank"; // reroute to bank
       }
@@ -386,7 +451,7 @@ function settleDebtsForPlayer(state: GameState, debtorId: PlayerId): number {
       } else if (resolvedCreditorId === "pot") {
         state.freeParkingPot += payout;
       } else {
-        const creditor = state.players.find(p => p.id === resolvedCreditorId)!;
+        const creditor = state.players.find((p) => p.id === resolvedCreditorId)!;
         creditor.cash += payout;
       }
       totalPaid += payout;
@@ -399,7 +464,7 @@ function settleDebtsForPlayer(state: GameState, debtorId: PlayerId): number {
   }
 
   // Remove all settled debts from the ledger
-  state.debtLedger = state.debtLedger.filter(d => d.debtorId !== debtorId);
+  state.debtLedger = state.debtLedger.filter((d) => d.debtorId !== debtorId);
   return totalPaid;
 }
 
@@ -409,16 +474,18 @@ function settleDebtsForPlayer(state: GameState, debtorId: PlayerId): number {
  */
 function forceWriteOffDebts(state: GameState, playerId: PlayerId): void {
   // Write off debts they owe (creditors get nothing)
-  const owedDebts = state.debtLedger.filter(d => d.debtorId === playerId);
+  const owedDebts = state.debtLedger.filter((d) => d.debtorId === playerId);
   for (const debt of owedDebts) {
     if (debt.amount > 0) {
-      state.log.push(`₦${debt.amount.toLocaleString("en-NG")} debt written off (${state.players.find(p => p.id === playerId)!.name} left the game).`);
+      state.log.push(
+        `₦${debt.amount.toLocaleString("en-NG")} debt written off (${state.players.find((p) => p.id === playerId)!.name} left the game).`,
+      );
     }
   }
-  state.debtLedger = state.debtLedger.filter(d => d.debtorId !== playerId);
+  state.debtLedger = state.debtLedger.filter((d) => d.debtorId !== playerId);
 
   // Reroute debts owed TO this player to the bank
-  state.debtLedger.forEach(d => {
+  state.debtLedger.forEach((d) => {
     if (d.creditorId === playerId) {
       d.creditorId = "bank";
     }
@@ -448,9 +515,16 @@ export function applyAction(
   const isForfeit = action.type === "FORFEIT";
   const isVoteKick = action.type === "VOTE_KICK";
 
-  if (playerId !== currentPlayer.id && !isAuctionAction && !isTradeResponse && !isForfeit && !isVoteKick) {
-    const playerObj = nextState.players.find(p => p.id === playerId);
-    const isDeclaringBankruptInDebt = action.type === "DECLARE_BANKRUPT" && playerObj && playerObj.cash < 0;
+  if (
+    playerId !== currentPlayer.id &&
+    !isAuctionAction &&
+    !isTradeResponse &&
+    !isForfeit &&
+    !isVoteKick
+  ) {
+    const playerObj = nextState.players.find((p) => p.id === playerId);
+    const isDeclaringBankruptInDebt =
+      action.type === "DECLARE_BANKRUPT" && playerObj && playerObj.cash < 0;
     if (!isDeclaringBankruptInDebt) {
       throw new Error(`It is not player ${playerId}'s turn. Current player is ${currentPlayer.id}`);
     }
@@ -472,7 +546,9 @@ export function applyAction(
           currentPlayer.inJail = false;
           currentPlayer.jailTurns = 0;
           nextState.doublesCount = 0; // escape jail doubles does not count towards 3x doubles jail limit
-          nextState.log.push(`${currentPlayer.name} rolled doubles [${d1}, ${d2}] and escaped Jail!`);
+          nextState.log.push(
+            `${currentPlayer.name} rolled doubles [${d1}, ${d2}] and escaped Jail!`,
+          );
 
           movePlayerAndResolve(nextState, currentPlayer, diceTotal, rng);
         } else {
@@ -484,19 +560,19 @@ export function applyAction(
             if (nextState.settings.freeParkingJackpot) {
               nextState.freeParkingPot += JAIL_FINE;
               nextState.log.push(
-                `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine (added to Mama Put Pot) and moved.`
+                `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine (added to Mama Put Pot) and moved.`,
               );
             } else {
               nextState.bank += JAIL_FINE;
               nextState.log.push(
-                `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine and moved.`
+                `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine and moved.`,
               );
             }
 
             movePlayerAndResolve(nextState, currentPlayer, diceTotal, rng);
           } else {
             nextState.log.push(
-              `${currentPlayer.name} rolled [${d1}, ${d2}] in Jail. Remain in Jail (attempt ${currentPlayer.jailTurns}/3).`
+              `${currentPlayer.name} rolled [${d1}, ${d2}] in Jail. Remain in Jail (attempt ${currentPlayer.jailTurns}/3).`,
             );
             nextState.phase = "awaiting-end-turn";
           }
@@ -511,7 +587,9 @@ export function applyAction(
             currentPlayer.position = JAIL_POSITION;
             nextState.doublesCount = 0;
             nextState.stats[currentPlayer.id].jailTimes += 1;
-            nextState.log.push(`${currentPlayer.name} rolled doubles 3 times in a row and went to Kirikiri Prison!`);
+            nextState.log.push(
+              `${currentPlayer.name} rolled doubles 3 times in a row and went to Kirikiri Prison!`,
+            );
             nextState.phase = "awaiting-end-turn";
             return nextState;
           }
@@ -542,14 +620,18 @@ export function applyAction(
       }
 
       if (currentPlayer.cash < tile.price) {
-        throw new Error(`Insufficient cash (₦${currentPlayer.cash}) to buy ${tile.name} (₦${tile.price})`);
+        throw new Error(
+          `Insufficient cash (₦${currentPlayer.cash}) to buy ${tile.name} (₦${tile.price})`,
+        );
       }
 
       currentPlayer.cash -= tile.price;
       nextState.bank += tile.price;
       nextState.tiles[pos] = { ownerId: currentPlayer.id, houses: 0, mortgaged: false };
       nextState.stats[currentPlayer.id].propertiesBought += 1;
-      nextState.log.push(`${currentPlayer.name} bought ${tile.name} for ₦${tile.price.toLocaleString("en-NG")}.`);
+      nextState.log.push(
+        `${currentPlayer.name} bought ${tile.name} for ₦${tile.price.toLocaleString("en-NG")}.`,
+      );
       nextState.phase = "awaiting-end-turn";
       break;
     }
@@ -611,7 +693,9 @@ export function applyAction(
 
       // Ownership check: must own the entire color group
       const group = tile.group;
-      const groupTiles = BOARD.filter((t): t is PropertyTile => t.type === "property" && t.group === group);
+      const groupTiles = BOARD.filter(
+        (t): t is PropertyTile => t.type === "property" && t.group === group,
+      );
       const ownsAll = groupTiles.every((t) => nextState.tiles[t.pos]?.ownerId === currentPlayer.id);
       if (!ownsAll) {
         throw new Error("You must own the full color group to build");
@@ -630,7 +714,9 @@ export function applyAction(
 
       // Even build constraint: cannot build a house on this property if it has more houses than another in the group
       const targetHouses = tileState.houses;
-      const violatesEven = groupTiles.some((t) => (nextState.tiles[t.pos]?.houses ?? 0) < targetHouses);
+      const violatesEven = groupTiles.some(
+        (t) => (nextState.tiles[t.pos]?.houses ?? 0) < targetHouses,
+      );
       if (violatesEven) {
         throw new Error("You must build evenly across all properties in the color group");
       }
@@ -669,7 +755,9 @@ export function applyAction(
       tileState.houses += 1;
 
       const buildType = getDevelopmentName(tileState.houses);
-      nextState.log.push(`${currentPlayer.name} built a ${buildType} on ${tile.name} for ₦${tile.houseCost.toLocaleString("en-NG")}.`);
+      nextState.log.push(
+        `${currentPlayer.name} built a ${buildType} on ${tile.name} for ₦${tile.houseCost.toLocaleString("en-NG")}.`,
+      );
       break;
     }
 
@@ -694,8 +782,12 @@ export function applyAction(
       // Even selling constraint: cannot sell if target has fewer houses than another in the group (must be max)
       const targetHouses = tileState.houses;
       const group = tile.group;
-      const groupTiles = BOARD.filter((t): t is PropertyTile => t.type === "property" && t.group === group);
-      const violatesEven = groupTiles.some((t) => (nextState.tiles[t.pos]?.houses ?? 0) > targetHouses);
+      const groupTiles = BOARD.filter(
+        (t): t is PropertyTile => t.type === "property" && t.group === group,
+      );
+      const violatesEven = groupTiles.some(
+        (t) => (nextState.tiles[t.pos]?.houses ?? 0) > targetHouses,
+      );
       if (violatesEven) {
         throw new Error("You must sell buildings evenly across the color group");
       }
@@ -725,7 +817,7 @@ export function applyAction(
 
       const sellType = getDevelopmentName(tileState.houses + 1);
       nextState.log.push(
-        `${currentPlayer.name} sold a ${sellType} on ${tile.name} for ₦${refund.toLocaleString("en-NG")}.`
+        `${currentPlayer.name} sold a ${sellType} on ${tile.name} for ₦${refund.toLocaleString("en-NG")}.`,
       );
       break;
     }
@@ -751,7 +843,9 @@ export function applyAction(
       // Property and group must have no buildings
       if (tile.type === "property") {
         const group = tile.group;
-        const groupTiles = BOARD.filter((t): t is PropertyTile => t.type === "property" && t.group === group);
+        const groupTiles = BOARD.filter(
+          (t): t is PropertyTile => t.type === "property" && t.group === group,
+        );
         const hasBuildings = groupTiles.some((t) => (nextState.tiles[t.pos]?.houses ?? 0) > 0);
         if (hasBuildings) {
           throw new Error("Must sell all buildings in the color group before mortgaging");
@@ -761,7 +855,9 @@ export function applyAction(
       tileState.mortgaged = true;
       currentPlayer.cash += tile.mortgage;
       nextState.bank -= tile.mortgage;
-      nextState.log.push(`${currentPlayer.name} mortgaged ${tile.name} for ₦${tile.mortgage.toLocaleString("en-NG")}.`);
+      nextState.log.push(
+        `${currentPlayer.name} mortgaged ${tile.name} for ₦${tile.mortgage.toLocaleString("en-NG")}.`,
+      );
       break;
     }
 
@@ -791,7 +887,9 @@ export function applyAction(
       currentPlayer.cash -= cost;
       nextState.bank += cost;
       tileState.mortgaged = false;
-      nextState.log.push(`${currentPlayer.name} unmortgaged ${tile.name} for ₦${cost.toLocaleString("en-NG")}.`);
+      nextState.log.push(
+        `${currentPlayer.name} unmortgaged ${tile.name} for ₦${cost.toLocaleString("en-NG")}.`,
+      );
       break;
     }
 
@@ -811,7 +909,9 @@ export function applyAction(
       currentPlayer.jailTurns = 0;
       if (nextState.settings.freeParkingJackpot) {
         nextState.freeParkingPot += JAIL_FINE;
-        nextState.log.push(`${currentPlayer.name} paid ₦50,000 fine (added to Mama Put Pot) and was released from Jail.`);
+        nextState.log.push(
+          `${currentPlayer.name} paid ₦50,000 fine (added to Mama Put Pot) and was released from Jail.`,
+        );
       } else {
         nextState.bank += JAIL_FINE;
         nextState.log.push(`${currentPlayer.name} paid ₦50,000 fine and was released from Jail.`);
@@ -842,7 +942,9 @@ export function applyAction(
         nextState.hustleOrder.push("es07");
       }
 
-      nextState.log.push(`${currentPlayer.name} used a Get Out of Jail Free card and was released from Jail.`);
+      nextState.log.push(
+        `${currentPlayer.name} used a Get Out of Jail Free card and was released from Jail.`,
+      );
       // Remain in awaiting-roll
       break;
     }
@@ -853,13 +955,17 @@ export function applyAction(
       }
 
       // Block if the current player has unsettled debts in the ledger
-      const playerDebts = nextState.debtLedger.filter(d => d.debtorId === currentPlayer.id);
+      const playerDebts = nextState.debtLedger.filter((d) => d.debtorId === currentPlayer.id);
       if (playerDebts.length > 0) {
-        throw new Error("Cannot end turn with unsettled debts. You must mortgage properties, sell houses, or declare bankruptcy.");
+        throw new Error(
+          "Cannot end turn with unsettled debts. You must mortgage properties, sell houses, or declare bankruptcy.",
+        );
       }
 
       if (currentPlayer.cash < 0) {
-        throw new Error("Cannot end turn with negative cash. You must mortgage properties, sell houses, or declare bankruptcy.");
+        throw new Error(
+          "Cannot end turn with negative cash. You must mortgage properties, sell houses, or declare bankruptcy.",
+        );
       }
 
       // If player rolled doubles and is not in jail, they get another turn
@@ -877,20 +983,23 @@ export function applyAction(
         // Did we complete a round?
         if (nextIndex < nextState.currentPlayerIndex) {
           // Yes, we wrapped around. Check turn limit BEFORE incrementing round count to limit current round play
-          if (nextState.settings.turnLimit > 0 && nextState.currentTurn >= nextState.settings.turnLimit) {
+          if (
+            nextState.settings.turnLimit > 0 &&
+            nextState.currentTurn >= nextState.settings.turnLimit
+          ) {
             // Game over! Calculate winner by net worth
-            const solventPlayers = nextState.players.filter(p => !p.bankrupt);
+            const solventPlayers = nextState.players.filter((p) => !p.bankrupt);
             let highestNetWorth = -Infinity;
             let winnerId: string | null = null;
-            
+
             nextState.log.push("Turn limit reached! Calculating player net worths...");
-            
-            solventPlayers.forEach(p => {
+
+            solventPlayers.forEach((p) => {
               // Cash
               let netWorth = p.cash;
-              
+
               // Value of all properties owned by this player
-              Object.keys(nextState.tiles).forEach(posStr => {
+              Object.keys(nextState.tiles).forEach((posStr) => {
                 const pos = parseInt(posStr, 10);
                 const ts = nextState.tiles[pos];
                 if (ts.ownerId === p.id) {
@@ -913,23 +1022,25 @@ export function applyAction(
 
               // Subtract any pending debts this player owes
               const pendingDebts = nextState.debtLedger
-                .filter(d => d.debtorId === p.id)
+                .filter((d) => d.debtorId === p.id)
                 .reduce((sum, d) => sum + d.amount, 0);
               netWorth -= pendingDebts;
-              
+
               nextState.log.push(`${p.name}'s Net Worth: ₦${netWorth.toLocaleString("en-NG")}`);
-              
+
               if (netWorth > highestNetWorth) {
                 highestNetWorth = netWorth;
                 winnerId = p.id;
               }
             });
-            
+
             if (winnerId) {
-              const winnerName = nextState.players.find(p => p.id === winnerId)!.name;
+              const winnerName = nextState.players.find((p) => p.id === winnerId)!.name;
               nextState.winnerId = winnerId;
               nextState.phase = "game-over";
-              nextState.log.push(`Turn limit of ${nextState.settings.turnLimit} rounds was reached! ${winnerName} wins the game with a net worth of ₦${highestNetWorth.toLocaleString("en-NG")}!`);
+              nextState.log.push(
+                `Turn limit of ${nextState.settings.turnLimit} rounds was reached! ${winnerName} wins the game with a net worth of ₦${highestNetWorth.toLocaleString("en-NG")}!`,
+              );
               evaluateObjectivesAtBoundary(nextState);
               return nextState;
             }
@@ -943,9 +1054,14 @@ export function applyAction(
             nextState.blackout = null;
             nextState.log.push(`💡 Light don restore! Rent dey collect again.`);
           }
-          if (nextState.airportStrike && nextState.currentTurn >= nextState.airportStrike.untilRound) {
+          if (
+            nextState.airportStrike &&
+            nextState.currentTurn >= nextState.airportStrike.untilRound
+          ) {
             nextState.airportStrike = null;
-            nextState.log.push(`🛬 Aviation workers don resume work! Airport rent dey collect again.`);
+            nextState.log.push(
+              `🛬 Aviation workers don resume work! Airport rent dey collect again.`,
+            );
           }
         }
 
@@ -998,7 +1114,7 @@ export function applyAction(
       auction.highestBidderId = playerId;
       auction.deadline = null; // the server resets the clock on each new bid
       nextState.log.push(`${bidder.name} bid ₦${amount.toLocaleString("en-NG")}!`);
-      
+
       if (amount > nextState.stats[playerId].highestAuctionBid) {
         nextState.stats[playerId].highestAuctionBid = amount;
       }
@@ -1034,9 +1150,7 @@ export function applyAction(
       nextState.log.push(`${bidder.name} passed.`);
 
       // Who is still able to bid?
-      const remaining = auction.participantIds.filter(
-        (id) => !auction.passedIds.includes(id),
-      );
+      const remaining = auction.participantIds.filter((id) => !auction.passedIds.includes(id));
       if (auction.highestBidderId !== null) {
         // Someone has bid; once no challenger is left, the top bidder wins.
         const challengers = remaining.filter((id) => id !== auction.highestBidderId);
@@ -1098,10 +1212,14 @@ export function applyAction(
         throw new Error("Trade cash values must be non-negative");
       }
       if (proposer.cash < trade.giveCash) {
-        throw new Error(`Insufficient cash to propose trade (proposer has ₦${proposer.cash}, offers ₦${trade.giveCash})`);
+        throw new Error(
+          `Insufficient cash to propose trade (proposer has ₦${proposer.cash}, offers ₦${trade.giveCash})`,
+        );
       }
       if (recipient.cash < trade.getCash) {
-        throw new Error(`Recipient has insufficient cash (recipient has ₦${recipient.cash}, requested ₦${trade.getCash})`);
+        throw new Error(
+          `Recipient has insufficient cash (recipient has ₦${recipient.cash}, requested ₦${trade.getCash})`,
+        );
       }
 
       // Tile checks for proposer
@@ -1138,7 +1256,9 @@ export function applyAction(
 
       const trade = nextState.activeTrade;
       if (playerId !== trade.toId) {
-        throw new Error(`Only recipient (${trade.toId}) can respond to trade. Received request from ${playerId}`);
+        throw new Error(
+          `Only recipient (${trade.toId}) can respond to trade. Received request from ${playerId}`,
+        );
       }
 
       const proposer = nextState.players.find((p) => p.id === trade.fromId)!;
@@ -1167,7 +1287,9 @@ export function applyAction(
 
         nextState.log.push(`Trade between ${proposer.name} and ${recipient.name} was accepted.`);
       } else {
-        nextState.log.push(`Trade proposal from ${proposer.name} was rejected by ${recipient.name}.`);
+        nextState.log.push(
+          `Trade proposal from ${proposer.name} was rejected by ${recipient.name}.`,
+        );
       }
 
       nextState.activeTrade = null;
@@ -1257,9 +1379,11 @@ export function applyAction(
     case "DECLARE_BANKRUPT": {
       const bankruptPlayer = nextState.players.find((p) => p.id === playerId)!;
       // Can declare bankruptcy if in debt (negative cash) OR has unsettled debts in the ledger
-      const playerDebts = nextState.debtLedger.filter(d => d.debtorId === playerId);
+      const playerDebts = nextState.debtLedger.filter((d) => d.debtorId === playerId);
       if (bankruptPlayer.cash >= 0 && playerDebts.length === 0) {
-        throw new Error("Cannot declare bankruptcy unless you are in debt (negative cash or unsettled debts)");
+        throw new Error(
+          "Cannot declare bankruptcy unless you are in debt (negative cash or unsettled debts)",
+        );
       }
 
       bankruptPlayer.bankrupt = true;
@@ -1275,7 +1399,7 @@ export function applyAction(
       let primaryCreditorId: PlayerId | "bank" = "bank";
       for (const debt of playerDebts) {
         if (debt.creditorId !== "bank") {
-          const creditor = nextState.players.find(p => p.id === debt.creditorId);
+          const creditor = nextState.players.find((p) => p.id === debt.creditorId);
           if (creditor && !creditor.bankrupt) {
             primaryCreditorId = debt.creditorId;
             break;
@@ -1325,14 +1449,16 @@ export function applyAction(
           bankruptPlayer.cash = 0;
         }
 
-        nextState.log.push(`All of ${bankruptPlayer.name}'s properties were transferred to ${creditor.name}.`);
+        nextState.log.push(
+          `All of ${bankruptPlayer.name}'s properties were transferred to ${creditor.name}.`,
+        );
       }
 
       // Ensure bankrupt player's cash is 0 (never negative)
       bankruptPlayer.cash = 0;
 
       // Reroute any debts owed TO this bankrupt player to the bank
-      nextState.debtLedger.forEach(d => {
+      nextState.debtLedger.forEach((d) => {
         if (d.creditorId === playerId) {
           d.creditorId = "bank";
         }
@@ -1365,9 +1491,9 @@ export function applyAction(
 
     case "VOTE_KICK": {
       const targetId = action.targetId;
-      const targetPlayer = nextState.players.find(p => p.id === targetId);
-      const voterPlayer = nextState.players.find(p => p.id === playerId);
-      
+      const targetPlayer = nextState.players.find((p) => p.id === targetId);
+      const voterPlayer = nextState.players.find((p) => p.id === playerId);
+
       if (!targetPlayer || targetPlayer.bankrupt) {
         throw new Error("Target player is not in the game or is already bankrupt");
       }
@@ -1381,17 +1507,21 @@ export function applyAction(
       if (!nextState.votekicks[targetId]) {
         nextState.votekicks[targetId] = [];
       }
-      
+
       const votes = nextState.votekicks[targetId];
       if (votes.includes(playerId)) {
         throw new Error("You have already voted to commot this player");
       }
-      
+
       votes.push(playerId);
-      nextState.log.push(`${voterPlayer.name} voted to commot ${targetPlayer.name} (${votes.length} votes).`);
-      
-      const activePlayerIds = new Set(nextState.players.filter(p => !p.bankrupt).map(p => p.id));
-      const liveVoteCount = votes.filter(id => activePlayerIds.has(id)).length;
+      nextState.log.push(
+        `${voterPlayer.name} voted to commot ${targetPlayer.name} (${votes.length} votes).`,
+      );
+
+      const activePlayerIds = new Set(
+        nextState.players.filter((p) => !p.bankrupt).map((p) => p.id),
+      );
+      const liveVoteCount = votes.filter((id) => activePlayerIds.has(id)).length;
       if (liveVoteCount > activePlayerIds.size / 2) {
         targetPlayer.kicked = true;
         nextState.log.push(`Vote majority reached! ${targetPlayer.name} don commot from the game.`);
@@ -1446,17 +1576,23 @@ function resolveLanding(
     } else {
       // Landed on another player's property - pay rent!
       if (tileState.mortgaged) {
-        state.log.push(`${player.name} landed on ${tile.name} (owned by ${tileState.ownerId}), but it is mortgaged.`);
+        state.log.push(
+          `${player.name} landed on ${tile.name} (owned by ${tileState.ownerId}), but it is mortgaged.`,
+        );
         state.phase = "awaiting-end-turn";
       } else if (state.blackout) {
         // NEPA don take light — no light, no rent.
-        state.log.push(`⚡ Blackout! ${player.name} landed on ${tile.name} but NEPA don take light — no rent collected.`);
+        state.log.push(
+          `⚡ Blackout! ${player.name} landed on ${tile.name} but NEPA don take light — no rent collected.`,
+        );
         state.phase = "awaiting-end-turn";
       } else if (state.airportStrike && tile.type === "airport") {
-        state.log.push(`✈️ Airport Strike! ${player.name} landed on ${tile.name} but workers don lock gate — no rent collected.`);
+        state.log.push(
+          `✈️ Airport Strike! ${player.name} landed on ${tile.name} but workers don lock gate — no rent collected.`,
+        );
         state.phase = "awaiting-end-turn";
       } else {
-        let rent = getRent(state, pos, state.dice ? (state.dice[0] + state.dice[1]) : 0);
+        let rent = getRent(state, pos, state.dice ? state.dice[0] + state.dice[1] : 0);
         if (tile.type === "airport" && rentMultiplier === 2) {
           rent *= 2;
         }
@@ -1475,7 +1611,7 @@ function resolveLanding(
         const ownerForLog = state.players.find((p) => p.id === tileState.ownerId)!;
 
         state.log.push(
-          `${player.name} paid ₦${rent.toLocaleString("en-NG")} rent to ${ownerForLog.name} for landing on ${tile.name}.`
+          `${player.name} paid ₦${rent.toLocaleString("en-NG")} rent to ${ownerForLog.name} for landing on ${tile.name}.`,
         );
         state.phase = "awaiting-end-turn";
       }
@@ -1483,10 +1619,14 @@ function resolveLanding(
   } else if (tile.type === "tax") {
     if (state.settings.freeParkingJackpot) {
       addDebt(state, player.id, "pot", tile.amount);
-      state.log.push(`${player.name} paid ₦${tile.amount.toLocaleString("en-NG")} for ${tile.name} (added to Mama Put Pot).`);
+      state.log.push(
+        `${player.name} paid ₦${tile.amount.toLocaleString("en-NG")} for ${tile.name} (added to Mama Put Pot).`,
+      );
     } else {
       addDebt(state, player.id, "bank", tile.amount);
-      state.log.push(`${player.name} paid ₦${tile.amount.toLocaleString("en-NG")} for ${tile.name}.`);
+      state.log.push(
+        `${player.name} paid ₦${tile.amount.toLocaleString("en-NG")} for ${tile.name}.`,
+      );
     }
     state.phase = "awaiting-end-turn";
   } else if (tile.type === "jail") {
@@ -1495,7 +1635,9 @@ function resolveLanding(
   } else if (tile.type === "free") {
     if (state.settings.freeParkingJackpot && state.freeParkingPot > 0) {
       player.cash += state.freeParkingPot;
-      state.log.push(`${player.name} landed on Mama Put Rest Stop (Free Parking) and collected the Mama Put Pot of ₦${state.freeParkingPot.toLocaleString("en-NG")}!`);
+      state.log.push(
+        `${player.name} landed on Mama Put Rest Stop (Free Parking) and collected the Mama Put Pot of ₦${state.freeParkingPot.toLocaleString("en-NG")}!`,
+      );
       state.freeParkingPot = 0;
     } else {
       state.log.push(`${player.name} landed on Mama Put Rest Stop (Free Parking).`);
@@ -1568,7 +1710,7 @@ function drawCard(
 function applyCardAction(
   state: GameState,
   player: Player,
-  action: typeof CHANCE_CARDS[0]["action"],
+  action: (typeof CHANCE_CARDS)[0]["action"],
   deckSource: "chance" | "hustle",
   rng: () => number,
 ): void {
@@ -1578,7 +1720,9 @@ function applyCardAction(
         const amtAbs = Math.abs(action.amount);
         if (state.settings.freeParkingJackpot) {
           addDebt(state, player.id, "pot", amtAbs);
-          state.log.push(`${player.name} lost ₦${amtAbs.toLocaleString("en-NG")} (added to Mama Put Pot).`);
+          state.log.push(
+            `${player.name} lost ₦${amtAbs.toLocaleString("en-NG")} (added to Mama Put Pot).`,
+          );
         } else {
           addDebt(state, player.id, "bank", amtAbs);
           state.log.push(`${player.name} lost ₦${amtAbs.toLocaleString("en-NG")}.`);
@@ -1644,7 +1788,9 @@ function applyCardAction(
           addDebt(state, p.id, player.id, action.amount);
           // Track how much was actually received by the collector
           totalCollected += player.cash - beforeCash;
-          state.log.push(`${p.name} paid ₦${action.amount.toLocaleString("en-NG")} to ${player.name}.`);
+          state.log.push(
+            `${p.name} paid ₦${action.amount.toLocaleString("en-NG")} to ${player.name}.`,
+          );
         }
       });
       state.phase = "awaiting-end-turn";
@@ -1657,7 +1803,9 @@ function applyCardAction(
       state.players.forEach((p) => {
         if (p.id !== player.id && !p.bankrupt) {
           addDebt(state, player.id, p.id, action.amount);
-          state.log.push(`${player.name} paid ₦${action.amount.toLocaleString("en-NG")} to ${p.name}.`);
+          state.log.push(
+            `${player.name} paid ₦${action.amount.toLocaleString("en-NG")} to ${p.name}.`,
+          );
         }
       });
       state.phase = "awaiting-end-turn";
@@ -1682,12 +1830,12 @@ function applyCardAction(
       if (state.settings.freeParkingJackpot) {
         addDebt(state, player.id, "pot", totalCost);
         state.log.push(
-          `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} Bungalow/Duplex/Mansion/Estate(s), ${hotelsCount} Hotel(s)) (added to Mama Put Pot).`
+          `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} Bungalow/Duplex/Mansion/Estate(s), ${hotelsCount} Hotel(s)) (added to Mama Put Pot).`,
         );
       } else {
         addDebt(state, player.id, "bank", totalCost);
         state.log.push(
-          `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} Bungalow/Duplex/Mansion/Estate(s), ${hotelsCount} Hotel(s)).`
+          `${player.name} paid ₦${totalCost.toLocaleString("en-NG")} for property repairs (${housesCount} Bungalow/Duplex/Mansion/Estate(s), ${hotelsCount} Hotel(s)).`,
         );
       }
       state.phase = "awaiting-end-turn";
@@ -1732,11 +1880,22 @@ function applyCardAction(
       state.log.push(`${player.name} moved to nearest Utility: ${BOARD[targetPos].name}.`);
 
       const tileState = state.tiles[targetPos];
-      if (state.blackout && tileState.ownerId !== null && tileState.ownerId !== player.id && !tileState.mortgaged) {
+      if (
+        state.blackout &&
+        tileState.ownerId !== null &&
+        tileState.ownerId !== player.id &&
+        !tileState.mortgaged
+      ) {
         // NEPA blackout — utility owner can't charge either.
-        state.log.push(`⚡ Blackout! ${player.name} reached ${BOARD[targetPos].name} but NEPA don take light — no rent collected.`);
+        state.log.push(
+          `⚡ Blackout! ${player.name} reached ${BOARD[targetPos].name} but NEPA don take light — no rent collected.`,
+        );
         state.phase = "awaiting-end-turn";
-      } else if (tileState.ownerId !== null && tileState.ownerId !== player.id && !tileState.mortgaged) {
+      } else if (
+        tileState.ownerId !== null &&
+        tileState.ownerId !== player.id &&
+        !tileState.mortgaged
+      ) {
         // Roll dice and pay 10x roll
         const rd1 = Math.floor(rng() * 6) + 1;
         const rd2 = Math.floor(rng() * 6) + 1;
@@ -1755,7 +1914,7 @@ function applyCardAction(
         }
 
         state.log.push(
-          `${player.name} rolled [${rd1}, ${rd2}] for utility rent. Paid ₦${rent.toLocaleString("en-NG")} to ${owner.name}.`
+          `${player.name} rolled [${rd1}, ${rd2}] for utility rent. Paid ₦${rent.toLocaleString("en-NG")} to ${owner.name}.`,
         );
         state.phase = "awaiting-end-turn";
       } else {
@@ -1769,14 +1928,18 @@ function applyCardAction(
       // (currentTurn increments once). Drawing again while already dark just
       // refreshes the window.
       state.blackout = { untilRound: state.currentTurn + 1 };
-      state.log.push(`⚡ NEPA don take light! Total blackout — no rent until the round waka back around.`);
+      state.log.push(
+        `⚡ NEPA don take light! Total blackout — no rent until the round waka back around.`,
+      );
       state.phase = "awaiting-end-turn";
       break;
     }
 
     case "airportStrike": {
       state.airportStrike = { untilRound: state.currentTurn + 1 };
-      state.log.push(`✈️ Airport Strike! Aviation workers don lock gate — no airport rent until the round waka back around.`);
+      state.log.push(
+        `✈️ Airport Strike! Aviation workers don lock gate — no airport rent until the round waka back around.`,
+      );
       state.phase = "awaiting-end-turn";
       break;
     }
@@ -1798,13 +1961,17 @@ function applyCardAction(
       const bonus = housesCount * action.perHouse + hotelsCount * action.perHotel;
       player.cash += bonus;
       state.bank -= bonus;
-      
+
       if (bonus > 0) {
-        state.log.push(`📈 Market Boom! ${player.name} collected ₦${bonus.toLocaleString("en-NG")} for owning ${housesCount} house(s) and ${hotelsCount} hotel(s).`);
+        state.log.push(
+          `📈 Market Boom! ${player.name} collected ₦${bonus.toLocaleString("en-NG")} for owning ${housesCount} house(s) and ${hotelsCount} hotel(s).`,
+        );
       } else {
-        state.log.push(`📈 Market Boom! ${player.name} collected nothing (no developed properties).`);
+        state.log.push(
+          `📈 Market Boom! ${player.name} collected nothing (no developed properties).`,
+        );
       }
-      
+
       state.phase = "awaiting-end-turn";
       break;
     }

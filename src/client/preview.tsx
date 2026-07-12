@@ -60,7 +60,7 @@ const engineState = {
     "Chidi rolled 4 + 3 = 7.",
     "Chidi bought Asokoro, Abuja for ₦300,000!",
     "Amina paid ₦85,000 rent to Emeka.",
-    "Bola drew Hustle: \"Village meeting levy — pay ₦40,000.\"",
+    'Bola drew Hustle: "Village meeting levy — pay ₦40,000."',
   ],
   winnerId: null,
   settings: { startingCash: 1_500_000, turnLimit: 0, freeParkingJackpot: false, chaosMode: false },
@@ -119,7 +119,16 @@ function PreviewApp() {
           <ChatPanel
             room={mockRoom}
             engineState={engineState as any}
-            chatMessages={[{ senderId: "System", senderName: "System", text: "Welcome to Odogwu Empire Preview!", tokenId: "agbada", timestamp: Date.now(), toId: "all" }]}
+            chatMessages={[
+              {
+                senderId: "System",
+                senderName: "System",
+                text: "Welcome to Odogwu Empire Preview!",
+                tokenId: "agbada",
+                timestamp: Date.now(),
+                toId: "all",
+              },
+            ]}
             onSendChatMessage={() => {}}
           />
           <SettingsPanel muted={muted} onToggleMute={() => setMuted(!muted)} />
@@ -165,9 +174,7 @@ function PreviewApp() {
           <span>How to Play</span>
           <span>Privacy</span>
         </div>
-        <div className="footer-right">
-          © 2026 Odogwu Games · Made with Lagos vibes.
-        </div>
+        <div className="footer-right">© 2026 Odogwu Games · Made with Lagos vibes.</div>
       </footer>
     </div>
   );
@@ -176,5 +183,5 @@ function PreviewApp() {
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <MotionConfig reducedMotion="user">
     <PreviewApp />
-  </MotionConfig>
+  </MotionConfig>,
 );

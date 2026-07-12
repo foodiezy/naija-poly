@@ -14,7 +14,7 @@ const VOL_KEY = "odogwu:volume";
 // the CSS overrides live in index.css under `html.high-contrast`.
 export default function SettingsPanel({ muted, onToggleMute }: SettingsPanelProps) {
   const [highContrast, setHighContrast] = useState<boolean>(
-    () => typeof localStorage !== "undefined" && localStorage.getItem(HC_KEY) === "1"
+    () => typeof localStorage !== "undefined" && localStorage.getItem(HC_KEY) === "1",
   );
   const [volume, setVolumeState] = useState<number>(() => {
     if (typeof localStorage !== "undefined") {
@@ -54,12 +54,7 @@ export default function SettingsPanel({ muted, onToggleMute }: SettingsPanelProp
     <div className="console-panel glass-panel settings-panel">
       <div className="settings-panel-header">⚙️ Settings</div>
 
-      <button
-        type="button"
-        className="settings-row"
-        onClick={onToggleMute}
-        aria-pressed={!muted}
-      >
+      <button type="button" className="settings-row" onClick={onToggleMute} aria-pressed={!muted}>
         <span className="settings-row-label">{muted ? "🔇" : "🔊"} Sound</span>
         <span className={`settings-pill ${muted ? "" : "on"}`}>{muted ? "Off" : "On"}</span>
       </button>
@@ -89,7 +84,9 @@ export default function SettingsPanel({ muted, onToggleMute }: SettingsPanelProp
         aria-pressed={highContrast}
       >
         <span className="settings-row-label">🌗 High Contrast</span>
-        <span className={`settings-pill ${highContrast ? "on" : ""}`}>{highContrast ? "On" : "Off"}</span>
+        <span className={`settings-pill ${highContrast ? "on" : ""}`}>
+          {highContrast ? "On" : "Off"}
+        </span>
       </button>
     </div>
   );

@@ -12,7 +12,13 @@ interface Props {
   onSendAction: (action: Action) => void;
 }
 
-export default function AuctionPanel({ auction, players, mySessionId, myCash, onSendAction }: Props) {
+export default function AuctionPanel({
+  auction,
+  players,
+  mySessionId,
+  myCash,
+  onSendAction,
+}: Props) {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -39,8 +45,14 @@ export default function AuctionPanel({ auction, players, mySessionId, myCash, on
       exit={{ opacity: 0, height: 0 }}
       style={{ overflow: "hidden" }}
     >
-      <div className={`auction-panel ${secsLeft <= 3 && auction.deadline ? "auction-urgent" : ""}`} style={{ margin: "0.75rem", borderRadius: "2px" }}>
-        <div className="auction-title" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}>
+      <div
+        className={`auction-panel ${secsLeft <= 3 && auction.deadline ? "auction-urgent" : ""}`}
+        style={{ margin: "0.75rem", borderRadius: "2px" }}
+      >
+        <div
+          className="auction-title"
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
+        >
           <IconAuction size={20} /> LIVE AUCTION
         </div>
         <div style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
@@ -50,7 +62,10 @@ export default function AuctionPanel({ auction, players, mySessionId, myCash, on
         {auction.deadline && (
           <div className="auction-timer">
             <div className="auction-timer-bar">
-              <div className={`auction-timer-fill ${secsLeft <= 3 ? "urgent" : ""}`} style={{ width: `${timerPct}%` }} />
+              <div
+                className={`auction-timer-fill ${secsLeft <= 3 ? "urgent" : ""}`}
+                style={{ width: `${timerPct}%` }}
+              />
             </div>
             <div className={`auction-timer-secs ${secsLeft <= 3 ? "urgent" : ""}`}>
               {secsLeft > 0 ? `${secsLeft}s` : "GONE!"}
@@ -59,8 +74,17 @@ export default function AuctionPanel({ auction, players, mySessionId, myCash, on
         )}
 
         <div className="auction-bid-hud">
-          <span>Top: <strong style={{ color: "var(--color-naira)" }}>₦{auction.highestBid.toLocaleString()}</strong></span>
-          <span>{auction.highestBidderId ? players.find((p) => p.id === auction.highestBidderId)?.name : "No bids"}</span>
+          <span>
+            Top:{" "}
+            <strong style={{ color: "var(--color-naira)" }}>
+              ₦{auction.highestBid.toLocaleString()}
+            </strong>
+          </span>
+          <span>
+            {auction.highestBidderId
+              ? players.find((p) => p.id === auction.highestBidderId)?.name
+              : "No bids"}
+          </span>
         </div>
 
         {canBid ? (
@@ -92,13 +116,28 @@ export default function AuctionPanel({ auction, players, mySessionId, myCash, on
             </button>
           </div>
         ) : iAmHighest ? (
-          <div className="action-status-indicator" style={{ color: "var(--color-naira)", fontWeight: "bold", fontSize: "0.75rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}>
+          <div
+            className="action-status-indicator"
+            style={{
+              color: "var(--color-naira)",
+              fontWeight: "bold",
+              fontSize: "0.75rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.3rem",
+            }}
+          >
             <IconTrophy size={16} /> You hold the top bid!
           </div>
         ) : iPassed ? (
-          <div className="action-status-indicator" style={{ fontSize: "0.75rem" }}>You folded.</div>
+          <div className="action-status-indicator" style={{ fontSize: "0.75rem" }}>
+            You folded.
+          </div>
         ) : (
-          <div className="action-status-indicator" style={{ fontSize: "0.75rem" }}>Spectating…</div>
+          <div className="action-status-indicator" style={{ fontSize: "0.75rem" }}>
+            Spectating…
+          </div>
         )}
       </div>
     </motion.div>

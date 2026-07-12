@@ -40,7 +40,7 @@ class MockRNG {
 /**
  * Compute the system's Money Conservation Invariant.
  *
- * User Rule: (bank + Σ player cash + free-parking pot + Σ realizable asset value) 
+ * User Rule: (bank + Σ player cash + free-parking pot + Σ realizable asset value)
  * is constant, decreasing ONLY by deliberate shortfall write-offs.
  *
  * Here, `realizable asset value` means forced liquidation value:
@@ -49,23 +49,26 @@ class MockRNG {
  * - Mortgaged properties: 0 (you already took the cash)
  *
  * Since forced liquidation destroys half the value of houses (and buying a property
- * destroys half the cash value instantly since you can only mortgage it for half), 
- * for the sum to be strictly constant, the `bank` state variable MUST track the 
- * "net fiat money supply" — it absorbs the asymmetric losses of asset values, 
+ * destroys half the cash value instantly since you can only mortgage it for half),
+ * for the sum to be strictly constant, the `bank` state variable MUST track the
+ * "net fiat money supply" — it absorbs the asymmetric losses of asset values,
  * or alternatively, we just sum them as defined by the user and assert conservation.
  *
  * NOTE: The engine must track `state.bank` appropriately for this to hold.
  */
 export function computeInvariant(state: GameState): number {
-  return (state.bank || 0) + totalPlayerCash(state) + state.freeParkingPot + totalRealizableAssetValue(state);
+  return (
+    (state.bank || 0) +
+    totalPlayerCash(state) +
+    state.freeParkingPot +
+    totalRealizableAssetValue(state)
+  );
 }
 
 const totalPlayerCash = (s: GameState) => s.players.reduce((sum, p) => sum + p.cash, 0);
 
-
-
 /**
- * Compute "realizable asset value" — the forced liquidation value of all assets 
+ * Compute "realizable asset value" — the forced liquidation value of all assets
  * held by all players.
  */
 function totalRealizableAssetValue(state: GameState): number {
@@ -74,16 +77,16 @@ function totalRealizableAssetValue(state: GameState): number {
     const pos = parseInt(posStr, 10);
     const ts = state.tiles[pos];
     if (ts.ownerId === null) continue;
-    
+
     const tile = BOARD[pos];
     if (tile.type === "property" || tile.type === "airport" || tile.type === "utility") {
       if (ts.mortgaged) {
         // Already mortgaged, can't extract more cash
-        total += 0; 
+        total += 0;
       } else {
         // Can be mortgaged for its mortgage value
         total += tile.mortgage;
-        
+
         if (tile.type === "property" && ts.houses > 0 && ts.houses <= 5) {
           const houseCount = ts.houses === 5 ? 5 : ts.houses; // hotel is 5 houses
           total += houseCount * (tile.houseCost / 2); // sell back for half price
@@ -161,7 +164,7 @@ describe("Debt Ledger", () => {
 
       // There should be an outstanding debt in the ledger
       expect(nextState.debtLedger.length).toBeGreaterThan(0);
-      const debt = nextState.debtLedger.find(d => d.debtorId === "p2");
+      const debt = nextState.debtLedger.find((d) => d.debtorId === "p2");
       expect(debt).toBeDefined();
       expect(debt!.creditorId).toBe("p1");
     });
@@ -181,13 +184,13 @@ describe("Debt Ledger", () => {
       const nextState = applyAction(state, "p2", { type: "ROLL" }, rng.getRNG());
 
       const invariantAfter = computeInvariant(nextState);
-      
+
       // Total system money should be exactly constant (tax debt recorded, no write off yet)
       expect(invariantAfter).toBe(invariantBefore);
 
       // Debt should be recorded
       expect(nextState.debtLedger.length).toBeGreaterThan(0);
-      const debt = nextState.debtLedger.find(d => d.debtorId === "p2");
+      const debt = nextState.debtLedger.find((d) => d.debtorId === "p2");
       expect(debt).toBeDefined();
       expect(debt!.creditorId).toBe("bank");
     });
@@ -214,7 +217,7 @@ describe("Debt Ledger", () => {
       // p2 rolls (1,2) = 3, lands on Bama
       const rng = MockRNG.makeRoll(1, 2);
       const nextState = applyAction(state, "p2", { type: "ROLL" }, rng.getRNG());
-      
+
       const invariantAfter = computeInvariant(nextState);
 
       // Total money must remain perfectly constant (no money minted or destroyed)
@@ -281,7 +284,7 @@ describe("Debt Ledger", () => {
 
       // Total money in system should not have increased (no money minted!)
       // Note: when assets are transferred, houses are destroyed, so the invariant might go down
-      // exactly by the value of the destroyed houses, but since the airport has 0 houses, 
+      // exactly by the value of the destroyed houses, but since the airport has 0 houses,
       // the invariant should be perfectly constant!
       const invariantAfter = computeInvariant(nextState);
       expect(invariantAfter).toBe(invariantBefore);
@@ -331,7 +334,10 @@ describe("Debt Ledger", () => {
       }
 
       // Rig the chance deck so the next card drawn is collectFromEach
-      state.chanceOrder = [collectCard.id, ...state.chanceOrder.filter((id: string) => id !== collectCard.id)];
+      state.chanceOrder = [
+        collectCard.id,
+        ...state.chanceOrder.filter((id: string) => id !== collectCard.id),
+      ];
       state.chancePtr = 0;
 
       // p1 at pos 6, rolls (1,0)... need to land on a Chance tile.
@@ -357,8 +363,8 @@ describe("Debt Ledger", () => {
       expect(nextState.players[3].cash).toBeGreaterThanOrEqual(0);
 
       // Any remaining debts for p3/p4 in the ledger represent unresolved shortfalls
-      const p3Debts = nextState.debtLedger.filter(d => d.debtorId === "p3");
-      const p4Debts = nextState.debtLedger.filter(d => d.debtorId === "p4");
+      const p3Debts = nextState.debtLedger.filter((d) => d.debtorId === "p3");
+      const p4Debts = nextState.debtLedger.filter((d) => d.debtorId === "p4");
 
       // For non-current players, debts should be auto-settled inline:
       // they pay min(cash, owed), shortfall is written off
@@ -398,11 +404,13 @@ describe("Debt Ledger", () => {
       // and the creditor goes bankrupt before settlement
 
       // Create a pre-existing debt from p3 to p2
-      state.debtLedger = [{
-        debtorId: "p3",
-        creditorId: "p2",
-        amount: 4_000,
-      }];
+      state.debtLedger = [
+        {
+          debtorId: "p3",
+          creditorId: "p2",
+          amount: 4_000,
+        },
+      ];
 
       // p3 declares bankruptcy to force-settle
       const nextState = applyAction(state, "p3", { type: "DECLARE_BANKRUPT" });
@@ -434,11 +442,13 @@ describe("Debt Ledger", () => {
       state.currentPlayerIndex = 1;
 
       // Record the debt
-      state.debtLedger = [{
-        debtorId: "p2",
-        creditorId: "p1",
-        amount: 50_000,
-      }];
+      state.debtLedger = [
+        {
+          debtorId: "p2",
+          creditorId: "p1",
+          amount: 50_000,
+        },
+      ];
 
       state.tiles[5] = { ownerId: "p2", houses: 0, mortgaged: false };
 
@@ -452,7 +462,7 @@ describe("Debt Ledger", () => {
       expect(nextState.players[1].bankrupt).toBe(true);
 
       // Debt ledger should be cleared
-      expect(nextState.debtLedger.filter(d => d.debtorId === "p2")).toHaveLength(0);
+      expect(nextState.debtLedger.filter((d) => d.debtorId === "p2")).toHaveLength(0);
 
       // p1 should NOT have received any money (forfeit = assets go to bank)
       expect(nextState.players[0].cash).toBe(p1CashBefore);
@@ -479,11 +489,13 @@ describe("Debt Ledger", () => {
       // p2 has an outstanding debt to p1
       state.players[1].cash = 3_000;
 
-      state.debtLedger = [{
-        debtorId: "p2",
-        creditorId: "p1",
-        amount: 50_000,
-      }];
+      state.debtLedger = [
+        {
+          debtorId: "p2",
+          creditorId: "p1",
+          amount: 50_000,
+        },
+      ];
 
       state.tiles[5] = { ownerId: "p2", houses: 0, mortgaged: false };
 
@@ -495,7 +507,7 @@ describe("Debt Ledger", () => {
       expect(nextState.players[1].bankrupt).toBe(true);
 
       // Debts should be cleared
-      expect(nextState.debtLedger.filter(d => d.debtorId === "p2")).toHaveLength(0);
+      expect(nextState.debtLedger.filter((d) => d.debtorId === "p2")).toHaveLength(0);
 
       // Properties go to bank
       expect(nextState.tiles[5].ownerId).toBeNull();
@@ -515,11 +527,13 @@ describe("Debt Ledger", () => {
       state.currentPlayerIndex = 0;
 
       // p1 has an outstanding debt
-      state.debtLedger = [{
-        debtorId: "p1",
-        creditorId: "p2",
-        amount: 10_000,
-      }];
+      state.debtLedger = [
+        {
+          debtorId: "p1",
+          creditorId: "p2",
+          amount: 10_000,
+        },
+      ];
 
       expect(() => applyAction(state, "p1", { type: "END_TURN" })).toThrow();
     });
@@ -536,11 +550,13 @@ describe("Debt Ledger", () => {
       state.players[0].objectiveCompleted = false;
 
       // Add a debt so objectives should NOT evaluate
-      state.debtLedger = [{
-        debtorId: "p2",
-        creditorId: "bank",
-        amount: 1_000,
-      }];
+      state.debtLedger = [
+        {
+          debtorId: "p2",
+          creditorId: "bank",
+          amount: 1_000,
+        },
+      ];
 
       // Trigger a boundary where objectives would normally evaluate
       // (END_TURN will throw because of debt, so we test via a different path)
@@ -570,11 +586,13 @@ describe("Debt Ledger", () => {
       state.players[1].cash = 1_500_000;
 
       // p1 has a debt of ₦200k — net worth should be 1.6M - 200k = 1.4M
-      state.debtLedger = [{
-        debtorId: "p1",
-        creditorId: "bank",
-        amount: 200_000,
-      }];
+      state.debtLedger = [
+        {
+          debtorId: "p1",
+          creditorId: "bank",
+          amount: 200_000,
+        },
+      ];
 
       state.phase = "awaiting-end-turn";
 

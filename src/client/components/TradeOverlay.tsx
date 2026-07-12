@@ -26,13 +26,22 @@ function groupColorVar(tile: Tile): string {
 }
 
 function tileSubLabel(tile: Tile): string {
-  if (tile.type === "property") return (tile as PropertyTile).group.replace(/^\w/, (c) => c.toUpperCase());
+  if (tile.type === "property")
+    return (tile as PropertyTile).group.replace(/^\w/, (c) => c.toUpperCase());
   if (tile.type === "airport") return "Airport";
   if (tile.type === "utility") return "Utility";
   return "";
 }
 
-export default function TradeOverlay({ activeTrade, players, tiles, mySessionId, onSendAction, liveState, onCounterOffer }: Props) {
+export default function TradeOverlay({
+  activeTrade,
+  players,
+  tiles,
+  mySessionId,
+  onSendAction,
+  liveState,
+  onCounterOffer,
+}: Props) {
   if (activeTrade.toId !== mySessionId) return null;
 
   const proposer = players.find((p) => p.id === activeTrade.fromId);
@@ -85,7 +94,9 @@ export default function TradeOverlay({ activeTrade, players, tiles, mySessionId,
       >
         <div className="trade-card-header">
           <div className="trade-card-title">
-            <span className="trade-card-title-icon"><IconTrade size={20} /></span>
+            <span className="trade-card-title-icon">
+              <IconTrade size={20} />
+            </span>
             <span>Incoming Trade</span>
           </div>
         </div>
@@ -113,9 +124,11 @@ export default function TradeOverlay({ activeTrade, players, tiles, mySessionId,
               </div>
               <label className="trade-cash-label">Properties</label>
               <div className="trade-tile-list">
-                {incomingTilesPositions.length === 0
-                  ? <div className="trade-empty-row">No properties.</div>
-                  : incomingTilesPositions.map(renderTile)}
+                {incomingTilesPositions.length === 0 ? (
+                  <div className="trade-empty-row">No properties.</div>
+                ) : (
+                  incomingTilesPositions.map(renderTile)
+                )}
               </div>
             </div>
 
@@ -128,13 +141,17 @@ export default function TradeOverlay({ activeTrade, players, tiles, mySessionId,
               </div>
               <div className="trade-cash-display">
                 <span>Cash</span>
-                <strong className={canAfford ? "" : "short"}>₦{outgoingCash.toLocaleString()}</strong>
+                <strong className={canAfford ? "" : "short"}>
+                  ₦{outgoingCash.toLocaleString()}
+                </strong>
               </div>
               <label className="trade-cash-label">Properties</label>
               <div className="trade-tile-list">
-                {outgoingTilesPositions.length === 0
-                  ? <div className="trade-empty-row">No properties.</div>
-                  : outgoingTilesPositions.map(renderTile)}
+                {outgoingTilesPositions.length === 0 ? (
+                  <div className="trade-empty-row">No properties.</div>
+                ) : (
+                  outgoingTilesPositions.map(renderTile)
+                )}
               </div>
             </div>
           </div>
@@ -152,7 +169,8 @@ export default function TradeOverlay({ activeTrade, players, tiles, mySessionId,
 
           {!canAfford && (
             <div className="trade-cant-afford">
-              You can't cover the ₦{outgoingCash.toLocaleString()} cash — current balance ₦{(me?.cash ?? 0).toLocaleString()}.
+              You can't cover the ₦{outgoingCash.toLocaleString()} cash — current balance ₦
+              {(me?.cash ?? 0).toLocaleString()}.
             </div>
           )}
         </div>
@@ -176,7 +194,7 @@ export default function TradeOverlay({ activeTrade, players, tiles, mySessionId,
                   giveCash: activeTrade.getCash,
                   getCash: activeTrade.giveCash,
                   giveTiles: activeTrade.getTiles,
-                  getTiles: activeTrade.giveTiles
+                  getTiles: activeTrade.giveTiles,
                 });
               }}
             >
@@ -193,6 +211,6 @@ export default function TradeOverlay({ activeTrade, players, tiles, mySessionId,
         </div>
       </motion.div>
     </motion.div>,
-    document.body
+    document.body,
   );
 }

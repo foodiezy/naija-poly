@@ -1,6 +1,7 @@
 // engine/queries.ts — pure, read-only predicates over GameState.
-// Single source of truth for what property actions are legal; imported by
-// both the client (to enable/disable buttons) and the engine (to validate).
+// Used by the client (to enable/disable buttons) and by the AI (to decide
+// its next move). The engine's own action handlers re-validate independently
+// so they can throw specific, user-facing error messages per failure reason.
 
 import { BOARD, HOUSE_SUPPLY, HOTEL_SUPPLY } from "../data/board";
 import type { PropertyTile } from "../data/board";
@@ -12,7 +13,9 @@ export function canBuildOn(state: GameState, playerId: PlayerId, pos: number): b
   const ts = state.tiles[pos];
   if (!ts || ts.ownerId !== playerId || ts.mortgaged || ts.houses >= 5) return false;
 
-  const group = BOARD.filter((t): t is PropertyTile => t.type === "property" && t.group === tile.group);
+  const group = BOARD.filter(
+    (t): t is PropertyTile => t.type === "property" && t.group === tile.group,
+  );
   if (!group.every((t) => state.tiles[t.pos]?.ownerId === playerId)) return false;
   if (group.some((t) => state.tiles[t.pos]?.mortgaged)) return false;
   if (group.some((t) => (state.tiles[t.pos]?.houses ?? 0) < ts.houses)) return false;
@@ -35,7 +38,9 @@ export function canSellHouseOn(state: GameState, playerId: PlayerId, pos: number
   const ts = state.tiles[pos];
   if (!ts || ts.ownerId !== playerId || ts.houses === 0) return false;
 
-  const group = BOARD.filter((t): t is PropertyTile => t.type === "property" && t.group === tile.group);
+  const group = BOARD.filter(
+    (t): t is PropertyTile => t.type === "property" && t.group === tile.group,
+  );
   return !group.some((t) => (state.tiles[t.pos]?.houses ?? 0) > ts.houses);
 }
 
@@ -46,7 +51,9 @@ export function canMortgageAt(state: GameState, playerId: PlayerId, pos: number)
   if (!ts || ts.ownerId !== playerId || ts.mortgaged) return false;
 
   if (tile.type === "property") {
-    const group = BOARD.filter((t): t is PropertyTile => t.type === "property" && t.group === tile.group);
+    const group = BOARD.filter(
+      (t): t is PropertyTile => t.type === "property" && t.group === tile.group,
+    );
     if (group.some((t) => (state.tiles[t.pos]?.houses ?? 0) > 0)) return false;
   }
   return true;

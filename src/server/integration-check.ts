@@ -73,7 +73,7 @@ async function run() {
   const cc = new Client(endpoint);
   [ca, cb, cc].forEach(patchClientForV017);
 
-  console.log("\n=== 1. JOIN (renamed room id \"odogwu\") ===");
+  console.log('\n=== 1. JOIN (renamed room id "odogwu") ===');
   const ra = await ca.joinOrCreate("odogwu", { name: "Ada" });
   const rb = await cb.joinById(ra.roomId, { name: "Bola" });
   const rc = await cc.joinById(ra.roomId, { name: "Chidi" });
@@ -103,7 +103,9 @@ async function run() {
   // General broadcast
   ra.send("SEND_CHAT", { text: "hello-everyone" });
   await waitFor(() => C.chats.some((m) => m.text === "hello-everyone"), 4000);
-  const allGotGeneral = [A, B, C].every((x) => x.chats.some((m) => m.text === "hello-everyone" && !m.toId));
+  const allGotGeneral = [A, B, C].every((x) =>
+    x.chats.some((m) => m.text === "hello-everyone" && !m.toId),
+  );
   check("general message reached all 3 players", allGotGeneral);
 
   console.log("\n=== 3. START GAME ===");
@@ -141,7 +143,9 @@ async function run() {
       const idx = e.currentPlayerIndex;
       driver.room.send("ACTION", { type: "END_TURN" });
       await waitFor(
-        () => A.engine && (A.engine.currentPlayerIndex !== idx || A.engine.phase !== "awaiting-end-turn"),
+        () =>
+          A.engine &&
+          (A.engine.currentPlayerIndex !== idx || A.engine.phase !== "awaiting-end-turn"),
         4000,
       );
     } else {
@@ -157,13 +161,18 @@ async function run() {
     const bidderId = a.participantIds[0];
     const bidder = bySession[bidderId];
     const inc = a.bidIncrements[0];
-    console.log(`  (tile #${tilePos}, increments ₦${a.bidIncrements.join(" / ₦")}, ${a.bidDurationMs}ms window)`);
+    console.log(
+      `  (tile #${tilePos}, increments ₦${a.bidIncrements.join(" / ₦")}, ${a.bidDurationMs}ms window)`,
+    );
 
     // Invalid bid: not a set increment -> server should reject with ERROR.
     const errBefore = bidder.errors.length;
     bidder.room.send("ACTION", { type: "BID", amount: a.highestBid + 1 });
     const gotErr = await waitFor(() => bidder.errors.length > errBefore, 4000);
-    check("off-increment bid rejected by server", gotErr && A.engine.auctionState?.highestBid === 0);
+    check(
+      "off-increment bid rejected by server",
+      gotErr && A.engine.auctionState?.highestBid === 0,
+    );
 
     // Valid bid: one increment above current.
     bidder.room.send("ACTION", { type: "BID", amount: a.highestBid + inc });

@@ -7,6 +7,7 @@
 
 import { BOARD, PropertyTile, JAIL_FINE } from "../data/board";
 import type { GameState, PlayerId, Action } from "./types";
+import { canBuildOn } from "./queries";
 // Default cash buffer to keep on hand rather than spending to zero.
 const DEFAULT_CASH_BUFFER = 50_000;
 
@@ -22,9 +23,7 @@ function tilePrice(pos: number): number {
 
 // Properties in the same colour group as the given property tile.
 function groupTiles(tile: PropertyTile): PropertyTile[] {
-  return BOARD.filter(
-    (t): t is PropertyTile => t.type === "property" && t.group === tile.group,
-  );
+  return BOARD.filter((t): t is PropertyTile => t.type === "property" && t.group === tile.group);
 }
 
 // A mortgageable property the player owns (unmortgaged, no buildings in group).
@@ -54,11 +53,18 @@ function findSellableHouse(state: GameState, playerId: PlayerId): number | null 
   return null;
 }
 
+export interface AIOptions {
+  // GameState carries no memory of declined trades, so a pure function of
+  // state would re-propose the same trade forever. The server remembers that
+  // this AI already proposed a trade this round and sets this to break the loop.
+  suppressTradeProposal?: boolean;
+}
+
 /**
  * Decide the AI player's next move. Returns null when it's not their turn and
  * they have no auction action pending.
  */
-export function getAIAction(state: GameState, playerId: PlayerId): Action | null {
+export function getAIAction(state: GameState, playerId: PlayerId, opts?: AIOptions): Action | null {
   const me = state.players.find((p) => p.id === playerId);
   if (!me || me.bankrupt) return null;
 
@@ -75,12 +81,12 @@ export function getAIAction(state: GameState, playerId: PlayerId): Action | null
     const receive = t.giveCash + t.giveTiles.reduce((s, p) => s + tilePrice(p), 0);
     const giveUp = t.getCash + t.getTiles.reduce((s, p) => s + tilePrice(p), 0);
     let accept = t.getCash <= me.cash && receive >= giveUp;
-    
+
     // Trader accepts slight losses to keep things moving
     if (style === "Trader" && t.getCash <= me.cash && receive >= giveUp * 0.9) {
       accept = true;
     }
-    
+
     return { type: "RESPOND_TRADE", accept };
   }
 
@@ -92,12 +98,12 @@ export function getAIAction(state: GameState, playerId: PlayerId): Action | null
 
     const tile = BOARD[a.tilePos];
     const value = "price" in tile ? tile.price : 0;
-    
+
     let capMultiplier = 0.8;
     if (style === "AggressiveBidder") capMultiplier = 1.2;
     if (style === "PropertyHoarder") capMultiplier = 1.0;
     if (style === "CashSaver") capMultiplier = 0.6;
-    
+
     const cap = Math.floor(value * capMultiplier);
     const inc = a.bidIncrements[0];
     const nextBid = a.highestBid + inc;
@@ -130,14 +136,16 @@ export function getAIAction(state: GameState, playerId: PlayerId): Action | null
         groupTiles(tile as PropertyTile).some(
           (t) => t.pos !== me.position && state.tiles[t.pos]?.ownerId === playerId,
         );
-      const threshold = completesGroup ? price + cashBuffer : price * (style === "PropertyHoarder" ? 1 : 2);
+      const threshold = completesGroup
+        ? price + cashBuffer
+        : price * (style === "PropertyHoarder" ? 1 : 2);
       if (me.cash >= threshold) return { type: "BUY" };
       return { type: "DECLINE_BUY" };
     }
 
     case "awaiting-end-turn": {
       // Resolve debt first: check for unsettled debts in the ledger OR negative cash.
-      const hasDebts = state.debtLedger?.some(d => d.debtorId === playerId);
+      const hasDebts = state.debtLedger?.some((d) => d.debtorId === playerId);
       if (me.cash < 0 || hasDebts) {
         const sell = findSellableHouse(state, playerId);
         if (sell !== null) return { type: "SELL_HOUSE", pos: sell };
@@ -150,31 +158,29 @@ export function getAIAction(state: GameState, playerId: PlayerId): Action | null
       if (style === "Builder") buildBuffer = 0; // Builder spends all cash on houses
 
       for (const tile of BOARD) {
-        if (isProperty(tile.pos)) {
-          // Re-implement canBuild check with custom buildBuffer
-          const ts = state.tiles[tile.pos];
-          if (ts && ts.ownerId === playerId && !ts.mortgaged && ts.houses < 5) {
-            const group = groupTiles(tile as PropertyTile);
-            if (group.every((t) => state.tiles[t.pos]?.ownerId === playerId)) {
-              if (!group.some((t) => state.tiles[t.pos]?.mortgaged)) {
-                if (!group.some((t) => (state.tiles[t.pos]?.houses ?? 0) < ts.houses)) {
-                  if (me.cash >= (tile as PropertyTile).houseCost + buildBuffer) {
-                    return { type: "BUILD", pos: tile.pos };
-                  }
-                }
-              }
-            }
+        if (isProperty(tile.pos) && canBuildOn(state, playerId, tile.pos)) {
+          if (me.cash >= (tile as PropertyTile).houseCost + buildBuffer) {
+            return { type: "BUILD", pos: tile.pos };
           }
         }
       }
-      
-      // Trader might randomly propose a trade if they have some cash but need properties
-      if (style === "Trader" && Math.random() < 0.3) {
+
+      // Trader proposes a trade if they have some cash but need properties.
+      // Skip while a trade is already pending, and skip once we've already
+      // proposed this round (see AIOptions) — otherwise a decline would make
+      // us re-propose the identical trade forever and never end the turn.
+      if (style === "Trader" && !state.activeTrade && !opts?.suppressTradeProposal) {
         // Find a property we need to complete a set
         for (const tile of BOARD) {
-          if (isProperty(tile.pos) && state.tiles[tile.pos]?.ownerId && state.tiles[tile.pos]?.ownerId !== playerId) {
+          if (
+            isProperty(tile.pos) &&
+            state.tiles[tile.pos]?.ownerId &&
+            state.tiles[tile.pos]?.ownerId !== playerId
+          ) {
             const group = groupTiles(tile as PropertyTile);
-            const ownedInGroup = group.filter((t) => state.tiles[t.pos]?.ownerId === playerId).length;
+            const ownedInGroup = group.filter(
+              (t) => state.tiles[t.pos]?.ownerId === playerId,
+            ).length;
             if (ownedInGroup > 0) {
               const targetOwner = state.tiles[tile.pos]!.ownerId!;
               // propose trade for this tile
@@ -186,8 +192,8 @@ export function getAIAction(state: GameState, playerId: PlayerId): Action | null
                   giveCash: Math.min(me.cash, tilePrice(tile.pos) + 20000),
                   getCash: 0,
                   giveTiles: [],
-                  getTiles: [tile.pos]
-                }
+                  getTiles: [tile.pos],
+                },
               };
             }
           }

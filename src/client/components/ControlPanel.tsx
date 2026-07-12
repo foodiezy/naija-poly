@@ -27,7 +27,14 @@ interface ControlPanelProps {
 }
 
 export default function ControlPanel({
-  room, engineState, onSendAction, autoEndTurn, onToggleAutoEndTurn, turnDeadline, turnTimeoutSecs, onOpenTile,
+  room,
+  engineState,
+  onSendAction,
+  autoEndTurn,
+  onToggleAutoEndTurn,
+  turnDeadline,
+  turnTimeoutSecs,
+  onOpenTile,
 }: ControlPanelProps) {
   const [showTradeBuilder, setShowTradeBuilder] = useState(false);
   const [initialTradeOffer, setInitialTradeOffer] = useState<TradeOffer | undefined>(undefined);
@@ -53,13 +60,16 @@ export default function ControlPanel({
   }, [turnDeadline]);
 
   // Reset trade builder when turn or phase changes
-  useEffect(() => { setShowTradeBuilder(false); }, [currentPlayerIndex, phase]);
+  useEffect(() => {
+    setShowTradeBuilder(false);
+  }, [currentPlayerIndex, phase]);
 
   const turnMsLeft = turnDeadline && turnDeadline > 0 ? Math.max(0, turnDeadline - now) : 0;
   const turnSecsLeft = Math.ceil(turnMsLeft / 1000);
-  const turnPct = turnDeadline && turnDeadline > 0 && turnTimeoutSecs
-    ? Math.max(0, Math.min(100, (turnMsLeft / (turnTimeoutSecs * 1000)) * 100))
-    : 0;
+  const turnPct =
+    turnDeadline && turnDeadline > 0 && turnTimeoutSecs
+      ? Math.max(0, Math.min(100, (turnMsLeft / (turnTimeoutSecs * 1000)) * 100))
+      : 0;
 
   const myToken = liveState?.lobbyPlayers?.get(mySessionId);
   const myNetWorth = netWorth(me?.cash ?? 0, engineState.tiles, mySessionId);
@@ -110,35 +120,148 @@ export default function ControlPanel({
       </AnimatePresence>
 
       {/* 1. Player roster */}
-      <PlayerList engineState={engineState} mySessionId={mySessionId} liveState={liveState} onSendAction={onSendAction} />
+      <PlayerList
+        engineState={engineState}
+        mySessionId={mySessionId}
+        liveState={liveState}
+        onSendAction={onSendAction}
+      />
 
       {/* Per-turn AFK countdown */}
       {isMyTurn && !isBankrupt && !isAuctionActive && turnDeadline && turnDeadline > 0 && (
-        <div style={{ padding: "0.5rem 1rem", background: "rgba(70,199,141,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--text-secondary)", marginBottom: "0.3rem", fontWeight: 600 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}><IconTimer size={14} /> Turn timer</span>
-            <span style={{ fontWeight: "bold", color: turnPct < 20 ? "var(--color-danger)" : turnPct < 50 ? "var(--color-gold)" : "var(--color-naira)" }}>{turnSecsLeft}s</span>
+        <div
+          style={{
+            padding: "0.5rem 1rem",
+            background: "rgba(70,199,141,0.05)",
+            borderBottom: "1px solid rgba(255,255,255,0.05)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: "0.7rem",
+              color: "var(--text-secondary)",
+              marginBottom: "0.3rem",
+              fontWeight: 600,
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+              <IconTimer size={14} /> Turn timer
+            </span>
+            <span
+              style={{
+                fontWeight: "bold",
+                color:
+                  turnPct < 20
+                    ? "var(--color-danger)"
+                    : turnPct < 50
+                      ? "var(--color-gold)"
+                      : "var(--color-naira)",
+              }}
+            >
+              {turnSecsLeft}s
+            </span>
           </div>
-          <div style={{ height: "6px", background: "rgba(0,0,0,0.4)", borderRadius: "2px", overflow: "hidden" }}>
-            <div style={{ width: `${turnPct}%`, height: "100%", background: turnPct < 20 ? "var(--color-danger)" : turnPct < 50 ? "var(--color-gold)" : "var(--color-naira)", transition: "width 0.25s linear" }} />
+          <div
+            style={{
+              height: "6px",
+              background: "rgba(0,0,0,0.4)",
+              borderRadius: "2px",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                width: `${turnPct}%`,
+                height: "100%",
+                background:
+                  turnPct < 20
+                    ? "var(--color-danger)"
+                    : turnPct < 50
+                      ? "var(--color-gold)"
+                      : "var(--color-naira)",
+                transition: "width 0.25s linear",
+              }}
+            />
           </div>
         </div>
       )}
 
       {/* 2. My player card */}
-      <div className="sidebar-player-card" style={{ background: "rgba(0,0,0,0.15)", margin: 0, borderBottom: "1px solid rgba(255,255,255,0.05)", borderRadius: 0 }}>
+      <div
+        className="sidebar-player-card"
+        style={{
+          background: "rgba(0,0,0,0.15)",
+          margin: 0,
+          borderBottom: "1px solid rgba(255,255,255,0.05)",
+          borderRadius: 0,
+        }}
+      >
         <div className="sidebar-player-avatar">{me ? tokenEmoji(myToken?.tokenId) : "👤"}</div>
         <div className="sidebar-player-name">{me?.name || "—"}</div>
-        <div className="sidebar-player-token-label">Token: {me ? tokenName(myToken?.tokenId) : "—"}</div>
+        <div className="sidebar-player-token-label">
+          Token: {me ? tokenName(myToken?.tokenId) : "—"}
+        </div>
         <div className="sidebar-player-balance">₦{(me?.cash ?? 0).toLocaleString()}</div>
-        <div className="sidebar-player-meta" style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem", width: "100%", marginTop: "0.4rem", fontSize: "0.7rem", color: "var(--text-muted)" }}>
-          <span>Net worth <strong style={{ color: "var(--text-secondary)" }}>₦{myNetWorth.toLocaleString()}</strong></span>
-          <span>Round <strong style={{ color: "var(--text-secondary)" }}>{engineState.currentTurn ?? 1}{engineState.settings?.turnLimit > 0 ? ` / ${engineState.settings.turnLimit}` : ""}</strong></span>
+        <div
+          className="sidebar-player-meta"
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: "0.5rem",
+            width: "100%",
+            marginTop: "0.4rem",
+            fontSize: "0.7rem",
+            color: "var(--text-muted)",
+          }}
+        >
+          <span>
+            Net worth{" "}
+            <strong style={{ color: "var(--text-secondary)" }}>
+              ₦{myNetWorth.toLocaleString()}
+            </strong>
+          </span>
+          <span>
+            Round{" "}
+            <strong style={{ color: "var(--text-secondary)" }}>
+              {engineState.currentTurn ?? 1}
+              {engineState.settings?.turnLimit > 0 ? ` / ${engineState.settings.turnLimit}` : ""}
+            </strong>
+          </span>
         </div>
         {me?.secretObjective && (
-          <div style={{ marginTop: "0.75rem", width: "100%", background: "rgba(0,0,0,0.3)", borderRadius: "4px", padding: "0.5rem", borderLeft: "2px solid var(--color-gold)", fontSize: "0.75rem", textAlign: "left" }}>
-            <div style={{ color: "var(--color-gold)", fontWeight: 600, marginBottom: "0.2rem", textTransform: "uppercase", fontSize: "0.65rem", letterSpacing: "1px" }}>Secret Objective</div>
-            <div style={{ color: "var(--text-secondary)", textDecoration: me.objectiveCompleted ? "line-through" : "none", opacity: me.objectiveCompleted ? 0.6 : 1 }}>
+          <div
+            style={{
+              marginTop: "0.75rem",
+              width: "100%",
+              background: "rgba(0,0,0,0.3)",
+              borderRadius: "4px",
+              padding: "0.5rem",
+              borderLeft: "2px solid var(--color-gold)",
+              fontSize: "0.75rem",
+              textAlign: "left",
+            }}
+          >
+            <div
+              style={{
+                color: "var(--color-gold)",
+                fontWeight: 600,
+                marginBottom: "0.2rem",
+                textTransform: "uppercase",
+                fontSize: "0.65rem",
+                letterSpacing: "1px",
+              }}
+            >
+              Secret Objective
+            </div>
+            <div
+              style={{
+                color: "var(--text-secondary)",
+                textDecoration: me.objectiveCompleted ? "line-through" : "none",
+                opacity: me.objectiveCompleted ? 0.6 : 1,
+              }}
+            >
               {me.secretObjective === "own_2_airports" && "Own at least 2 Airports"}
               {me.secretObjective === "complete_color_set" && "Complete any color set"}
               {me.secretObjective === "cash_2m" && "Have ₦2,000,000 in cash"}
@@ -146,7 +269,9 @@ export default function ControlPanel({
               {me.secretObjective === "first_hotel" && "Build a Hotel"}
             </div>
             {me.objectiveCompleted && (
-              <div style={{ color: "var(--color-green)", fontWeight: 600, marginTop: "0.2rem" }}>Bonus claimed! ✅</div>
+              <div style={{ color: "var(--color-green)", fontWeight: 600, marginTop: "0.2rem" }}>
+                Bonus claimed! ✅
+              </div>
             )}
           </div>
         )}
@@ -167,13 +292,44 @@ export default function ControlPanel({
 
       {/* Bankruptcy warning */}
       {me && me.cash < 0 && !isBankrupt && (
-        <div style={{ margin: "0.75rem", padding: "0.5rem", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "2px" }}>
-          <div style={{ fontSize: "0.75rem", color: "var(--color-danger)", textAlign: "center", fontWeight: "bold", marginBottom: "0.3rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}>
+        <div
+          style={{
+            margin: "0.75rem",
+            padding: "0.5rem",
+            background: "rgba(239,68,68,0.06)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            borderRadius: "2px",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: "var(--color-danger)",
+              textAlign: "center",
+              fontWeight: "bold",
+              marginBottom: "0.3rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.3rem",
+            }}
+          >
             <IconWarning size={16} /> DEBT: ₦{me.cash.toLocaleString()}
           </div>
           <button
             className="button-primary"
-            style={{ width: "100%", background: "var(--color-gold)", color: "#000", fontSize: "0.75rem", padding: "0.4rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", borderRadius: "2px" }}
+            style={{
+              width: "100%",
+              background: "var(--color-gold)",
+              color: "#000",
+              fontSize: "0.75rem",
+              padding: "0.4rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.4rem",
+              borderRadius: "2px",
+            }}
             onClick={() => setShowDebtRescue(true)}
           >
             Settle Debt <IconBankrupt size={16} />
@@ -183,18 +339,46 @@ export default function ControlPanel({
 
       {/* Trade pending notices */}
       {activeTrade && activeTrade.fromId === mySessionId && (
-        <div style={{ margin: "0.75rem", padding: "0.4rem", fontSize: "0.72rem", textAlign: "center", color: "var(--text-secondary)", border: "1px solid rgba(232,182,74,0.15)", borderRadius: "2px", background: "rgba(232,182,74,0.03)" }}>
+        <div
+          style={{
+            margin: "0.75rem",
+            padding: "0.4rem",
+            fontSize: "0.72rem",
+            textAlign: "center",
+            color: "var(--text-secondary)",
+            border: "1px solid rgba(232,182,74,0.15)",
+            borderRadius: "2px",
+            background: "rgba(232,182,74,0.03)",
+          }}
+        >
           🤝 Waiting for trade response...
         </div>
       )}
       {activeTrade && activeTrade.fromId !== mySessionId && activeTrade.toId !== mySessionId && (
-        <div style={{ margin: "0.75rem", padding: "0.4rem", fontSize: "0.72rem", textAlign: "center", color: "var(--text-muted)", border: "1px solid var(--border-subtle)", borderRadius: "2px" }}>
+        <div
+          style={{
+            margin: "0.75rem",
+            padding: "0.4rem",
+            fontSize: "0.72rem",
+            textAlign: "center",
+            color: "var(--text-muted)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "2px",
+          }}
+        >
           🤝 Trade in progress...
         </div>
       )}
 
       {/* 4. Action buttons */}
-      <div className="sidebar-actions" style={{ padding: "0.75rem 1rem", background: "#1c1835", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <div
+        className="sidebar-actions"
+        style={{
+          padding: "0.75rem 1rem",
+          background: "#1c1835",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
         {!isAuctionActive && (
           <ActionButtons
             engineState={engineState}
@@ -212,33 +396,78 @@ export default function ControlPanel({
       {/* Auto End Turn toggle */}
       {!isBankrupt && (
         <>
-          <div style={{ padding: "0.4rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.05)", textAlign: "center" }}>
+          <div
+            style={{
+              padding: "0.4rem 1rem",
+              borderBottom: "1px solid rgba(255,255,255,0.05)",
+              textAlign: "center",
+            }}
+          >
             <button
               className="button-primary"
-              style={{ width: "100%", background: "transparent", border: "1px solid rgba(239,68,68,0.3)", color: "var(--color-danger)", fontSize: "0.65rem", padding: "0.25rem", borderRadius: "2px" }}
-              onClick={() => { if (window.confirm("Are you sure you want to go bankrupt and leave the game? This cannot be undone.")) onSendAction({ type: "FORFEIT" }); }}
+              style={{
+                width: "100%",
+                background: "transparent",
+                border: "1px solid rgba(239,68,68,0.3)",
+                color: "var(--color-danger)",
+                fontSize: "0.65rem",
+                padding: "0.25rem",
+                borderRadius: "2px",
+              }}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Are you sure you want to go bankrupt and leave the game? This cannot be undone.",
+                  )
+                )
+                  onSendAction({ type: "FORFEIT" });
+              }}
             >
               Declare Bankruptcy (Leave Game)
             </button>
           </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.4rem 1rem", background: "rgba(0,0,0,0.2)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.7rem", color: "var(--text-muted)", cursor: "pointer", fontWeight: 600 }}>
-              <input type="checkbox" checked={!!autoEndTurn} onChange={onToggleAutoEndTurn} style={{ cursor: "pointer" }} />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0.4rem 1rem",
+              background: "rgba(0,0,0,0.2)",
+              borderBottom: "1px solid rgba(255,255,255,0.05)",
+            }}
+          >
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.3rem",
+                fontSize: "0.7rem",
+                color: "var(--text-muted)",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={!!autoEndTurn}
+                onChange={onToggleAutoEndTurn}
+                style={{ cursor: "pointer" }}
+              />
               Auto End Turn
             </label>
             {autoEndTurn && isMyTurn && phase === "awaiting-end-turn" && (me?.cash ?? 0) >= 0 && (
-              <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", fontStyle: "italic" }}>⏳ auto ~2s</span>
+              <span
+                style={{ fontSize: "0.62rem", color: "var(--text-muted)", fontStyle: "italic" }}
+              >
+                ⏳ auto ~2s
+              </span>
             )}
           </div>
         </>
       )}
 
       {/* 5. My properties — click a holding to open its card (upgrade/sell there) */}
-      <PropertyList
-        engineState={engineState}
-        mySessionId={mySessionId}
-        onOpenTile={onOpenTile}
-      />
+      <PropertyList engineState={engineState} mySessionId={mySessionId} onOpenTile={onOpenTile} />
     </div>
   );
 }

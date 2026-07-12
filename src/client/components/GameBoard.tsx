@@ -5,10 +5,10 @@ import { getDevelopmentName } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
-import { ALL_TRIVIA } from "../../data/facts";
 import TileImage from "./TileImage";
 import { tileImageUrl } from "../tileImages";
 import { IconHouse, IconHotel } from "./icons";
+import { useTriviaRotation } from "../hooks/useTriviaRotation";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
 // type, so drop the redundant "Airport"/"Corporation" suffix; the full name
@@ -41,13 +41,48 @@ function getTileEdge(pos: number): "bottom" | "left" | "top" | "right" {
 // Color bar is always on the board-center-facing side of the tile
 function getColorBarStyle(pos: number): React.CSSProperties {
   // bottom row: bar on top (facing center)
-  if (pos <= 10) return { position: "absolute", top: 0, left: 0, right: 0, height: "11px", width: "auto", borderRadius: "2px 2px 0 0" };
+  if (pos <= 10)
+    return {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: "11px",
+      width: "auto",
+      borderRadius: "2px 2px 0 0",
+    };
   // left col: bar on right (facing center)
-  if (pos <= 20) return { position: "absolute", top: 0, right: 0, bottom: 0, width: "11px", height: "auto", borderRadius: "0 2px 2px 0" };
+  if (pos <= 20)
+    return {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      width: "11px",
+      height: "auto",
+      borderRadius: "0 2px 2px 0",
+    };
   // top row: bar on bottom (facing center)
-  if (pos <= 30) return { position: "absolute", bottom: 0, left: 0, right: 0, height: "11px", width: "auto", borderRadius: "0 0 2px 2px" };
+  if (pos <= 30)
+    return {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: "11px",
+      width: "auto",
+      borderRadius: "0 0 2px 2px",
+    };
   // right col: bar on left (facing center)
-  return { position: "absolute", top: 0, left: 0, bottom: 0, width: "11px", height: "auto", borderRadius: "2px 0 0 2px" };
+  return {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: "11px",
+    height: "auto",
+    borderRadius: "2px 0 0 2px",
+  };
 }
 
 // Padding on tile content to clear the absolutely-positioned color bar
@@ -62,17 +97,28 @@ function getColorBarPadding(pos: number, hasBar: boolean, isCorner: boolean): Re
 // Icon for non-property tile types
 function getSpecialTileIcon(tile: Tile): string {
   switch (tile.type) {
-    case "go":      return "🚀";
-    case "jail":    return "🔒";
-    case "free":    return "🍲";
-    case "gotojail": return "👮";
-    case "chance":  return "❓";
-    case "hustle":  return "💼";
-    case "airport": return "✈️";
+    case "go":
+      return "🚀";
+    case "jail":
+      return "🔒";
+    case "free":
+      return "🍲";
+    case "gotojail":
+      return "👮";
+    case "chance":
+      return "❓";
+    case "hustle":
+      return "💼";
+    case "airport":
+      return "✈️";
     case "utility":
-      return (tile.name.toLowerCase().includes("power") || tile.name.toLowerCase().includes("nepa") || tile.name.toLowerCase().includes("ecg"))
-        ? "⚡" : "📡";
-    default: return "";
+      return tile.name.toLowerCase().includes("power") ||
+        tile.name.toLowerCase().includes("nepa") ||
+        tile.name.toLowerCase().includes("ecg")
+        ? "⚡"
+        : "📡";
+    default:
+      return "";
   }
 }
 
@@ -93,7 +139,14 @@ function getTileGridCoords(pos: number): { row: number; col: number } {
   }
 }
 
-export default function GameBoard({ engineState, roomState, mySessionId, onTileClick, onEndTurn, displayedPositions: displayedPositionsProp }: GameBoardProps) {
+export default function GameBoard({
+  engineState,
+  roomState,
+  mySessionId,
+  onTileClick,
+  onEndTurn,
+  displayedPositions: displayedPositionsProp,
+}: GameBoardProps) {
   if (!engineState) {
     return (
       <div className="glass-panel" style={{ padding: "2rem", textAlign: "center" }}>
@@ -110,7 +163,8 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   // App owns the token walker (so the buy card can wait for the token to
   // arrive). Fall back to static positions when it isn't provided (the design
   // preview, which has no motion).
-  const displayedPositions = displayedPositionsProp ?? new Map(players.map((p) => [p.id, p.position]));
+  const displayedPositions =
+    displayedPositionsProp ?? new Map(players.map((p) => [p.id, p.position]));
   const getDisplayedPos = (p: Player) => displayedPositions.get(p.id) ?? p.position;
 
   // Identify the local player's position and the active turn player
@@ -132,14 +186,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   const prevDiceKey = useRef<string>("");
 
   // In-game trivia rotation — shown during other players' turns
-  const [boardTriviaIdx, setBoardTriviaIdx] = useState(() => Math.floor(Math.random() * ALL_TRIVIA.length));
-  useEffect(() => {
-    if (isMyTurn) return; // no trivia during your own turn
-    const interval = setInterval(() => {
-      setBoardTriviaIdx(prev => (prev + 1) % ALL_TRIVIA.length);
-    }, 14000);
-    return () => clearInterval(interval);
-  }, [isMyTurn]);
+  const boardTrivia = useTriviaRotation(14000, isMyTurn);
 
   // Keep the game feed pinned to the newest line WITHOUT scrolling the page.
   // scrollIntoView() walks every scrollable ancestor (including the window),
@@ -152,7 +199,9 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
 
   // Trigger dice shake when the dice values change
   useEffect(() => {
-    const key = engineState.dice ? `${engineState.dice[0]}-${engineState.dice[1]}-${engineState.currentTurn}` : "";
+    const key = engineState.dice
+      ? `${engineState.dice[0]}-${engineState.dice[1]}-${engineState.currentTurn}`
+      : "";
     if (key && key !== prevDiceKey.current) {
       prevDiceKey.current = key;
       setDiceShaking(true);
@@ -163,7 +212,12 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   }, [engineState.dice, engineState.currentTurn]);
 
   const getLogClass = (logLine: string) => {
-    if (logLine.includes("rolled") || logLine.includes("START") || logLine.includes("Prison") || logLine.includes("escaped")) {
+    if (
+      logLine.includes("rolled") ||
+      logLine.includes("START") ||
+      logLine.includes("Prison") ||
+      logLine.includes("escaped")
+    ) {
       return "log-entry log-entry-system";
     }
     if (logLine.includes("bought")) {
@@ -180,13 +234,26 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   const renderDie3D = (value: number, key: string) => {
     let rotation = "";
     switch (value) {
-      case 1: rotation = "rotateX(0deg) rotateY(0deg)"; break;
-      case 6: rotation = "rotateX(180deg) rotateY(0deg)"; break;
-      case 2: rotation = "rotateX(-90deg) rotateY(0deg)"; break;
-      case 5: rotation = "rotateX(90deg) rotateY(0deg)"; break;
-      case 3: rotation = "rotateX(0deg) rotateY(90deg)"; break;
-      case 4: rotation = "rotateX(0deg) rotateY(-90deg)"; break;
-      default: rotation = "rotateX(0deg) rotateY(0deg)";
+      case 1:
+        rotation = "rotateX(0deg) rotateY(0deg)";
+        break;
+      case 6:
+        rotation = "rotateX(180deg) rotateY(0deg)";
+        break;
+      case 2:
+        rotation = "rotateX(-90deg) rotateY(0deg)";
+        break;
+      case 5:
+        rotation = "rotateX(90deg) rotateY(0deg)";
+        break;
+      case 3:
+        rotation = "rotateX(0deg) rotateY(90deg)";
+        break;
+      case 4:
+        rotation = "rotateX(0deg) rotateY(-90deg)";
+        break;
+      default:
+        rotation = "rotateX(0deg) rotateY(0deg)";
     }
     // Rest the die at a slight isometric tilt so the value face plus two side
     // faces are visible — reads as a real 3D die instead of a flat square.
@@ -206,25 +273,34 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
               <span className="pip"></span>
             </div>
             <div className="face back" data-value="6">
-              <span className="pip"></span><span className="pip"></span>
-              <span className="pip"></span><span className="pip"></span>
-              <span className="pip"></span><span className="pip"></span>
+              <span className="pip"></span>
+              <span className="pip"></span>
+              <span className="pip"></span>
+              <span className="pip"></span>
+              <span className="pip"></span>
+              <span className="pip"></span>
             </div>
             <div className="face top" data-value="2">
-              <span className="pip"></span><span className="pip"></span>
+              <span className="pip"></span>
+              <span className="pip"></span>
             </div>
             <div className="face bottom" data-value="5">
-              <span className="pip"></span><span className="pip"></span>
               <span className="pip"></span>
-              <span className="pip"></span><span className="pip"></span>
+              <span className="pip"></span>
+              <span className="pip"></span>
+              <span className="pip"></span>
+              <span className="pip"></span>
             </div>
             <div className="face left" data-value="3">
-              <span className="pip"></span><span className="pip"></span>
+              <span className="pip"></span>
+              <span className="pip"></span>
               <span className="pip"></span>
             </div>
             <div className="face right" data-value="4">
-              <span className="pip"></span><span className="pip"></span>
-              <span className="pip"></span><span className="pip"></span>
+              <span className="pip"></span>
+              <span className="pip"></span>
+              <span className="pip"></span>
+              <span className="pip"></span>
             </div>
           </div>
         </div>
@@ -233,14 +309,19 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   };
 
   // Helper to extract the last card draw text from logs
-  const lastLog = engineState.log && engineState.log.length > 0 ? engineState.log[engineState.log.length - 1] : "";
+  const lastLog =
+    engineState.log && engineState.log.length > 0
+      ? engineState.log[engineState.log.length - 1]
+      : "";
   const cardDrawMatch = lastLog.match(/(.+) drew (Chance|Hustle): "(.+)"/);
-  
-  const activeCardDraw = cardDrawMatch ? {
-    player: cardDrawMatch[1],
-    type: cardDrawMatch[2].toLowerCase(),
-    text: cardDrawMatch[3]
-  } : null;
+
+  const activeCardDraw = cardDrawMatch
+    ? {
+        player: cardDrawMatch[1],
+        type: cardDrawMatch[2].toLowerCase(),
+        text: cardDrawMatch[3],
+      }
+    : null;
 
   // Show the drawn-card banner briefly, then auto-dismiss so it stops covering
   // the game feed and doesn't linger until the next log line.
@@ -258,27 +339,80 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
   }, [lastLog, activeArrived]);
 
   // Can the local player end their turn right now?
-  const canEndTurn = isMyTurn && engineState.phase === "awaiting-end-turn" && (myPlayer?.cash ?? 0) >= 0;
+  const canEndTurn =
+    isMyTurn && engineState.phase === "awaiting-end-turn" && (myPlayer?.cash ?? 0) >= 0;
 
   return (
     <div className="monopoly-board">
       {/* Board Center (Richup.io Style) */}
-      <div className="board-center" style={{ display: "flex", flexDirection: "column", justifyContent: "flex-start", gap: "0.75rem", background: "linear-gradient(135deg, #120e24 0%, #0a0814 100%)", padding: "1.5rem", borderRadius: "2px" }}>
+      <div
+        className="board-center"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "flex-start",
+          gap: "0.75rem",
+          background: "linear-gradient(135deg, #120e24 0%, #0a0814 100%)",
+          padding: "1.5rem",
+          borderRadius: "2px",
+        }}
+      >
         {/* Top Row: Logo, Mama Put Pot and Game Phase/Turn HUD */}
-        <div className="board-center-top-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 5, width: "100%" }}>
-          <div className="board-center-logo" style={{ margin: 0, fontSize: "1.2rem", letterSpacing: "0.2em", background: "linear-gradient(135deg, var(--color-gold) 0%, #f97316 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+        <div
+          className="board-center-top-row"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            zIndex: 5,
+            width: "100%",
+          }}
+        >
+          <div
+            className="board-center-logo"
+            style={{
+              margin: 0,
+              fontSize: "1.2rem",
+              letterSpacing: "0.2em",
+              background: "linear-gradient(135deg, var(--color-gold) 0%, #f97316 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
             ODOGWU EMPIRE
           </div>
-          
+
           {/* Mama Put Pot Display */}
           {engineState.settings?.freeParkingJackpot && (
             <motion.div
               className="mama-put-pot-display"
-              style={{ margin: 0, padding: "0.35rem 0.75rem", background: "rgba(70, 199, 141, 0.1)", border: "1px solid rgba(70, 199, 141, 0.25)", borderRadius: "2px", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", color: "var(--color-naira)", boxShadow: "0 0 10px rgba(70, 199, 141, 0.15)", zIndex: 5 }}
+              style={{
+                margin: 0,
+                padding: "0.35rem 0.75rem",
+                background: "rgba(70, 199, 141, 0.1)",
+                border: "1px solid rgba(70, 199, 141, 0.25)",
+                borderRadius: "2px",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                fontSize: "0.75rem",
+                fontWeight: "bold",
+                color: "var(--color-naira)",
+                boxShadow: "0 0 10px rgba(70, 199, 141, 0.15)",
+                zIndex: 5,
+              }}
               key={engineState.freeParkingPot}
-              animate={engineState.freeParkingPot > 0 ? {
-                boxShadow: ["0 0 10px rgba(70,199,141,0.15)", "0 0 22px rgba(70,199,141,0.45)", "0 0 10px rgba(70,199,141,0.15)"],
-              } : {}}
+              animate={
+                engineState.freeParkingPot > 0
+                  ? {
+                      boxShadow: [
+                        "0 0 10px rgba(70,199,141,0.15)",
+                        "0 0 22px rgba(70,199,141,0.45)",
+                        "0 0 10px rgba(70,199,141,0.15)",
+                      ],
+                    }
+                  : {}
+              }
               transition={{ duration: 1.5, repeat: Infinity }}
             >
               <span>🍲 Mama Put Pot:</span>
@@ -297,9 +431,30 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
           {engineState.blackout && (
             <motion.div
               className="blackout-display"
-              style={{ margin: 0, padding: "0.35rem 0.75rem", background: "rgba(232, 182, 74, 0.12)", border: "1px solid rgba(232, 182, 74, 0.4)", borderRadius: "2px", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", color: "var(--color-gold, #e8b64a)", zIndex: 5 }}
+              style={{
+                margin: 0,
+                padding: "0.35rem 0.75rem",
+                background: "rgba(232, 182, 74, 0.12)",
+                border: "1px solid rgba(232, 182, 74, 0.4)",
+                borderRadius: "2px",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                fontSize: "0.75rem",
+                fontWeight: "bold",
+                color: "var(--color-gold, #e8b64a)",
+                zIndex: 5,
+              }}
               initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0, boxShadow: ["0 0 8px rgba(232,182,74,0.15)", "0 0 20px rgba(232,182,74,0.5)", "0 0 8px rgba(232,182,74,0.15)"] }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                boxShadow: [
+                  "0 0 8px rgba(232,182,74,0.15)",
+                  "0 0 20px rgba(232,182,74,0.5)",
+                  "0 0 8px rgba(232,182,74,0.15)",
+                ],
+              }}
               transition={{ boxShadow: { duration: 1.4, repeat: Infinity } }}
               title="NEPA don take light — rent is frozen until the round comes back around."
             >
@@ -313,20 +468,49 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px", zIndex: 5 }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              gap: "2px",
+              zIndex: 5,
+            }}
           >
-            <div style={{ color: "var(--text-secondary)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-              Phase: <span style={{ color: "var(--color-gold)", fontWeight: "bold" }}>{engineState.phase.replace("-", " ")}</span>
+            <div
+              style={{
+                color: "var(--text-secondary)",
+                fontSize: "0.75rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.03em",
+              }}
+            >
+              Phase:{" "}
+              <span style={{ color: "var(--color-gold)", fontWeight: "bold" }}>
+                {engineState.phase.replace("-", " ")}
+              </span>
             </div>
             <div style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>
-              Round: <span style={{ color: "#3b82f6", fontWeight: "bold" }}>{engineState.currentTurn ?? 1}</span>
+              Round:{" "}
+              <span style={{ color: "#3b82f6", fontWeight: "bold" }}>
+                {engineState.currentTurn ?? 1}
+              </span>
               {engineState.settings?.turnLimit > 0 && ` / ${engineState.settings.turnLimit}`}
             </div>
           </motion.div>
         </div>
 
         {/* Central Display: Dice + Active Player Status (Richup.io centerpiece) */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: "0 1 auto", marginTop: "1.5rem", zIndex: 10 }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            flex: "0 1 auto",
+            marginTop: "1.5rem",
+            zIndex: 10,
+          }}
+        >
           {/* Dice — bigger stage, shake-then-settle */}
           <AnimatePresence mode="wait">
             {engineState.dice && (
@@ -338,8 +522,14 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                {renderDie3D(engineState.dice[0], `die0-${engineState.dice[0]}-${engineState.currentTurn}`)}
-                {renderDie3D(engineState.dice[1], `die1-${engineState.dice[1]}-${engineState.currentTurn}`)}
+                {renderDie3D(
+                  engineState.dice[0],
+                  `die0-${engineState.dice[0]}-${engineState.currentTurn}`,
+                )}
+                {renderDie3D(
+                  engineState.dice[1],
+                  `die1-${engineState.dice[1]}-${engineState.currentTurn}`,
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -362,7 +552,9 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
               </div>
             </motion.div>
           ) : (
-            <div style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>Waiting for players...</div>
+            <div style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+              Waiting for players...
+            </div>
           )}
 
           {/* End Turn button — prominently centered */}
@@ -375,7 +567,17 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
               exit={{ opacity: 0 }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              style={{ padding: "0.6rem 2rem", fontSize: "1rem", fontWeight: 700, borderRadius: "2px", background: "linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%)", boxShadow: "0 4px 15px rgba(70, 199, 141, 0.4)", border: "none", color: "#fff", cursor: "pointer" }}
+              style={{
+                padding: "0.6rem 2rem",
+                fontSize: "1rem",
+                fontWeight: 700,
+                borderRadius: "2px",
+                background: "linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%)",
+                boxShadow: "0 4px 15px rgba(70, 199, 141, 0.4)",
+                border: "none",
+                color: "#fff",
+                cursor: "pointer",
+              }}
             >
               End Turn
             </motion.button>
@@ -387,14 +589,14 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
               <span className="trivia-label">🇳🇬 Did you know?</span>
               <AnimatePresence mode="wait">
                 <motion.p
-                  key={boardTriviaIdx}
+                  key={boardTrivia}
                   className="trivia-text"
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.35 }}
                 >
-                  {ALL_TRIVIA[boardTriviaIdx]}
+                  {boardTrivia}
                 </motion.p>
               </AnimatePresence>
             </div>
@@ -402,7 +604,15 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
         </div>
 
         {/* Bottom Section: Game Feed & Card draws */}
-        <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", zIndex: 5 }}>
+        <div
+          style={{
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            zIndex: 5,
+          }}
+        >
           {/* Drawn Card Overlay */}
           <AnimatePresence>
             {activeCardDraw && cardVisible && (
@@ -412,19 +622,40 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
                 transition={{ duration: 0.25 }}
-                style={{ width: "100%", maxWidth: "450px", marginBottom: "0.5rem", borderRadius: "2px" }}
+                style={{
+                  width: "100%",
+                  maxWidth: "450px",
+                  marginBottom: "0.5rem",
+                  borderRadius: "2px",
+                }}
               >
-                <div className="card-deck-title">{activeCardDraw.type} DRAWN BY {activeCardDraw.player.toUpperCase()}</div>
+                <div className="card-deck-title">
+                  {activeCardDraw.type} DRAWN BY {activeCardDraw.player.toUpperCase()}
+                </div>
                 <div className="card-text">"{activeCardDraw.text}"</div>
               </motion.div>
             )}
           </AnimatePresence>
 
           {/* Center: Game Feed — blends into the board-center background (no boxed panel) */}
-          <div className="board-center-feed" style={{ width: "100%", maxWidth: "550px", margin: 0, background: "transparent", border: "none", maxHeight: "110px" }}>
+          <div
+            className="board-center-feed"
+            style={{
+              width: "100%",
+              maxWidth: "550px",
+              margin: 0,
+              background: "transparent",
+              border: "none",
+              maxHeight: "110px",
+            }}
+          >
             <div className="board-center-feed-logs" style={{ padding: "0.5rem 1rem" }}>
               {engineState.log?.map((logLine: string, idx: number) => (
-                <div key={idx} className={getLogClass(logLine)} style={{ fontSize: "0.78rem", padding: "2px 0", textAlign: "center" }}>
+                <div
+                  key={idx}
+                  className={getLogClass(logLine)}
+                  style={{ fontSize: "0.78rem", padding: "2px 0", textAlign: "center" }}
+                >
                   {logLine}
                 </div>
               ))}
@@ -441,7 +672,9 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
         const isCorner = tile.pos % 10 === 0;
 
         // Find players on this tile (using their walking display position)
-        const playersOnTile = players.filter((p: Player) => getDisplayedPos(p) === tile.pos && !p.bankrupt);
+        const playersOnTile = players.filter(
+          (p: Player) => getDisplayedPos(p) === tile.pos && !p.bankrupt,
+        );
         const hasMyToken = myPosition === tile.pos;
         const hasActivePlayer = playersOnTile.some((p: Player) => p.id === activePlayerId);
 
@@ -482,7 +715,8 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
         };
 
         const getOwnerTitle = () => {
-          const ownerName = players.find((p: Player) => p.id === tileState.ownerId)?.name || "Unknown";
+          const ownerName =
+            players.find((p: Player) => p.id === tileState.ownerId)?.name || "Unknown";
           if (isMortgaged) {
             return `Owned by ${ownerName} (Mortgaged)`;
           }
@@ -518,7 +752,10 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
             {hasColorBar && groupColor && (
               <div
                 className="tile-color-bar"
-                style={{ backgroundColor: `var(--color-${groupColor})`, ...getColorBarStyle(tile.pos) }}
+                style={{
+                  backgroundColor: `var(--color-${groupColor})`,
+                  ...getColorBarStyle(tile.pos),
+                }}
               />
             )}
 
@@ -546,9 +783,7 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
                 price (the word "Mortgaged" overflows narrow side tiles); state is
                 shown by the greyed photo + 🔒 in the stripe and owner badge. */}
             {priceLabel && (
-              <span className="tile-price">
-                {isMortgaged ? <>🔒 {priceLabel}</> : priceLabel}
-              </span>
+              <span className="tile-price">{isMortgaged ? <>🔒 {priceLabel}</> : priceLabel}</span>
             )}
 
             {/* Owner badge */}
@@ -556,7 +791,14 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
               <span
                 className="tile-owner-indicator"
                 title={getOwnerTitle()}
-                style={isMortgaged ? { border: "1px solid var(--color-danger)", background: "rgba(239, 68, 68, 0.2)" } : {}}
+                style={
+                  isMortgaged
+                    ? {
+                        border: "1px solid var(--color-danger)",
+                        background: "rgba(239, 68, 68, 0.2)",
+                      }
+                    : {}
+                }
               >
                 {ownerEmoji} {isMortgaged && "🔒"}
               </span>
@@ -599,7 +841,8 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
                 </div>
                 {tile.type === "property" && (
                   <div className="tile-tooltip-row">
-                    Rent: ₦{((tileState?.houses ?? 0) > 0
+                    Rent: ₦
+                    {((tileState?.houses ?? 0) > 0
                       ? (tile as PropertyTile).rent[tileState.houses]
                       : (tile as PropertyTile).rent[0]
                     ).toLocaleString()}
@@ -607,10 +850,14 @@ export default function GameBoard({ engineState, roomState, mySessionId, onTileC
                   </div>
                 )}
                 {"price" in tile && (
-                  <div className="tile-tooltip-row tile-tooltip-muted">Price ₦{tile.price.toLocaleString()}</div>
+                  <div className="tile-tooltip-row tile-tooltip-muted">
+                    Price ₦{tile.price.toLocaleString()}
+                  </div>
                 )}
                 {tileState?.mortgaged && (
-                  <div className="tile-tooltip-row" style={{ color: "var(--color-danger)" }}>🔒 Mortgaged</div>
+                  <div className="tile-tooltip-row" style={{ color: "var(--color-danger)" }}>
+                    🔒 Mortgaged
+                  </div>
                 )}
                 <div className="tile-tooltip-row tile-tooltip-muted">Click for full deed</div>
               </div>

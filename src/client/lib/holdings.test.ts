@@ -37,7 +37,11 @@ describe("ownedTiles & netWorth", () => {
   };
 
   it("lists only the player's tiles", () => {
-    expect(ownedTiles(tiles, "p1").map((t) => t.pos).sort()).toEqual([1, 3]);
+    expect(
+      ownedTiles(tiles, "p1")
+        .map((t) => t.pos)
+        .sort(),
+    ).toEqual([1, 3]);
     expect(ownedTiles(tiles, "p2")).toHaveLength(0);
   });
 

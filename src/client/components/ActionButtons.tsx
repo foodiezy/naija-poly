@@ -15,14 +15,33 @@ interface Props {
 }
 
 export default function ActionButtons({
-  engineState, me, mySessionId, isMyTurn, canManage, activeTrade, onSendAction, onShowTradeBuilder,
+  engineState,
+  me,
+  mySessionId,
+  isMyTurn,
+  canManage,
+  activeTrade,
+  onSendAction,
+  onShowTradeBuilder,
 }: Props) {
   const { phase, players } = engineState;
   const currentPlayer = players[engineState.currentPlayerIndex];
   const isBankrupt = me?.bankrupt;
 
   if (isBankrupt) {
-    return <div style={{ flex: 1, textAlign: "center", fontSize: "0.75rem", color: "var(--text-muted)", padding: "0.25rem" }}>💀 Spectating</div>;
+    return (
+      <div
+        style={{
+          flex: 1,
+          textAlign: "center",
+          fontSize: "0.75rem",
+          color: "var(--text-muted)",
+          padding: "0.25rem",
+        }}
+      >
+        💀 Spectating
+      </div>
+    );
   }
 
   const tradeBtn = (
@@ -30,7 +49,13 @@ export default function ActionButtons({
       className="sidebar-action-btn sidebar-action-btn-outline"
       onClick={onShowTradeBuilder}
       disabled={!canManage || players.length < 2 || activeTrade !== null}
-      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem", borderRadius: "2px" }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "0.3rem",
+        borderRadius: "2px",
+      }}
     >
       <IconTrade size={16} /> Trade
     </button>
@@ -40,13 +65,35 @@ export default function ActionButtons({
     if (me?.inJail) {
       return (
         <>
-          <button className="sidebar-action-btn sidebar-action-btn-primary" onClick={() => onSendAction({ type: "ROLL" })} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", borderRadius: "2px" }}>
+          <button
+            className="sidebar-action-btn sidebar-action-btn-primary"
+            onClick={() => onSendAction({ type: "ROLL" })}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.4rem",
+              borderRadius: "2px",
+            }}
+          >
             <IconRoll size={18} /> Roll
           </button>
-          <button className="sidebar-action-btn sidebar-action-btn-outline" onClick={() => onSendAction({ type: "PAY_JAIL_FINE" })} disabled={(me?.cash || 0) < 50000} title="Pay ₦50,000" style={{ borderRadius: "2px" }}>
+          <button
+            className="sidebar-action-btn sidebar-action-btn-outline"
+            onClick={() => onSendAction({ type: "PAY_JAIL_FINE" })}
+            disabled={(me?.cash || 0) < 50000}
+            title="Pay ₦50,000"
+            style={{ borderRadius: "2px" }}
+          >
             Pay Fine
           </button>
-          <button className="sidebar-action-btn sidebar-action-btn-outline" onClick={() => onSendAction({ type: "USE_JAIL_CARD" })} disabled={(me?.jailCardSources?.length || 0) === 0} title={`Jail cards: ${me?.jailCardSources?.length || 0}`} style={{ borderRadius: "2px" }}>
+          <button
+            className="sidebar-action-btn sidebar-action-btn-outline"
+            onClick={() => onSendAction({ type: "USE_JAIL_CARD" })}
+            disabled={(me?.jailCardSources?.length || 0) === 0}
+            title={`Jail cards: ${me?.jailCardSources?.length || 0}`}
+            style={{ borderRadius: "2px" }}
+          >
             Jail Card
           </button>
         </>
@@ -58,7 +105,15 @@ export default function ActionButtons({
           className="sidebar-action-btn sidebar-action-btn-primary"
           onClick={() => onSendAction({ type: "ROLL" })}
           whileTap={{ scale: 0.94 }}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", borderRadius: "2px", background: "linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%)", boxShadow: "0 4px 12px rgba(70,199,141,0.25)" }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "0.4rem",
+            borderRadius: "2px",
+            background: "linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%)",
+            boxShadow: "0 4px 12px rgba(70,199,141,0.25)",
+          }}
         >
           <IconRoll size={18} /> Roll Dice
         </motion.button>
@@ -72,10 +127,22 @@ export default function ActionButtons({
     const price = tile && "price" in tile ? tile.price : 0;
     return (
       <>
-        <button className="sidebar-action-btn sidebar-action-btn-primary" disabled={(me?.cash || 0) < price} onClick={() => onSendAction({ type: "BUY" })} style={{ borderRadius: "2px", background: "linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%)" }}>
+        <button
+          className="sidebar-action-btn sidebar-action-btn-primary"
+          disabled={(me?.cash || 0) < price}
+          onClick={() => onSendAction({ type: "BUY" })}
+          style={{
+            borderRadius: "2px",
+            background: "linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%)",
+          }}
+        >
           Buy ₦{(price / 1000).toFixed(0)}k
         </button>
-        <button className="sidebar-action-btn sidebar-action-btn-outline" onClick={() => onSendAction({ type: "DECLINE_BUY" })} style={{ borderRadius: "2px" }}>
+        <button
+          className="sidebar-action-btn sidebar-action-btn-outline"
+          onClick={() => onSendAction({ type: "DECLINE_BUY" })}
+          style={{ borderRadius: "2px" }}
+        >
           Auction
         </button>
       </>
@@ -88,7 +155,15 @@ export default function ActionButtons({
 
   if (!isMyTurn) {
     return (
-      <div style={{ flex: 1, textAlign: "center", fontSize: "0.75rem", color: "var(--text-muted)", padding: "0.25rem" }}>
+      <div
+        style={{
+          flex: 1,
+          textAlign: "center",
+          fontSize: "0.75rem",
+          color: "var(--text-muted)",
+          padding: "0.25rem",
+        }}
+      >
         ⏳ Waiting for {currentPlayer?.name || "—"}
       </div>
     );

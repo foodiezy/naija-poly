@@ -84,6 +84,42 @@ describe("getAIAction", () => {
     expect(getAIAction(s, "ai_1")).toEqual({ type: "DECLARE_BANKRUPT" });
   });
 
+  it("Trader proposes a trade for a set-completing tile, but not when suppressed or one is pending", () => {
+    const s = setup();
+    s.phase = "awaiting-end-turn";
+    s.players[0].aiStyle = "Trader";
+    s.players[0].cash = 1_000_000;
+    // ai_1 owns one brown tile; p2 owns the other — a set worth chasing.
+    s.tiles[1] = { ownerId: "ai_1", houses: 0, mortgaged: false };
+    s.tiles[3] = { ownerId: "p2", houses: 0, mortgaged: false };
+
+    expect(getAIAction(s, "ai_1")).toEqual({
+      type: "PROPOSE_TRADE",
+      trade: {
+        fromId: "ai_1",
+        toId: "p2",
+        giveCash: 80_000, // Bama's ₦60,000 list price + ₦20,000 sweetener
+        getCash: 0,
+        giveTiles: [],
+        getTiles: [3],
+      },
+    });
+
+    // Already proposed this round (server-tracked): don't re-propose forever.
+    expect(getAIAction(s, "ai_1", { suppressTradeProposal: true })).toEqual({ type: "END_TURN" });
+
+    // A trade is still pending with someone: don't stack another proposal.
+    s.activeTrade = {
+      fromId: "ai_1",
+      toId: "p2",
+      giveCash: 80_000,
+      getCash: 0,
+      giveTiles: [],
+      getTiles: [3],
+    };
+    expect(getAIAction(s, "ai_1")).toEqual({ type: "END_TURN" });
+  });
+
   it("responds to a trade addressed to it, even on another player's turn", () => {
     const s = setup();
     s.phase = "awaiting-end-turn";
@@ -91,16 +127,37 @@ describe("getAIAction", () => {
     s.players[0].cash = 1_000_000;
 
     // p2 offers ₦100,000 cash for nothing — clearly favorable, accept.
-    s.activeTrade = { fromId: "p2", toId: "ai_1", giveCash: 100_000, getCash: 0, giveTiles: [], getTiles: [] };
+    s.activeTrade = {
+      fromId: "p2",
+      toId: "ai_1",
+      giveCash: 100_000,
+      getCash: 0,
+      giveTiles: [],
+      getTiles: [],
+    };
     expect(getAIAction(s, "ai_1")).toEqual({ type: "RESPOND_TRADE", accept: true });
 
     // p2 asks the AI for ₦100,000 and gives nothing — lopsided, decline.
-    s.activeTrade = { fromId: "p2", toId: "ai_1", giveCash: 0, getCash: 100_000, giveTiles: [], getTiles: [] };
+    s.activeTrade = {
+      fromId: "p2",
+      toId: "ai_1",
+      giveCash: 0,
+      getCash: 100_000,
+      giveTiles: [],
+      getTiles: [],
+    };
     expect(getAIAction(s, "ai_1")).toEqual({ type: "RESPOND_TRADE", accept: false });
 
     // Asking more cash than the AI holds is declined regardless of value.
     s.players[0].cash = 10_000;
-    s.activeTrade = { fromId: "p2", toId: "ai_1", giveCash: 0, getCash: 50_000, giveTiles: [1], getTiles: [] };
+    s.activeTrade = {
+      fromId: "p2",
+      toId: "ai_1",
+      giveCash: 0,
+      getCash: 50_000,
+      giveTiles: [1],
+      getTiles: [],
+    };
     expect(getAIAction(s, "ai_1")).toEqual({ type: "RESPOND_TRADE", accept: false });
   });
 });

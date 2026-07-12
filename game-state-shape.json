@@ -41,7 +41,10 @@
         "name": "string (display name, e.g. 'Lagos Island')",
         "group": "string (color group id, e.g. 'blue', 'red', for monopoly-set bonus rent)",
         "price": "number | null",
-        "rentLevels": ["array: [base, 1house, 2house, 3house, 4house, hotel]", "null if not a property"],
+        "rentLevels": [
+          "array: [base, 1house, 2house, 3house, 4house, hotel]",
+          "null if not a property"
+        ],
         "houseCost": "number | null",
         "mortgageValue": "number | null",
         "ownerId": "string (player uuid) | null",

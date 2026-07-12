@@ -177,7 +177,11 @@ export default function App() {
         <div className="header-right">
           {room && (
             <>
-              <span className="room-badge" onClick={copyRoomCode} title="Click to copy the invite link">
+              <span
+                className="room-badge"
+                onClick={copyRoomCode}
+                title="Click to copy the invite link"
+              >
                 Room: {room.roomId}
                 <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>🔗</span>
               </span>
@@ -235,155 +239,164 @@ export default function App() {
 
       {/* Content Router */}
       <AnimatePresence mode="wait">
-      {!room ? (
-        <motion.div
-          key="landing"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -16 }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
-        >
-          {reconnecting ? (
-            <div className="reconnect-overlay" style={{ position: "relative", minHeight: "60vh", background: "transparent", backdropFilter: "none" }}>
-              <div className="reconnect-spinner"></div>
-              <h2 style={{ marginTop: "1rem" }}>Welcome Back</h2>
-              <p>Restoring your session...</p>
-            </div>
-          ) : (
-            <>
-              <Lobby
-                onCreateRoom={createRoom}
-                onJoinRoom={joinRoom}
-                onQuickMatch={quickMatch}
-                initialRoomId={inviteRoomId}
-              />
-            </>
-          )}
-        </motion.div>
-      ) : roomState?.status === "lobby" ? (
-        <motion.div
-          key="lobby"
-          className="lobby-view"
-          initial={{ opacity: 0, x: 40 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -40 }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
-        >
-          <RoomLobbyView
-            room={room}
-            roomState={roomState}
-            onCopyRoomCode={copyRoomCode}
-            onSelectToken={selectToken}
-            onAddAI={addAI}
-            onUpdateSettings={updateSettings}
-            onStartGame={startGame}
-            chatMessages={chatMessages}
-            onSendChatMessage={sendChatMessage}
-          />
-        </motion.div>
-      ) : engineState ? (
-        <motion.div
-          key="game"
-          className="game-view"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {reconnecting && (
-            <div className="reconnect-overlay">
-              <div className="reconnect-spinner"></div>
-              <h2>Connection Lost</h2>
-              <p>Attempting to reconnect...</p>
-            </div>
-          )}
-
-          {/* Left column: room chat + settings */}
-          <div className="game-col game-col-left">
-            <ChatPanel
+        {!room ? (
+          <motion.div
+            key="landing"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+          >
+            {reconnecting ? (
+              <div
+                className="reconnect-overlay"
+                style={{
+                  position: "relative",
+                  minHeight: "60vh",
+                  background: "transparent",
+                  backdropFilter: "none",
+                }}
+              >
+                <div className="reconnect-spinner"></div>
+                <h2 style={{ marginTop: "1rem" }}>Welcome Back</h2>
+                <p>Restoring your session...</p>
+              </div>
+            ) : (
+              <>
+                <Lobby
+                  onCreateRoom={createRoom}
+                  onJoinRoom={joinRoom}
+                  onQuickMatch={quickMatch}
+                  initialRoomId={inviteRoomId}
+                />
+              </>
+            )}
+          </motion.div>
+        ) : roomState?.status === "lobby" ? (
+          <motion.div
+            key="lobby"
+            className="lobby-view"
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+          >
+            <RoomLobbyView
               room={room}
-              engineState={engineState}
+              roomState={roomState}
+              onCopyRoomCode={copyRoomCode}
+              onSelectToken={selectToken}
+              onAddAI={addAI}
+              onUpdateSettings={updateSettings}
+              onStartGame={startGame}
               chatMessages={chatMessages}
               onSendChatMessage={sendChatMessage}
             />
-            <SettingsPanel
-              muted={muted}
-              onToggleMute={() => {
-                const nextMute = !muted;
-                setMuted(nextMute);
-                sound.setMuted(nextMute);
-              }}
-            />
-          </div>
-
-          {/* Center: the board */}
-          <div className="board-panel">
-            <GameBoard
-              engineState={engineState}
-              roomState={roomState}
-              mySessionId={mySessionId || undefined}
-              onTileClick={(pos) => setSelectedTilePos(pos)}
-              onEndTurn={() => sendAction({ type: "END_TURN" })}
-              displayedPositions={displayedPositions}
-            />
-          </div>
-
-          {/* Right column: redesigned sidebar */}
-          <div className="game-col game-col-right">
-            <ControlPanel
-              room={room}
-              engineState={engineState}
-              onSendAction={sendAction}
-              autoEndTurn={autoEndTurn}
-              onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
-              turnDeadline={roomState?.turnDeadline}
-              turnTimeoutSecs={roomState?.turnTimeoutSecs}
-              onOpenTile={(pos) => setSelectedTilePos(pos)}
-            />
-          </div>
-
-          <AnimatePresence>
-            {selectedTilePos !== null && (
-              <TileInspector
-                tilePos={selectedTilePos}
-                engineState={engineState}
-                roomState={roomState}
-                onClose={() => setSelectedTilePos(null)}
-                mySessionId={mySessionId}
-                canManage={
-                  engineState.players?.[engineState.currentPlayerIndex]?.id === mySessionId &&
-                  (engineState.phase === "awaiting-roll" || engineState.phase === "awaiting-end-turn")
-                }
-                onSendAction={sendAction}
-              />
+          </motion.div>
+        ) : engineState ? (
+          <motion.div
+            key="game"
+            className="game-view"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            {reconnecting && (
+              <div className="reconnect-overlay">
+                <div className="reconnect-spinner"></div>
+                <h2>Connection Lost</h2>
+                <p>Attempting to reconnect...</p>
+              </div>
             )}
-          </AnimatePresence>
 
-          <AnimatePresence>
-            {mySessionId && !myTokenWalking && (
-              <BuyDeedModal
+            {/* Left column: room chat + settings */}
+            <div className="game-col game-col-left">
+              <ChatPanel
+                room={room}
                 engineState={engineState}
-                mySessionId={mySessionId}
-                onSendAction={sendAction}
+                chatMessages={chatMessages}
+                onSendChatMessage={sendChatMessage}
               />
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {engineState.phase === "game-over" && showGameOverModal && (
-              <GameOverModal
-                engineState={engineState}
-                roomState={roomState}
-                mySessionId={mySessionId}
-                onResetGame={() => {
-                  setShowGameOverModal(false);
-                  resetGame();
+              <SettingsPanel
+                muted={muted}
+                onToggleMute={() => {
+                  const nextMute = !muted;
+                  setMuted(nextMute);
+                  sound.setMuted(nextMute);
                 }}
               />
-            )}
-          </AnimatePresence>
-        </motion.div>
-      ) : null}
+            </div>
+
+            {/* Center: the board */}
+            <div className="board-panel">
+              <GameBoard
+                engineState={engineState}
+                roomState={roomState}
+                mySessionId={mySessionId || undefined}
+                onTileClick={(pos) => setSelectedTilePos(pos)}
+                onEndTurn={() => sendAction({ type: "END_TURN" })}
+                displayedPositions={displayedPositions}
+              />
+            </div>
+
+            {/* Right column: redesigned sidebar */}
+            <div className="game-col game-col-right">
+              <ControlPanel
+                room={room}
+                engineState={engineState}
+                onSendAction={sendAction}
+                autoEndTurn={autoEndTurn}
+                onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
+                turnDeadline={roomState?.turnDeadline}
+                turnTimeoutSecs={roomState?.turnTimeoutSecs}
+                onOpenTile={(pos) => setSelectedTilePos(pos)}
+              />
+            </div>
+
+            <AnimatePresence>
+              {selectedTilePos !== null && (
+                <TileInspector
+                  tilePos={selectedTilePos}
+                  engineState={engineState}
+                  roomState={roomState}
+                  onClose={() => setSelectedTilePos(null)}
+                  mySessionId={mySessionId}
+                  canManage={
+                    engineState.players?.[engineState.currentPlayerIndex]?.id === mySessionId &&
+                    (engineState.phase === "awaiting-roll" ||
+                      engineState.phase === "awaiting-end-turn")
+                  }
+                  onSendAction={sendAction}
+                />
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {mySessionId && !myTokenWalking && (
+                <BuyDeedModal
+                  engineState={engineState}
+                  mySessionId={mySessionId}
+                  onSendAction={sendAction}
+                />
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {engineState.phase === "game-over" && showGameOverModal && (
+                <GameOverModal
+                  engineState={engineState}
+                  roomState={roomState}
+                  mySessionId={mySessionId}
+                  onResetGame={() => {
+                    setShowGameOverModal(false);
+                    resetGame();
+                  }}
+                />
+              )}
+            </AnimatePresence>
+          </motion.div>
+        ) : null}
       </AnimatePresence>
 
       {/* Footer */}
@@ -412,9 +425,7 @@ export default function App() {
             How to Play
           </span>
         </div>
-        <div className="footer-right">
-          © 2026 Odogwu Games · Made with Lagos vibes.
-        </div>
+        <div className="footer-right">© 2026 Odogwu Games · Made with Lagos vibes.</div>
       </footer>
     </div>
   );

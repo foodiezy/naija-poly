@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TOKENS, tokenEmoji } from "../../data/tokens";
 import { Room } from "colyseus.js";
 import { ChatMessage } from "../../shared/chat";
 import { RoomState, RoomSettings, LobbyPlayerView } from "../../shared/room";
-import { ALL_TRIVIA } from "../../data/facts";
 import { countHumans } from "../lib/players";
+import { useTriviaRotation } from "../hooks/useTriviaRotation";
 
 interface RoomLobbyViewProps {
   room: Room;
@@ -36,14 +35,7 @@ export default function RoomLobbyView({
   const myTokenId = roomState?.lobbyPlayers?.get(room.sessionId)?.tokenId;
   const humanCount = countHumans(roomState?.lobbyPlayers ? roomState.lobbyPlayers.keys() : []);
 
-  const [triviaIdx, setTriviaIdx] = useState(() => Math.floor(Math.random() * ALL_TRIVIA.length));
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTriviaIdx(prev => (prev + 1) % ALL_TRIVIA.length);
-    }, 6000);
-    return () => clearInterval(interval);
-  }, []);
+  const trivia = useTriviaRotation(6000);
 
   return (
     <div className="lobby-columns-container">
@@ -60,7 +52,13 @@ export default function RoomLobbyView({
           Share code {room.roomId} — tap the button to copy the invite link.
         </p>
         {isHost && (
-          <p style={{ textAlign: "center", color: "var(--color-gold, #e8b64a)", fontSize: "0.85rem" }}>
+          <p
+            style={{
+              textAlign: "center",
+              color: "var(--color-gold, #e8b64a)",
+              fontSize: "0.85rem",
+            }}
+          >
             Invite friends before you start — the room locks once the game begins.
           </p>
         )}
@@ -80,7 +78,7 @@ export default function RoomLobbyView({
                 }
               }
               const isMine = myTokenId === token.id;
-              
+
               return (
                 <button
                   key={token.id}
@@ -96,12 +94,31 @@ export default function RoomLobbyView({
             })}
           </div>
         </div>
-        
+
         {isHost && (
-          <div className="form-group" style={{ marginTop: "1rem", background: "rgba(0,0,0,0.2)", padding: "1rem", borderRadius: "8px" }}>
-            <h3 style={{ fontSize: "1rem", marginBottom: "0.75rem", color: "var(--text-secondary)" }}>⚙️ Host Settings</h3>
-            
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+          <div
+            className="form-group"
+            style={{
+              marginTop: "1rem",
+              background: "rgba(0,0,0,0.2)",
+              padding: "1rem",
+              borderRadius: "8px",
+            }}
+          >
+            <h3
+              style={{ fontSize: "1rem", marginBottom: "0.75rem", color: "var(--text-secondary)" }}
+            >
+              ⚙️ Host Settings
+            </h3>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "0.75rem",
+              }}
+            >
               <label style={{ margin: 0, fontSize: "0.9rem" }}>Starting Cash (₦)</label>
               <input
                 type="number"
@@ -115,7 +132,14 @@ export default function RoomLobbyView({
               />
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "0.75rem",
+              }}
+            >
               <label style={{ margin: 0, fontSize: "0.9rem" }}>Turn Limit (0 = ∞)</label>
               <input
                 type="number"
@@ -128,7 +152,16 @@ export default function RoomLobbyView({
               />
             </div>
 
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", cursor: "pointer", marginBottom: "0.75rem" }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                fontSize: "0.9rem",
+                cursor: "pointer",
+                marginBottom: "0.75rem",
+              }}
+            >
               <input
                 type="checkbox"
                 checked={roomState?.freeParkingJackpot || false}
@@ -137,7 +170,16 @@ export default function RoomLobbyView({
               Mama Put Rest Stop Jackpot
             </label>
 
-            <label style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", fontSize: "0.9rem", cursor: "pointer", marginBottom: "0.75rem" }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "0.5rem",
+                fontSize: "0.9rem",
+                cursor: "pointer",
+                marginBottom: "0.75rem",
+              }}
+            >
               <input
                 type="checkbox"
                 checked={roomState?.chaosMode || false}
@@ -152,7 +194,16 @@ export default function RoomLobbyView({
               </span>
             </label>
 
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", cursor: "pointer", marginBottom: "0.75rem" }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                fontSize: "0.9rem",
+                cursor: "pointer",
+                marginBottom: "0.75rem",
+              }}
+            >
               <input
                 type="checkbox"
                 checked={roomState?.secretObjectives || false}
@@ -161,7 +212,16 @@ export default function RoomLobbyView({
               Secret Objectives
             </label>
 
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", cursor: "pointer", marginBottom: "0.5rem" }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                fontSize: "0.9rem",
+                cursor: "pointer",
+                marginBottom: "0.5rem",
+              }}
+            >
               <input
                 type="checkbox"
                 checked={roomState?.turnTimerEnabled ?? false}
@@ -169,10 +229,19 @@ export default function RoomLobbyView({
               />
               Enable Turn Timer
             </label>
-            
+
             {(roomState?.turnTimerEnabled ?? false) && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: "1.5rem" }}>
-                <label style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-muted)" }}>Seconds per turn</label>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingLeft: "1.5rem",
+                }}
+              >
+                <label style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                  Seconds per turn
+                </label>
                 <input
                   type="number"
                   className="input-field"
@@ -208,53 +277,83 @@ export default function RoomLobbyView({
               onClick={onStartGame}
               disabled={playerCount < 2}
             >
-              {playerCount < 2
-                ? "Waiting for more players..."
-                : "Start Game 🎲"}
+              {playerCount < 2 ? "Waiting for more players..." : "Start Game 🎲"}
             </button>
             {humanCount === 1 && playerCount >= 2 && (
-              <span style={{ display: "block", fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center", marginTop: "0.5rem" }}>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                  textAlign: "center",
+                  marginTop: "0.5rem",
+                }}
+              >
                 Playing solo with bots — friends can't join once you start.
               </span>
             )}
           </>
         ) : (
-          <div className="status-indicator" style={{ padding: "1rem", textAlign: "center", background: "rgba(0,0,0,0.2)", borderRadius: "8px" }}>
+          <div
+            className="status-indicator"
+            style={{
+              padding: "1rem",
+              textAlign: "center",
+              background: "rgba(0,0,0,0.2)",
+              borderRadius: "8px",
+            }}
+          >
             ⏳ Waiting for host to start the game...
           </div>
         )}
       </div>
-      
+
       <div className="lobby-card glass-panel" style={{ display: "flex", flexDirection: "column" }}>
         <h2 className="lobby-title">Players Joined ({roomState?.lobbyPlayers?.size || 0})</h2>
         <div className="lobby-players-list">
-          {roomState?.lobbyPlayers && Array.from(roomState.lobbyPlayers.entries() as IterableIterator<[string, LobbyPlayerView]>).map(([pId, pData]) => (
-            <motion.div
-              key={pId}
-              className="lobby-player-row"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-            >
-              <span className="lobby-player-token">{tokenEmoji(pData.tokenId)}</span>
-              <span className="lobby-player-name">{pData.name} {pId === room.sessionId && "(You)"}</span>
-              {pId === roomState.hostId && <span className="lobby-host-badge">HOST</span>}
-            </motion.div>
-          ))}
+          {roomState?.lobbyPlayers &&
+            Array.from(
+              roomState.lobbyPlayers.entries() as IterableIterator<[string, LobbyPlayerView]>,
+            ).map(([pId, pData]) => (
+              <motion.div
+                key={pId}
+                className="lobby-player-row"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
+                <span className="lobby-player-token">{tokenEmoji(pData.tokenId)}</span>
+                <span className="lobby-player-name">
+                  {pData.name} {pId === room.sessionId && "(You)"}
+                </span>
+                {pId === roomState.hostId && <span className="lobby-host-badge">HOST</span>}
+              </motion.div>
+            ))}
         </div>
-        
-        <h3 style={{ fontSize: "1rem", margin: "1rem 0 0.5rem", color: "var(--text-secondary)" }}>Lobby Chat</h3>
-        <div id="lobby-chat-box" className="chat-messages-container" style={{ flexGrow: 1, minHeight: "150px" }}>
-          {chatMessages.filter(m => !m.toId).map((msg: ChatMessage, idx: number) => (
-            <div key={idx} className={`chat-message ${msg.senderId === room.sessionId ? 'my-message' : 'other-message'}`}>
-              <span className="chat-sender">{msg.senderName}:</span> {msg.text}
-            </div>
-          ))}
+
+        <h3 style={{ fontSize: "1rem", margin: "1rem 0 0.5rem", color: "var(--text-secondary)" }}>
+          Lobby Chat
+        </h3>
+        <div
+          id="lobby-chat-box"
+          className="chat-messages-container"
+          style={{ flexGrow: 1, minHeight: "150px" }}
+        >
+          {chatMessages
+            .filter((m) => !m.toId)
+            .map((msg: ChatMessage, idx: number) => (
+              <div
+                key={idx}
+                className={`chat-message ${msg.senderId === room.sessionId ? "my-message" : "other-message"}`}
+              >
+                <span className="chat-sender">{msg.senderName}:</span> {msg.text}
+              </div>
+            ))}
         </div>
         <div className="chat-input-row" style={{ marginTop: "0.5rem" }}>
-          <input 
-            type="text" 
-            className="input-field" 
-            placeholder="Type a message..." 
+          <input
+            type="text"
+            className="input-field"
+            placeholder="Type a message..."
             onKeyDown={(e) => {
               if (e.key === "Enter" && e.currentTarget.value.trim()) {
                 onSendChatMessage(e.currentTarget.value.trim());
@@ -270,14 +369,14 @@ export default function RoomLobbyView({
         <span className="trivia-label">🇳🇬 Did you know?</span>
         <AnimatePresence mode="wait">
           <motion.p
-            key={triviaIdx}
+            key={trivia}
             className="trivia-text"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.4 }}
           >
-            {ALL_TRIVIA[triviaIdx]}
+            {trivia}
           </motion.p>
         </AnimatePresence>
       </div>

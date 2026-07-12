@@ -22,11 +22,15 @@ const app = express();
 // ALLOWED_ORIGINS env var (comma-separated) rather than trusting every
 // *.onrender.com app — combined with credentials:true, a suffix match would
 // let any other Render-hosted site make credentialed requests to us. Local
-// dev origins are always allowed.
+// dev origins are always allowed. Render injects RENDER_EXTERNAL_URL (this
+// service's own public URL); allowing it keeps same-origin matchmaking POSTs
+// working even when ALLOWED_ORIGINS is unset, without trusting other apps.
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean);
+const selfOrigin = (process.env.RENDER_EXTERNAL_URL || "").replace(/\/$/, "");
+if (selfOrigin) allowedOrigins.push(selfOrigin);
 
 app.use(
   cors({
@@ -36,10 +40,8 @@ app.use(
         return;
       }
       const isLocalDev =
-        origin.startsWith("http://localhost:") ||
-        origin.startsWith("http://127.0.0.1:");
-      const isRender = origin.endsWith(".onrender.com");
-      const isAllowed = isLocalDev || isRender || allowedOrigins.includes(origin);
+        origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:");
+      const isAllowed = isLocalDev || allowedOrigins.includes(origin);
 
       if (isAllowed) {
         callback(null, true);
@@ -49,7 +51,7 @@ app.use(
       }
     },
     credentials: true,
-  })
+  }),
 );
 
 app.use(express.json());

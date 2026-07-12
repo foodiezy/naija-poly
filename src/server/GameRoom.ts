@@ -40,6 +40,10 @@ export class GameRoom extends Room<GameRoomState> {
   private auctionTimer?: ReturnType<typeof this.clock.setTimeout>;
   // Pending scheduled move for a computer player.
   private aiTimer?: ReturnType<typeof this.clock.setTimeout>;
+  // Last AI trade proposal (actor + round). The engine is pure and a declined
+  // trade leaves no trace in state, so without this memory a "Trader" bot
+  // whose offer was declined would re-propose the identical trade forever.
+  private lastAITradeProposal?: { actorId: string; round: number };
   // Per-turn AFK timeout (optional, host-configured).
   private turnTimer?: ReturnType<typeof this.clock.setTimeout>;
 
@@ -90,7 +94,13 @@ export class GameRoom extends Room<GameRoomState> {
   // game-over so both timeout and action paths stay consistent.
   private persist(state: GameState) {
     this.fullState = state;
-    const redacted: GameState = { ...state, chanceOrder: [], hustleOrder: [], chancePtr: 0, hustlePtr: 0 };
+    const redacted: GameState = {
+      ...state,
+      chanceOrder: [],
+      hustleOrder: [],
+      chancePtr: 0,
+      hustlePtr: 0,
+    };
     this.state.gameStateJson = JSON.stringify(redacted);
     if (state.phase === "game-over") {
       this.state.status = "finished";
@@ -146,12 +156,15 @@ export class GameRoom extends Room<GameRoomState> {
     let action: Action | null = null;
     if (s.phase === "awaiting-roll") action = { type: "ROLL" };
     else if (s.phase === "awaiting-buy-decision") action = { type: "DECLINE_BUY" };
-    else if (s.phase === "awaiting-end-turn") action = current.cash < 0 ? { type: "DECLARE_BANKRUPT" } : { type: "END_TURN" };
+    else if (s.phase === "awaiting-end-turn")
+      action = current.cash < 0 ? { type: "DECLARE_BANKRUPT" } : { type: "END_TURN" };
     if (!action) return;
 
     try {
       this.runEngineAction(current.id, action);
-      this.broadcast("ERROR", { message: `${current.name} ran out of time — auto-played their turn.` });
+      this.broadcast("ERROR", {
+        message: `${current.name} ran out of time — auto-played their turn.`,
+      });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`Turn timeout auto-move failed: ${msg}`);
@@ -209,10 +222,16 @@ export class GameRoom extends Room<GameRoomState> {
     const engineState = this.fullState;
     if (!engineState) return;
 
-    const action = getAIAction(engineState, actorId);
+    const suppressTradeProposal =
+      this.lastAITradeProposal?.actorId === actorId &&
+      this.lastAITradeProposal.round === engineState.currentTurn;
+    const action = getAIAction(engineState, actorId, { suppressTradeProposal });
     if (!action) {
       this.scheduleAIIfNeeded();
       return;
+    }
+    if (action.type === "PROPOSE_TRADE") {
+      this.lastAITradeProposal = { actorId, round: engineState.currentTurn };
     }
     try {
       this.runEngineAction(actorId, action); // persists + reschedules the next AI move
@@ -298,54 +317,70 @@ export class GameRoom extends Room<GameRoomState> {
     });
 
     // Message handler to update lobby settings
-    this.onMessage("UPDATE_SETTINGS", (client, message: { startingCash?: number; turnLimit?: number; freeParkingJackpot?: boolean; chaosMode?: boolean; secretObjectives?: boolean; turnTimerEnabled?: boolean; turnTimeoutSecs?: number }) => {
-      if (this.state.status !== "lobby") {
-        this.sendError(client, "Cannot change settings once game starts");
-        return;
-      }
-      if (client.sessionId !== this.state.hostId) {
-        this.sendError(client, "Only the host can modify settings");
-        return;
-      }
+    this.onMessage(
+      "UPDATE_SETTINGS",
+      (
+        client,
+        message: {
+          startingCash?: number;
+          turnLimit?: number;
+          freeParkingJackpot?: boolean;
+          chaosMode?: boolean;
+          secretObjectives?: boolean;
+          turnTimerEnabled?: boolean;
+          turnTimeoutSecs?: number;
+        },
+      ) => {
+        if (this.state.status !== "lobby") {
+          this.sendError(client, "Cannot change settings once game starts");
+          return;
+        }
+        if (client.sessionId !== this.state.hostId) {
+          this.sendError(client, "Only the host can modify settings");
+          return;
+        }
 
-      if (message.startingCash !== undefined) {
-        const cash = Number(message.startingCash);
-        if (!Number.isFinite(cash) || cash < 100_000 || cash > 10_000_000) {
-          this.sendError(client, "Starting cash must be between ₦100,000 and ₦10,000,000");
-          return;
+        if (message.startingCash !== undefined) {
+          const cash = Number(message.startingCash);
+          if (!Number.isFinite(cash) || cash < 100_000 || cash > 10_000_000) {
+            this.sendError(client, "Starting cash must be between ₦100,000 and ₦10,000,000");
+            return;
+          }
+          this.state.startingCash = Math.floor(cash);
         }
-        this.state.startingCash = Math.floor(cash);
-      }
-      if (message.turnLimit !== undefined) {
-        const limit = Number(message.turnLimit);
-        if (!Number.isFinite(limit) || limit < 0 || limit > 999) {
-          this.sendError(client, "Turn limit must be between 0 and 999");
-          return;
+        if (message.turnLimit !== undefined) {
+          const limit = Number(message.turnLimit);
+          if (!Number.isFinite(limit) || limit < 0 || limit > 999) {
+            this.sendError(client, "Turn limit must be between 0 and 999");
+            return;
+          }
+          this.state.turnLimit = Math.floor(limit);
         }
-        this.state.turnLimit = Math.floor(limit);
-      }
-      if (message.freeParkingJackpot !== undefined) {
-        this.state.freeParkingJackpot = !!message.freeParkingJackpot;
-      }
-      if (message.chaosMode !== undefined) {
-        this.state.chaosMode = !!message.chaosMode;
-      }
-      if (message.secretObjectives !== undefined) {
-        this.state.secretObjectives = !!message.secretObjectives;
-      }
-      if (message.turnTimerEnabled !== undefined) {
-        this.state.turnTimerEnabled = !!message.turnTimerEnabled;
-      }
-      if (message.turnTimeoutSecs !== undefined) {
-        const secs = Number(message.turnTimeoutSecs);
-        if (!Number.isFinite(secs) || secs < 10 || secs > 600) {
-          this.sendError(client, "Turn timeout must be between 10 and 600 seconds");
-          return;
+        if (message.freeParkingJackpot !== undefined) {
+          this.state.freeParkingJackpot = !!message.freeParkingJackpot;
         }
-        this.state.turnTimeoutSecs = Math.floor(secs);
-      }
-      console.log(`Lobby settings updated: startingCash=${this.state.startingCash}, turnLimit=${this.state.turnLimit}, jackpot=${this.state.freeParkingJackpot}, turnTimer=${this.state.turnTimerEnabled}/${this.state.turnTimeoutSecs}s`);
-    });
+        if (message.chaosMode !== undefined) {
+          this.state.chaosMode = !!message.chaosMode;
+        }
+        if (message.secretObjectives !== undefined) {
+          this.state.secretObjectives = !!message.secretObjectives;
+        }
+        if (message.turnTimerEnabled !== undefined) {
+          this.state.turnTimerEnabled = !!message.turnTimerEnabled;
+        }
+        if (message.turnTimeoutSecs !== undefined) {
+          const secs = Number(message.turnTimeoutSecs);
+          if (!Number.isFinite(secs) || secs < 10 || secs > 600) {
+            this.sendError(client, "Turn timeout must be between 10 and 600 seconds");
+            return;
+          }
+          this.state.turnTimeoutSecs = Math.floor(secs);
+        }
+        console.log(
+          `Lobby settings updated: startingCash=${this.state.startingCash}, turnLimit=${this.state.turnLimit}, jackpot=${this.state.freeParkingJackpot}, turnTimer=${this.state.turnTimerEnabled}/${this.state.turnTimeoutSecs}s`,
+        );
+      },
+    );
 
     // Message handler to add a computer player (host only, lobby only).
     this.onMessage("ADD_AI", (client) => {
