@@ -124,7 +124,10 @@ export type Action =
   | { type: "MORTGAGE"; pos: number }
   | { type: "UNMORTGAGE"; pos: number }
   | { type: "PROPOSE_TRADE"; trade: TradeOffer }
-  | { type: "RESPOND_TRADE"; accept: boolean }
+  // Declining may carry a counter-offer: it replaces the pending trade with
+  // roles swapped, so the original proposer becomes the new recipient.
+  | { type: "RESPOND_TRADE"; accept: boolean; counter?: TradeOffer }
+  | { type: "CANCEL_TRADE" } // proposer withdraws their own pending offer
   | { type: "PAY_JAIL_FINE" }
   | { type: "USE_JAIL_CARD" }
   | { type: "DECLARE_BANKRUPT" }
@@ -139,6 +142,10 @@ export interface TradeOffer {
   getCash: number;
   giveTiles: number[]; // positions
   getTiles: number[];
+  // Get Out of Jail Free cards changing hands (counts; the card's source deck
+  // travels with it). Optional so older payloads/tests keep working.
+  giveJailCards?: number;
+  getJailCards?: number;
 }
 
 // Helper type re-exported for convenience in the reducer.
