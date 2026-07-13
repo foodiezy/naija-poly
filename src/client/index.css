@@ -29,10 +29,17 @@
   --color-green: #43b581;
   --color-darkblue: #4c6ef5;
 
+  /* Semantic aliases referenced by components (kept mapping to the tuned
+     palette above so there's still one source of truth). */
+  --color-blue: var(--color-darkblue);
+  --color-property-2: var(--color-lightblue);
+
   /* Text Colors */
   --text-primary: #f9fafb;
   --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  /* Lightened from #6b7280 (~3.7:1 on --bg-main, below WCAG AA) to clear the
+     4.5:1 body-text minimum while staying visibly dimmer than --text-secondary. */
+  --text-muted: #8d96a5;
 
   /* ── Design tokens ─────────────────────────────────────────────────────
      One source of truth for spacing, radius, elevation, type, and surface
@@ -67,6 +74,8 @@
   --surface-3: rgba(255, 255, 255, 0.08);
   --border-subtle: rgba(255, 255, 255, 0.07);
   --border-strong: rgba(255, 255, 255, 0.14);
+  /* Generic component border alias (referenced by modals). */
+  --border-color: var(--border-strong);
 
   /* Type scale */
   --text-xs: 0.7rem;
@@ -140,6 +149,99 @@ h6 {
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   border-radius: 2px;
+}
+
+/* ── Modal system ──────────────────────────────────────────────────────
+   Full-screen dialog backdrop + centered, scrollable card. Modals portal to
+   <body> (see the components) so an ancestor's backdrop-filter/transform/
+   overflow can't trap position:fixed and clip the overlay to a sidebar. */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(6, 9, 18, 0.72);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  /* Scroll the backdrop itself on short screens so a tall card is reachable. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.modal-content {
+  position: relative;
+  width: 100%;
+  /* Fall back to the panel surface; a component may override background/border
+     inline. max-height + scroll keeps mandatory actions reachable on phones. */
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+/* Circular close button used in the top corner of modals. */
+.modal-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.modal-close-btn:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+/* ── Reconnect overlay ────────────────────────────────────────────────
+   Shown while the socket is dropped. Base is a full-screen centered column;
+   the landing-page usage overrides to position:relative/transparent inline. */
+.reconnect-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  text-align: center;
+  color: var(--text-primary);
+  background: rgba(6, 9, 18, 0.85);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.reconnect-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.14);
+  border-top-color: var(--color-naira);
+  border-radius: 50%;
+  animation: reconnectSpin 0.9s linear infinite;
+}
+
+@keyframes reconnectSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* App container */
@@ -487,6 +589,14 @@ h6 {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
+  /* Used as a <button>; buttons don't inherit these by default. */
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
+}
+
+.token-option:disabled {
+  cursor: not-allowed;
 }
 
 .token-option:hover {
@@ -607,6 +717,18 @@ h6 {
   padding: 0.1rem 0.3rem;
   border-radius: 4px;
   font-weight: bold;
+}
+
+/* HOST pill in the room-lobby player list */
+.lobby-host-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-hover) 100%);
+  color: #000;
 }
 
 /* Main Dashboard View */
@@ -942,6 +1064,28 @@ h6 {
   /* Touch-friendly checkbox row */
   .footer-toggle-item input[type="checkbox"] {
     transform: scale(1.2);
+  }
+}
+
+/* The italic tagline is the first thing to crowd the header controls in the
+   ~769–850px band (just above the 768px wrap point), clipping the right-side
+   buttons. Drop it early — it's decorative and the room badge carries context. */
+@media (max-width: 900px) {
+  .header-tagline {
+    display: none;
+  }
+}
+
+/* Touch devices: guarantee a comfortable 44px tap target on the small
+   interactive controls, independent of viewport width. */
+@media (pointer: coarse) {
+  .header-btn,
+  .button-secondary,
+  .board-end-turn-btn,
+  .room-badge,
+  .settings-row,
+  .sidebar-action-btn {
+    min-height: 44px;
   }
 }
 
@@ -1912,6 +2056,19 @@ h6 {
   text-align: right;
 }
 
+/* Visible keyboard focus for the interactive elements that are rendered as
+   divs/tiles (they're now role="button" + tabindex, so focus must be shown). */
+.tile:focus-visible,
+.holdings-card-clickable:focus-visible,
+.token-option:focus-visible,
+.settings-row:focus-visible,
+.modal-close-btn:focus-visible,
+.sidebar-action-btn:focus-visible {
+  outline: 2px solid var(--color-naira);
+  outline-offset: 2px;
+  z-index: 40;
+}
+
 /* High-contrast accessibility mode — brighten dim text and strengthen borders */
 html.high-contrast {
   --text-secondary: #e5e7eb;
@@ -2517,15 +2674,6 @@ html.high-contrast .glass-panel {
     font-size: 0.85rem;
   }
 
-  .game-over-overlay {
-    padding: 0.5rem;
-  }
-
-  .game-over-modal {
-    max-height: 92vh;
-    overflow-y: auto;
-  }
-
   .lobby-action-card,
   .lobby-card {
     padding: 1.5rem 1.25rem;
@@ -2816,91 +2964,9 @@ html.high-contrast .glass-panel {
 /* =============================================================================
    Game Over & Leaderboard Styles
    ============================================================================= */
-.game-over-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(8, 10, 16, 0.85);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  z-index: 999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.4s ease-out;
-}
-
-.game-over-modal {
-  width: 90%;
-  max-width: 680px;
-  background: rgba(17, 24, 39, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.5),
-    0 0 40px rgba(99, 102, 241, 0.15);
-  border-radius: 2px;
-  padding: 2.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.game-over-modal::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 4px;
-  background: linear-gradient(90deg, var(--color-gold), var(--color-naira), var(--color-gold));
-}
-
-.game-over-title {
-  font-family: var(--font-display);
-  font-size: 2.2rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--color-gold) 0%, #ffffff 50%, var(--color-gold) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin: 0;
-  letter-spacing: 2px;
-  text-shadow: 0 0 10px rgba(232, 182, 74, 0.3);
-}
-
-.winner-announcement {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.25rem;
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 1rem 2rem;
-  border-radius: 2px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.winner-emoji {
-  font-size: 2.5rem;
-  animation: bounce 1.5s infinite ease-in-out;
-}
-
-.winner-name {
-  color: var(--color-gold);
-  font-weight: 700;
-  font-size: 1.4rem;
-}
+/* NOTE: the old .game-over-overlay / .game-over-modal / .winner-* rules were
+   removed — GameOverModal renders through the shared .modal-overlay/.modal-content
+   system and the leaderboard classes below. */
 
 .leaderboard-container {
   width: 100%;
@@ -3058,14 +3124,6 @@ html.high-contrast .glass-panel {
 
 /* Responsive adjustments for game over table */
 @media (max-width: 600px) {
-  .game-over-modal {
-    padding: 1.5rem;
-  }
-
-  .game-over-title {
-    font-size: 1.6rem;
-  }
-
   .leaderboard-header,
   .leaderboard-row {
     grid-template-columns: 0.6fr 1.6fr 1.6fr;
@@ -3459,11 +3517,17 @@ html.high-contrast .glass-panel {
   align-items: center;
   padding: 1.5rem;
   perspective: 1400px;
+  /* Scroll on short/landscape phones so the mandatory Buy/Auction buttons
+     at the bottom of the card are always reachable (they used to clip). */
+  overflow-y: auto;
 }
 
 .buy-deed-card {
   width: 100%;
   max-width: 380px;
+  /* margin:auto centers the card when there's room but, unlike align-items,
+     keeps the top reachable when the card is taller than the viewport. */
+  margin: auto;
   background: #0b1020;
   border: 2px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;

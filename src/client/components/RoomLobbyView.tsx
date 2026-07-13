@@ -82,7 +82,7 @@ export default function RoomLobbyView({
               return (
                 <button
                   key={token.id}
-                  className={`token-btn ${isMine ? "selected" : ""} ${takenBy ? "taken" : ""}`}
+                  className={`token-option ${isMine ? "selected" : ""} ${takenBy ? "taken" : ""}`}
                   disabled={!!takenBy}
                   onClick={() => onSelectToken(token.id)}
                   title={takenBy ? `Taken by ${takenBy}` : token.name}
@@ -102,7 +102,7 @@ export default function RoomLobbyView({
               marginTop: "1rem",
               background: "rgba(0,0,0,0.2)",
               padding: "1rem",
-              borderRadius: "8px",
+              borderRadius: "var(--radius-md)",
             }}
           >
             <h3
@@ -300,7 +300,7 @@ export default function RoomLobbyView({
               padding: "1rem",
               textAlign: "center",
               background: "rgba(0,0,0,0.2)",
-              borderRadius: "8px",
+              borderRadius: "var(--radius-md)",
             }}
           >
             ⏳ Waiting for host to start the game...

@@ -649,7 +649,13 @@ export default function GameBoard({
               maxHeight: "110px",
             }}
           >
-            <div className="board-center-feed-logs" style={{ padding: "0.5rem 1rem" }}>
+            <div
+              className="board-center-feed-logs"
+              style={{ padding: "0.5rem 1rem" }}
+              role="log"
+              aria-live="polite"
+              aria-label="Game events (dice rolls, turns, rent and cards)"
+            >
               {engineState.log?.map((logLine: string, idx: number) => (
                 <div
                   key={idx}
@@ -738,6 +744,15 @@ export default function GameBoard({
               ...getColorBarPadding(tile.pos, hasColorBar, isCorner),
             }}
             onClick={() => onTileClick?.(tile.pos)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onTileClick?.(tile.pos);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={getTileTitle()}
             title={getTileTitle()}
           >
             {/* Real-place photo behind the tile content (purchasable tiles) */}

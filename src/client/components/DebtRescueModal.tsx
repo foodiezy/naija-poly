@@ -1,8 +1,10 @@
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { GameState, Player, Action } from "../../engine/types";
 import { BOARD } from "../../data/board";
 import { canSellHouseOn, canMortgageAt } from "../../engine/queries";
 import { IconBankrupt, IconTrade, IconWarning } from "./icons";
+import { useDialog } from "../hooks/useDialog";
 
 interface Props {
   engineState: GameState;
@@ -45,14 +47,19 @@ export default function DebtRescueModal({
   // Total shortfall shown at the top: overdrawn cash + any ledgered rent debt.
   const totalOwed = Math.max(0, -me.cash) + ledgerDebt;
 
-  return (
+  const dialogRef = useDialog<HTMLDivElement>(onClose);
+
+  return createPortal(
     <div className="modal-overlay" style={{ zIndex: 100 }}>
       <motion.div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Debt rescue — raise cash or declare bankruptcy"
         className="modal-content"
         style={{
           maxWidth: "500px",
           padding: "1.5rem",
-          background: "var(--surface-2)",
           border: "1px solid var(--color-danger)",
         }}
         initial={{ opacity: 0, scale: 0.95 }}
@@ -219,6 +226,7 @@ export default function DebtRescueModal({
           </button>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body,
   );
 }

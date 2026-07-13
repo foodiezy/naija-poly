@@ -263,7 +263,7 @@ export default function Lobby({
           className="button-secondary"
           style={{
             background: "transparent",
-            border: "1px solid rgba(255,255,255,0.12)",
+            border: "1px solid var(--border-strong)",
             padding: "0.5rem 1.5rem",
             fontSize: "0.9rem",
           }}
@@ -321,7 +321,7 @@ export default function Lobby({
         >
           <div
             className="glass-panel"
-            style={{ padding: "1rem 1.5rem", border: "1px solid rgba(255,255,255,0.06)" }}
+            style={{ padding: "1rem 1.5rem", border: "1px solid var(--border-subtle)" }}
           >
             <div
               style={{

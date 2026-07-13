@@ -237,7 +237,7 @@ export default function TileInspector({
                     style={{
                       fontSize: "0.7rem",
                       padding: "1px 6px",
-                      borderRadius: "3px",
+                      borderRadius: "var(--radius-md)",
                       background: gt.pos === tilePos ? "rgba(255,255,255,0.1)" : "transparent",
                       border: `1px solid ${isOwned ? groupColor : "rgba(255,255,255,0.1)"}`,
                       color: isOwned ? "#fff" : "var(--text-muted)",
@@ -261,9 +261,9 @@ export default function TileInspector({
                   alignItems: "center",
                   gap: "0.5rem",
                   padding: "0.5rem",
-                  background: "rgba(255,255,255,0.03)",
-                  borderRadius: "6px",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "var(--surface-1)",
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--border-subtle)",
                 }}
               >
                 <span style={{ fontSize: "1.2rem" }}>{ownerToken}</span>
@@ -480,9 +480,9 @@ export default function TileInspector({
             alignItems: "center",
             gap: "0.5rem",
             padding: "0.5rem",
-            background: "rgba(255,255,255,0.03)",
-            borderRadius: "6px",
-            border: "1px solid rgba(255,255,255,0.06)",
+            background: "var(--surface-1)",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid var(--border-subtle)",
           }}
         >
           <span style={{ fontSize: "1.2rem" }}>{ownerToken}</span>
@@ -563,9 +563,9 @@ export default function TileInspector({
                     alignItems: "center",
                     gap: "0.3rem",
                     padding: "2px 8px",
-                    background: "rgba(255,255,255,0.04)",
-                    borderRadius: "12px",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "var(--surface-1)",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border-subtle)",
                   }}
                 >
                   {tokenEmoji(lobbyPlayers.get(p.id)?.tokenId)} {p.name}

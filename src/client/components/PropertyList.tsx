@@ -102,6 +102,15 @@ export default function PropertyList({ engineState, mySessionId, onOpenTile }: P
                 key={tile.pos}
                 className={`holdings-card holdings-card-clickable${isMortgaged ? " mortgaged" : ""}${ownsFullGroup ? " full-set" : ""}`}
                 onClick={() => onOpenTile?.(tile.pos)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onOpenTile?.(tile.pos);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`${tile.name} — open card to upgrade, sell or mortgage`}
                 title="Open card to upgrade, sell or mortgage"
               >
                 <div className="holdings-band" style={{ background: colorVar(tile) }} />
