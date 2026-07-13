@@ -6,6 +6,7 @@ import { TradeOffer, Player, Action, TileState } from "../../engine/types";
 import { IconTrade } from "./icons";
 import { tokenEmoji } from "../../data/tokens";
 import { tileValue } from "../lib/holdings";
+import { mortgageTransferFee } from "../../engine/queries";
 import { RoomState } from "../../shared/room";
 
 interface Props {
@@ -53,12 +54,20 @@ export default function TradeOverlay({
   const incomingTilesPositions = activeTrade.giveTiles;
   const outgoingCash = activeTrade.getCash;
   const outgoingTilesPositions = activeTrade.getTiles;
+  const incomingJailCards = activeTrade.giveJailCards ?? 0;
+  const outgoingJailCards = activeTrade.getJailCards ?? 0;
+
+  // Receiving mortgaged property costs 10% interest to the bank on accept.
+  const interestDue = mortgageTransferFee({ tiles }, incomingTilesPositions);
 
   const incomingValue =
     incomingCash + incomingTilesPositions.reduce((s, p) => s + tileValue(p, tiles), 0);
   const outgoingValue =
     outgoingCash + outgoingTilesPositions.reduce((s, p) => s + tileValue(p, tiles), 0);
-  const canAfford = (me?.cash ?? 0) >= outgoingCash;
+  // Mirrors the engine's accept-time checks: cover the cash you send, and the
+  // interest with your post-swap balance.
+  const myCash = me?.cash ?? 0;
+  const canAfford = myCash >= outgoingCash && myCash - outgoingCash + incomingCash >= interestDue;
 
   const renderTile = (pos: number) => {
     const t = BOARD[pos];
@@ -130,6 +139,12 @@ export default function TradeOverlay({
                   incomingTilesPositions.map(renderTile)
                 )}
               </div>
+              {incomingJailCards > 0 && (
+                <div className="trade-cash-display">
+                  <span>Jail cards</span>
+                  <strong>🎟️ ×{incomingJailCards}</strong>
+                </div>
+              )}
             </div>
 
             <div className="trade-column">
@@ -153,8 +168,24 @@ export default function TradeOverlay({
                   outgoingTilesPositions.map(renderTile)
                 )}
               </div>
+              {outgoingJailCards > 0 && (
+                <div className="trade-cash-display">
+                  <span>Jail cards</span>
+                  <strong>🎟️ ×{outgoingJailCards}</strong>
+                </div>
+              )}
             </div>
           </div>
+
+          {interestDue > 0 && (
+            <div
+              className="trade-cant-afford"
+              style={{ background: "rgba(232,182,74,0.08)", color: "var(--color-gold)" }}
+            >
+              Accepting costs an extra ₦{interestDue.toLocaleString()} bank interest (10%) on the
+              mortgaged properties you receive.
+            </div>
+          )}
 
           <div className="trade-balance-row">
             <div className="trade-balance-side">
@@ -169,8 +200,9 @@ export default function TradeOverlay({
 
           {!canAfford && (
             <div className="trade-cant-afford">
-              You can't cover the ₦{outgoingCash.toLocaleString()} cash — current balance ₦
-              {(me?.cash ?? 0).toLocaleString()}.
+              You can't cover the ₦{outgoingCash.toLocaleString()} cash
+              {interestDue > 0 ? ` plus ₦${interestDue.toLocaleString()} interest` : ""} — current
+              balance ₦{myCash.toLocaleString()}.
             </div>
           )}
         </div>

@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BOARD, Tile, PropertyTile } from "../../data/board";
-import { getDevelopmentName } from "../../engine/engine";
+import { getDevelopmentName, getRent } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
@@ -842,8 +842,10 @@ export default function GameBoard({
                 {tile.type === "property" && (
                   <div className="tile-tooltip-row">
                     Rent: ₦
-                    {((tileState?.houses ?? 0) > 0
-                      ? (tile as PropertyTile).rent[tileState.houses]
+                    {/* When owned, use the engine's rent (doubles base rent for a
+                        full unimproved set); otherwise preview the base rate. */}
+                    {(tileState?.ownerId
+                      ? getRent(engineState, tile.pos, 7)
                       : (tile as PropertyTile).rent[0]
                     ).toLocaleString()}
                     {(tileState?.houses ?? 0) > 0 && ` · ${getDevelopmentName(tileState.houses)}`}

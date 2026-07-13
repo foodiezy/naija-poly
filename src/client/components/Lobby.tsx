@@ -84,6 +84,16 @@ export default function Lobby({
     }
   };
 
+  // Enter in the name field: when the player arrived via an invite link, the
+  // natural action is to JOIN the invited room, not create a brand-new one.
+  const handleNameSubmit = (e: React.FormEvent) => {
+    if (invited && roomId.trim()) {
+      handleJoin(e);
+    } else {
+      handleCreate(e);
+    }
+  };
+
   return (
     <div className="lobby-landing-page">
       {/* Hero Section */}
@@ -145,7 +155,7 @@ export default function Lobby({
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 220, damping: 22, delay: 0.2 }}
       >
-        <form onSubmit={handleCreate} className="form-group">
+        <form onSubmit={handleNameSubmit} className="form-group">
           <label htmlFor="name-input">Your Name</label>
           <input
             id="name-input"

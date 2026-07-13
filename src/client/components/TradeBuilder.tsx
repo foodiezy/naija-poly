@@ -16,6 +16,9 @@ interface Props {
   onClose: () => void;
   liveState?: RoomState | undefined;
   initialOffer?: TradeOffer;
+  // When true, the builder is composing a counter to an incoming offer: Send
+  // routes through RESPOND_TRADE{counter} and the partner is locked.
+  counterMode?: boolean;
 }
 
 function groupColorVar(tile: Tile): string {
@@ -40,6 +43,7 @@ export default function TradeBuilder({
   onClose,
   liveState,
   initialOffer,
+  counterMode,
 }: Props) {
   const { players, tiles } = engineState;
   const me = players.find((p) => p.id === mySessionId);
@@ -53,6 +57,8 @@ export default function TradeBuilder({
   const [tradeGetTiles, setTradeGetTiles] = useState<number[]>(
     initialOffer ? initialOffer.getTiles : [],
   );
+  const [tradeGiveJail, setTradeGiveJail] = useState(initialOffer?.giveJailCards ?? 0);
+  const [tradeGetJail, setTradeGetJail] = useState(initialOffer?.getJailCards ?? 0);
 
   useEffect(() => {
     if (
@@ -61,12 +67,18 @@ export default function TradeBuilder({
       tradeGetTiles.length === initialOffer.getTiles.length
     )
       return;
+    // Switching partner invalidates anything requested FROM the old partner.
     setTradeGetTiles([]);
+    setTradeGetJail(0);
   }, [tradeTargetId]);
 
   const getToken = (id: string) => tokenEmoji(liveState?.lobbyPlayers?.get(id)?.tokenId);
 
-  const tradeablePartners = players.filter((p) => p.id !== mySessionId && !p.bankrupt);
+  // In counter mode the partner is fixed (the original proposer); otherwise
+  // any solvent opponent is fair game.
+  const tradeablePartners = counterMode
+    ? players.filter((p) => p.id === tradeTargetId)
+    : players.filter((p) => p.id !== mySessionId && !p.bankrupt);
 
   const myTradeableTiles = useMemo(
     () =>
@@ -106,8 +118,16 @@ export default function TradeBuilder({
       getCash: Number(tradeGetCash) || 0,
       giveTiles: tradeGiveTiles,
       getTiles: tradeGetTiles,
+      giveJailCards: tradeGiveJail,
+      getJailCards: tradeGetJail,
     };
-    onSendAction({ type: "PROPOSE_TRADE", trade });
+    // A counter answers the pending offer in one engine action (decline +
+    // re-propose reversed); a fresh deal is a plain proposal.
+    if (counterMode) {
+      onSendAction({ type: "RESPOND_TRADE", accept: false, counter: trade });
+    } else {
+      onSendAction({ type: "PROPOSE_TRADE", trade });
+    }
     onClose();
   };
 
@@ -115,11 +135,16 @@ export default function TradeBuilder({
   const giveValue = tradeGiveCash + tradeGiveTiles.reduce((s, p) => s + tileValue(p, tiles), 0);
   const getValue = tradeGetCash + tradeGetTiles.reduce((s, p) => s + tileValue(p, tiles), 0);
 
+  const myJailCards = me?.jailCardSources?.length ?? 0;
+  const targetJailCards = target?.jailCardSources?.length ?? 0;
+
   const isEmpty =
     tradeGiveTiles.length === 0 &&
     tradeGetTiles.length === 0 &&
     tradeGiveCash === 0 &&
-    tradeGetCash === 0;
+    tradeGetCash === 0 &&
+    tradeGiveJail === 0 &&
+    tradeGetJail === 0;
 
   // Portal to <body>: the sidebar ancestor has backdrop-filter + overflow:hidden,
   // which creates a new containing block for position:fixed descendants and
@@ -144,7 +169,7 @@ export default function TradeBuilder({
             <span className="trade-card-title-icon">
               <IconTrade size={20} />
             </span>
-            <span>Propose a Deal</span>
+            <span>{counterMode ? "Counter Offer" : "Propose a Deal"}</span>
           </div>
           <button className="trade-card-close" onClick={onClose} aria-label="Close">
             ×
@@ -260,6 +285,33 @@ export default function TradeBuilder({
                       })
                     )}
                   </div>
+
+                  {myJailCards > 0 && (
+                    <div className="trade-cash-row" style={{ marginTop: "0.5rem" }}>
+                      <label className="trade-cash-label">🎟️ Jail cards</label>
+                      <div className="trade-bump-row" style={{ alignItems: "center" }}>
+                        <button
+                          type="button"
+                          className="trade-bump"
+                          onClick={() => setTradeGiveJail((n) => Math.max(0, n - 1))}
+                          disabled={tradeGiveJail <= 0}
+                        >
+                          −
+                        </button>
+                        <span style={{ fontWeight: 700 }}>
+                          {tradeGiveJail} / {myJailCards}
+                        </span>
+                        <button
+                          type="button"
+                          className="trade-bump"
+                          onClick={() => setTradeGiveJail((n) => Math.min(myJailCards, n + 1))}
+                          disabled={tradeGiveJail >= myJailCards}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* RIGHT — what they give */}
@@ -341,6 +393,33 @@ export default function TradeBuilder({
                       })
                     )}
                   </div>
+
+                  {targetJailCards > 0 && (
+                    <div className="trade-cash-row" style={{ marginTop: "0.5rem" }}>
+                      <label className="trade-cash-label">🎟️ Jail cards</label>
+                      <div className="trade-bump-row" style={{ alignItems: "center" }}>
+                        <button
+                          type="button"
+                          className="trade-bump"
+                          onClick={() => setTradeGetJail((n) => Math.max(0, n - 1))}
+                          disabled={tradeGetJail <= 0}
+                        >
+                          −
+                        </button>
+                        <span style={{ fontWeight: 700 }}>
+                          {tradeGetJail} / {targetJailCards}
+                        </span>
+                        <button
+                          type="button"
+                          className="trade-bump"
+                          onClick={() => setTradeGetJail((n) => Math.min(targetJailCards, n + 1))}
+                          disabled={tradeGetJail >= targetJailCards}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -368,7 +447,7 @@ export default function TradeBuilder({
             disabled={!tradeTargetId || isEmpty}
             onClick={handlePropose}
           >
-            <IconTrade size={16} /> Send Offer
+            <IconTrade size={16} /> {counterMode ? "Send Counter" : "Send Offer"}
           </button>
         </div>
       </motion.div>

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { BOARD } from "../../data/board";
 import { GameState, Player, Action, TradeOffer } from "../../engine/types";
@@ -12,6 +13,10 @@ interface Props {
   activeTrade: TradeOffer | null;
   onSendAction: (action: Action) => void;
   onShowTradeBuilder: () => void;
+  // True while this player's piece is still animating to its landing tile —
+  // Buy/Auction must wait until the reveal so a mis-click can't buy a tile the
+  // player hasn't seen.
+  tokenWalking?: boolean;
 }
 
 export default function ActionButtons({
@@ -23,10 +28,24 @@ export default function ActionButtons({
   activeTrade,
   onSendAction,
   onShowTradeBuilder,
+  tokenWalking,
 }: Props) {
   const { phase, players } = engineState;
   const currentPlayer = players[engineState.currentPlayerIndex];
   const isBankrupt = me?.bankrupt;
+
+  // In-flight guard: a turn action changes the phase, so a second click before
+  // the server responds would land in the wrong phase and just toast an error.
+  // Latch on send; release whenever the phase or active player changes.
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    setBusy(false);
+  }, [phase, engineState.currentPlayerIndex]);
+  const sendOnce = (action: Action) => {
+    if (busy) return;
+    setBusy(true);
+    onSendAction(action);
+  };
 
   if (isBankrupt) {
     return (
@@ -67,7 +86,8 @@ export default function ActionButtons({
         <>
           <button
             className="sidebar-action-btn sidebar-action-btn-primary"
-            onClick={() => onSendAction({ type: "ROLL" })}
+            onClick={() => sendOnce({ type: "ROLL" })}
+            disabled={busy}
             style={{
               display: "flex",
               alignItems: "center",
@@ -80,8 +100,8 @@ export default function ActionButtons({
           </button>
           <button
             className="sidebar-action-btn sidebar-action-btn-outline"
-            onClick={() => onSendAction({ type: "PAY_JAIL_FINE" })}
-            disabled={(me?.cash || 0) < 50000}
+            onClick={() => sendOnce({ type: "PAY_JAIL_FINE" })}
+            disabled={busy || (me?.cash || 0) < 50000}
             title="Pay ₦50,000"
             style={{ borderRadius: "2px" }}
           >
@@ -89,8 +109,8 @@ export default function ActionButtons({
           </button>
           <button
             className="sidebar-action-btn sidebar-action-btn-outline"
-            onClick={() => onSendAction({ type: "USE_JAIL_CARD" })}
-            disabled={(me?.jailCardSources?.length || 0) === 0}
+            onClick={() => sendOnce({ type: "USE_JAIL_CARD" })}
+            disabled={busy || (me?.jailCardSources?.length || 0) === 0}
             title={`Jail cards: ${me?.jailCardSources?.length || 0}`}
             style={{ borderRadius: "2px" }}
           >
@@ -103,7 +123,8 @@ export default function ActionButtons({
       <>
         <motion.button
           className="sidebar-action-btn sidebar-action-btn-primary"
-          onClick={() => onSendAction({ type: "ROLL" })}
+          onClick={() => sendOnce({ type: "ROLL" })}
+          disabled={busy}
           whileTap={{ scale: 0.94 }}
           style={{
             display: "flex",
@@ -129,8 +150,9 @@ export default function ActionButtons({
       <>
         <button
           className="sidebar-action-btn sidebar-action-btn-primary"
-          disabled={(me?.cash || 0) < price}
-          onClick={() => onSendAction({ type: "BUY" })}
+          disabled={busy || tokenWalking || (me?.cash || 0) < price}
+          onClick={() => sendOnce({ type: "BUY" })}
+          title={tokenWalking ? "Wait for your piece to land…" : undefined}
           style={{
             borderRadius: "2px",
             background: "linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%)",
@@ -140,7 +162,9 @@ export default function ActionButtons({
         </button>
         <button
           className="sidebar-action-btn sidebar-action-btn-outline"
-          onClick={() => onSendAction({ type: "DECLINE_BUY" })}
+          onClick={() => sendOnce({ type: "DECLINE_BUY" })}
+          disabled={busy || tokenWalking}
+          title={tokenWalking ? "Wait for your piece to land…" : undefined}
           style={{ borderRadius: "2px" }}
         >
           Auction

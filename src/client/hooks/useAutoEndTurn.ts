@@ -40,13 +40,17 @@ export function useAutoEndTurn(
       const me = engineState.players?.find((p: Player) => p.id === mySessionId);
       const isMyTurn = engineState.players?.[engineState.currentPlayerIndex]?.id === mySessionId;
       const hasPending = hasPendingPropertyAction(engineState, mySessionId);
+      // Ledger debts (rent owed while short on cash) need the player's own
+      // decision — mortgage/sell/bankrupt — so auto-end must stand down.
+      const hasDebts = engineState.debtLedger?.some((d) => d.debtorId === mySessionId) ?? false;
       if (
         isMyTurn &&
         me &&
         me.cash >= 0 &&
         !me.bankrupt &&
         !engineState.activeTrade &&
-        !hasPending
+        !hasPending &&
+        !hasDebts
       ) {
         autoEndTimerRef.current = setTimeout(() => {
           room.send("ACTION", { type: "END_TURN" });
