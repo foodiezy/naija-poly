@@ -521,12 +521,13 @@ describe("Debt Ledger", () => {
   // END_TURN blocked with unsettled debts
   // -------------------------------------------------------------------------
   describe("END_TURN blocked with unsettled debts", () => {
-    it("throws if current player has unsettled debts in the ledger", () => {
+    it("throws if the current player CANNOT cover their ledger debt", () => {
       const state = createGame(["p1", "p2"]);
       state.phase = "awaiting-end-turn";
       state.currentPlayerIndex = 0;
+      state.players[0].cash = 3_000; // less than the debt
 
-      // p1 has an outstanding debt
+      // p1 has an outstanding debt they can't pay and nothing left to liquidate
       state.debtLedger = [
         {
           debtorId: "p1",
@@ -535,7 +536,23 @@ describe("Debt Ledger", () => {
         },
       ];
 
-      expect(() => applyAction(state, "p1", { type: "END_TURN" })).toThrow();
+      expect(() => applyAction(state, "p1", { type: "END_TURN" })).toThrow(/unsettled debts/i);
+    });
+
+    it("auto-settles an AFFORDABLE ledger debt at END_TURN instead of blocking", () => {
+      const state = createGame(["p1", "p2"]);
+      state.phase = "awaiting-end-turn";
+      state.currentPlayerIndex = 0;
+      const p2Before = state.players[1].cash;
+
+      // p1 is solvent and can easily cover the debt.
+      state.debtLedger = [{ debtorId: "p1", creditorId: "p2", amount: 10_000 }];
+
+      const next = applyAction(state, "p1", { type: "END_TURN" });
+      expect(next.debtLedger).toHaveLength(0);
+      expect(next.players[0].cash).toBe(STARTING_CASH - 10_000);
+      expect(next.players[1].cash).toBe(p2Before + 10_000);
+      expect(next.currentPlayerIndex).toBe(1); // turn advanced normally
     });
   });
 

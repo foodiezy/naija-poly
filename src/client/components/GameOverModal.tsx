@@ -11,6 +11,9 @@ interface GameOverModalProps {
   roomState: RoomState | null;
   mySessionId: string | null;
   onResetGame: () => void;
+  // Dismiss the results overlay (e.g. to inspect the final board). Available to
+  // everyone, so a non-host isn't trapped behind the modal when the host leaves.
+  onClose?: () => void;
 }
 
 export default function GameOverModal({
@@ -18,6 +21,7 @@ export default function GameOverModal({
   roomState,
   mySessionId,
   onResetGame,
+  onClose,
 }: GameOverModalProps) {
   const calculatePlayerNetWorth = (p: Player, tiles: Record<number, TileState>) => {
     if (p.bankrupt) return 0;
@@ -123,6 +127,16 @@ export default function GameOverModal({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
       >
+        {onClose && (
+          <button
+            className="trade-card-close"
+            onClick={onClose}
+            aria-label="Close results"
+            style={{ position: "absolute", top: "1rem", right: "1rem" }}
+          >
+            ×
+          </button>
+        )}
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
           <h2
             style={{

@@ -88,9 +88,18 @@ export class GameRoom extends Room<GameRoomState> {
     client.send("ERROR", { message });
   }
 
+  // Last line of defence against a malformed payload slipping past the
+  // per-handler guards: with this hook defined, Colyseus wraps every message
+  // handler / clock callback in try/catch, so one bad client message can no
+  // longer take down the whole Node process (every room on the server).
+  onUncaughtException(err: Error, methodName: string) {
+    console.error(`Uncaught exception in room ${this.roomId} (${methodName}):`, err);
+  }
+
   // Persist the authoritative state and publish a redacted copy to clients.
-  // The redacted copy blanks the deck order/pointers (secret information) while
-  // keeping everything the UI actually renders. Also flips room status on
+  // The redacted copy blanks the deck order/pointers and hides players'
+  // secret objectives (each player receives their own via a targeted message;
+  // all are revealed once the game is over). Also flips room status on
   // game-over so both timeout and action paths stay consistent.
   private persist(state: GameState) {
     this.fullState = state;
@@ -100,11 +109,41 @@ export class GameRoom extends Room<GameRoomState> {
       hustleOrder: [],
       chancePtr: 0,
       hustlePtr: 0,
+      players:
+        state.phase === "game-over"
+          ? state.players
+          : state.players.map((p) => ({ ...p, secretObjective: undefined })),
     };
     this.state.gameStateJson = JSON.stringify(redacted);
     if (state.phase === "game-over") {
       this.state.status = "finished";
     }
+  }
+
+  // Privately tell a player (or everyone, if no client given) their own secret
+  // objective — it is stripped from the broadcast state so devtools can't
+  // reveal opponents' objectives.
+  private sendSecretObjective(target?: Client) {
+    const state = this.fullState;
+    if (!state || !state.settings.secretObjectives) return;
+    const recipients = target ? [target] : this.clients;
+    for (const client of recipients) {
+      const p = state.players.find((pl) => pl.id === client.sessionId);
+      if (p?.secretObjective) {
+        client.send("SECRET_OBJECTIVE", {
+          objective: p.secretObjective,
+          completed: !!p.objectiveCompleted,
+        });
+      }
+    }
+  }
+
+  // Host must always be a connected human — never a bot id or a dead session.
+  // Without this, a departing host leaves the room unstartable/unresettable.
+  private migrateHostIfNeeded(leftId: string) {
+    if (this.state.hostId !== leftId) return;
+    const next = this.clients.find((c) => c.sessionId !== leftId);
+    this.state.hostId = next ? next.sessionId : "";
   }
 
   // Single path for mutating game state: apply the action through the pure
@@ -143,7 +182,11 @@ export class GameRoom extends Room<GameRoomState> {
     this.turnTimer = this.clock.setTimeout(() => this.onTurnTimeout(), secs * 1000);
   }
 
-  // The active human ran out of time: make a safe, neutral move so play continues.
+  // The active human ran out of time: make a safe, neutral move so play
+  // continues. Attempts are a ladder — END_TURN first (the engine auto-settles
+  // any debt the player can afford), falling back to DECLARE_BANKRUPT for a
+  // debtor who genuinely can't pay. If everything fails, re-arm the timer so
+  // the game can never silently stall on an AFK player.
   private onTurnTimeout() {
     this.turnTimer = undefined;
     if (this.state.status !== "in_progress") return;
@@ -153,22 +196,28 @@ export class GameRoom extends Room<GameRoomState> {
     const current = s.players[s.currentPlayerIndex];
     if (!current || current.bankrupt || isAIPlayer(current.id)) return;
 
-    let action: Action | null = null;
-    if (s.phase === "awaiting-roll") action = { type: "ROLL" };
-    else if (s.phase === "awaiting-buy-decision") action = { type: "DECLINE_BUY" };
+    let attempts: Action[] = [];
+    if (s.phase === "awaiting-roll") attempts = [{ type: "ROLL" }];
+    else if (s.phase === "awaiting-buy-decision") attempts = [{ type: "DECLINE_BUY" }];
     else if (s.phase === "awaiting-end-turn")
-      action = current.cash < 0 ? { type: "DECLARE_BANKRUPT" } : { type: "END_TURN" };
-    if (!action) return;
+      attempts = [{ type: "END_TURN" }, { type: "DECLARE_BANKRUPT" }];
+    if (attempts.length === 0) return;
 
-    try {
-      this.runEngineAction(current.id, action);
-      this.broadcast("ERROR", {
-        message: `${current.name} ran out of time — auto-played their turn.`,
-      });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`Turn timeout auto-move failed: ${msg}`);
+    for (const action of attempts) {
+      try {
+        this.runEngineAction(current.id, action);
+        this.broadcast("ERROR", {
+          message: `${current.name} ran out of time — auto-played their turn.`,
+        });
+        return;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`Turn timeout auto-move (${action.type}) failed: ${msg}`);
+      }
     }
+    // Nothing worked (unexpected): give the player another window rather than
+    // leaving the game with no timer at all.
+    this.armTurnTimer(s);
   }
 
   private clearAITimer() {
@@ -286,7 +335,12 @@ export class GameRoom extends Room<GameRoomState> {
     this.onMessage("SELECT_TOKEN", (client, message: { tokenId: string }) => {
       // Never throw out of a message handler: an uncaught throw escapes the ws
       // receiver and crashes the whole server process. Report back to the
-      // offending client and bail instead.
+      // offending client and bail instead. Payloads are attacker-controlled:
+      // guard the shape before dereferencing anything.
+      if (!message || typeof message.tokenId !== "string") {
+        this.sendError(client, "Malformed message");
+        return;
+      }
       if (this.state.status !== "lobby") {
         this.sendError(client, "Cannot select token once game starts");
         return;
@@ -331,6 +385,10 @@ export class GameRoom extends Room<GameRoomState> {
           turnTimeoutSecs?: number;
         },
       ) => {
+        if (!message || typeof message !== "object") {
+          this.sendError(client, "Malformed message");
+          return;
+        }
         if (this.state.status !== "lobby") {
           this.sendError(client, "Cannot change settings once game starts");
           return;
@@ -449,6 +507,9 @@ export class GameRoom extends Room<GameRoomState> {
 
       this.persist(initialEngineState);
       this.state.status = "in_progress";
+      // Each player learns their own secret objective privately; the broadcast
+      // state carries none of them.
+      this.sendSecretObjective();
       // Seal the room so no stranger can join a game already in progress
       // (matchmaking would otherwise route "quick play" joiners into it).
       this.lock();
@@ -463,6 +524,12 @@ export class GameRoom extends Room<GameRoomState> {
     this.onMessage("ACTION", (client, action: Action) => {
       if (!this.allowMessage(client)) {
         this.sendError(client, "Slow down — too many actions too fast.");
+        return;
+      }
+      // Guard the shape before any dereference: `room.send("ACTION")` with no
+      // payload must not be able to throw out of this handler.
+      if (!action || typeof action !== "object" || typeof action.type !== "string") {
+        this.sendError(client, "Malformed action");
         return;
       }
       if (this.state.status !== "in_progress") {
@@ -485,6 +552,14 @@ export class GameRoom extends Room<GameRoomState> {
       }
     });
 
+    // A reconnecting client re-registers its message handlers from scratch, so
+    // it asks for its secret objective again rather than relying on a race-free
+    // push right after the reconnection resolves.
+    this.onMessage("REQUEST_OBJECTIVE", (client) => {
+      if (!this.allowMessage(client)) return;
+      this.sendSecretObjective(client);
+    });
+
     // Message handler to reset game back to lobby
     this.onMessage("RESET_GAME", (client, _message) => {
       if (client.sessionId !== this.state.hostId) {
@@ -498,6 +573,17 @@ export class GameRoom extends Room<GameRoomState> {
       this.state.status = "lobby";
       this.state.gameStateJson = "";
       this.fullState = null;
+      this.lastAITradeProposal = undefined;
+      // Drop ghosts: humans who left mid-game stay in lobbyPlayers while the
+      // game runs (their engine player is forfeited), but a fresh lobby must
+      // only seat connected clients and bots — otherwise the next START_GAME
+      // deals a hand to someone who is never coming back.
+      const connected = new Set(this.clients.map((c) => c.sessionId));
+      Array.from(this.state.lobbyPlayers.keys()).forEach((id) => {
+        if (!isAIPlayer(id) && !connected.has(id)) {
+          this.state.lobbyPlayers.delete(id);
+        }
+      });
       // Reopen the room so players can join the fresh lobby again.
       this.unlock();
       console.log(`Game reset back to lobby by host ${client.sessionId}`);
@@ -511,7 +597,11 @@ export class GameRoom extends Room<GameRoomState> {
         this.sendError(client, "Slow down — you're sending messages too fast.");
         return;
       }
-      const text = (message.text || "").trim().substring(0, 500);
+      // Payload shape guard: `text` may be missing or a non-string; a bad
+      // `toId` type must not reach the MapSchema lookup.
+      if (!message || typeof message.text !== "string") return;
+      const toId = typeof message.toId === "string" ? message.toId : null;
+      const text = message.text.trim().substring(0, 500);
       if (!text) return;
 
       const sender = this.state.lobbyPlayers.get(client.sessionId);
@@ -524,14 +614,14 @@ export class GameRoom extends Room<GameRoomState> {
         tokenId,
         text,
         timestamp: Date.now(),
-        toId: message.toId ?? null,
+        toId,
       };
 
-      if (message.toId) {
+      if (toId) {
         // Private: send to the recipient (if connected) and echo to the sender.
-        const recipient = this.state.lobbyPlayers.get(message.toId);
+        const recipient = this.state.lobbyPlayers.get(toId);
         payload.toName = recipient ? recipient.name : "Player";
-        const recipientClient = this.clients.find((c) => c.sessionId === message.toId);
+        const recipientClient = this.clients.find((c) => c.sessionId === toId);
         if (recipientClient && recipientClient !== client) {
           recipientClient.send("CHAT_MESSAGE", payload);
         }
@@ -551,7 +641,14 @@ export class GameRoom extends Room<GameRoomState> {
       throw new Error("This game don start already — ask your friend to create a new room.");
     }
 
-    const rawName = (options.name || "").trim().substring(0, 20);
+    // maxClients only counts sockets — AI players occupy lobby seats without
+    // one, so enforce the roster cap here too or a full-of-bots room would
+    // seat more players than there are distinct tokens.
+    if (this.state.lobbyPlayers.size >= MAX_PLAYERS) {
+      throw new Error("Room is full.");
+    }
+
+    const rawName = (typeof options?.name === "string" ? options.name : "").trim().substring(0, 20);
     const name = rawName || `Player_${client.sessionId.substring(0, 4)}`;
 
     const player = new LobbyPlayer();
@@ -579,11 +676,8 @@ export class GameRoom extends Room<GameRoomState> {
       // If still in lobby, remove immediately
       this.state.lobbyPlayers.delete(client.sessionId);
       this.rateBuckets.delete(client.sessionId);
-      if (this.state.hostId === client.sessionId) {
-        // Assign new host if any left
-        const remainingKeys = Array.from(this.state.lobbyPlayers.keys()) as string[];
-        this.state.hostId = remainingKeys.length > 0 ? remainingKeys[0] : "";
-      }
+      // Never hand the host seat to a bot — the room would be unstartable.
+      this.migrateHostIfNeeded(client.sessionId);
     } else {
       // If game is in progress, allow 60 seconds to reconnect
       try {
@@ -598,6 +692,11 @@ export class GameRoom extends Room<GameRoomState> {
         // stall waiting on someone who is gone.
         console.log(`Client ${client.sessionId} permanently disconnected.`);
         this.rateBuckets.delete(client.sessionId);
+        // A permanent leaver must not linger as a ghost: drop their lobby
+        // seat (so rematches don't deal them in) and migrate the host role to
+        // a connected human (so the room stays resettable).
+        this.state.lobbyPlayers.delete(client.sessionId);
+        this.migrateHostIfNeeded(client.sessionId);
         if (this.state.status === "in_progress") {
           try {
             this.runEngineAction(client.sessionId, { type: "FORFEIT" });

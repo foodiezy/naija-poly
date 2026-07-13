@@ -34,7 +34,6 @@ export default function App() {
     roomState,
     engineState,
     chatMessages,
-    errorMsg,
     reconnecting,
     mySessionId,
     createRoom,
@@ -56,6 +55,9 @@ export default function App() {
   const [autoEndTurn, setAutoEndTurn] = useState(true);
   const [gameResultRecorded, setGameResultRecorded] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  // True while the player is composing a trade or working the debt-rescue
+  // modal — auto end turn must never yank the turn away mid-composition.
+  const [composerOpen, setComposerOpen] = useState(false);
 
   // Room code from an invite link (?room=CODE), read once on load so a friend
   // who taps a shared link lands on the lobby with the join field prefilled.
@@ -98,13 +100,24 @@ export default function App() {
   // Initialize sound effects
   useSoundEffects(engineState, mySessionId);
 
-  // Initialize auto end turn
-  useAutoEndTurn(engineState, room, mySessionId, autoEndTurn);
+  // Initialize auto end turn — suspended while a trade/debt composer or the
+  // tile inspector is open, so the 2.5s timer can't discard what the player
+  // is in the middle of doing.
+  useAutoEndTurn(
+    engineState,
+    room,
+    mySessionId,
+    autoEndTurn && !composerOpen && selectedTilePos === null,
+  );
 
-  // Reset showGameOverModal when phase changes to game-over
+  // Reset showGameOverModal when phase changes to game-over; re-arm the
+  // once-per-game stats latch whenever we're NOT at a game-over (so a rematch
+  // in the same room records its result too).
   useEffect(() => {
     if (engineState?.phase === "game-over") {
       setShowGameOverModal(true);
+    } else {
+      setGameResultRecorded(false);
     }
   }, [engineState?.phase]);
 
@@ -222,21 +235,6 @@ export default function App() {
         style={{ zIndex: 99999, top: "70px" }}
       />
 
-      {/* Error Popup Notification */}
-      <AnimatePresence>
-        {errorMsg && (
-          <motion.div
-            className="error-popup"
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 300, damping: 24 }}
-          >
-            ❌ {errorMsg}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Content Router */}
       <AnimatePresence mode="wait">
         {!room ? (
@@ -351,6 +349,8 @@ export default function App() {
                 turnDeadline={roomState?.turnDeadline}
                 turnTimeoutSecs={roomState?.turnTimeoutSecs}
                 onOpenTile={(pos) => setSelectedTilePos(pos)}
+                onComposerOpenChange={setComposerOpen}
+                myTokenWalking={myTokenWalking}
               />
             </div>
 
@@ -392,9 +392,28 @@ export default function App() {
                     setShowGameOverModal(false);
                     resetGame();
                   }}
+                  onClose={() => setShowGameOverModal(false)}
                 />
               )}
             </AnimatePresence>
+
+            {/* Reopen the results after dismissing them to inspect the board */}
+            {engineState.phase === "game-over" && !showGameOverModal && (
+              <button
+                className="button-primary"
+                style={{
+                  position: "fixed",
+                  bottom: "4.5rem",
+                  right: "1rem",
+                  zIndex: 90,
+                  padding: "0.6rem 1rem",
+                  borderRadius: "4px",
+                }}
+                onClick={() => setShowGameOverModal(true)}
+              >
+                🏆 Show Results
+              </button>
+            )}
           </motion.div>
         ) : null}
       </AnimatePresence>

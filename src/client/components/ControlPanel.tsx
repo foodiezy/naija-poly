@@ -24,6 +24,9 @@ interface ControlPanelProps {
   turnDeadline?: number;
   turnTimeoutSecs?: number;
   onOpenTile?: (pos: number) => void;
+  // Reports when a trade/debt composer is open so App can pause auto-end-turn.
+  onComposerOpenChange?: (open: boolean) => void;
+  myTokenWalking?: boolean;
 }
 
 export default function ControlPanel({
@@ -35,9 +38,14 @@ export default function ControlPanel({
   turnDeadline,
   turnTimeoutSecs,
   onOpenTile,
+  onComposerOpenChange,
+  myTokenWalking,
 }: ControlPanelProps) {
   const [showTradeBuilder, setShowTradeBuilder] = useState(false);
   const [initialTradeOffer, setInitialTradeOffer] = useState<TradeOffer | undefined>(undefined);
+  // When set, the builder was opened to counter this incoming trade: sending
+  // goes through RESPOND_TRADE{counter} instead of PROPOSE_TRADE.
+  const [counterMode, setCounterMode] = useState(false);
   const [showDebtRescue, setShowDebtRescue] = useState(false);
   const [now, setNow] = useState(Date.now());
 
@@ -51,6 +59,12 @@ export default function ControlPanel({
   const isBankrupt = me?.bankrupt;
   const isAuctionActive = phase === "auction" && !!auctionState;
   const canManage = isMyTurn && (phase === "awaiting-roll" || phase === "awaiting-end-turn");
+  // Rent owed to the ledger while short on cash — the debtor must raise money
+  // (or go bankrupt) before their turn can end.
+  const myLedgerDebt = (engineState.debtLedger ?? [])
+    .filter((d) => d.debtorId === mySessionId)
+    .reduce((sum, d) => sum + d.amount, 0);
+  const inDebt = !isBankrupt && me !== undefined && (me.cash < 0 || myLedgerDebt > 0);
 
   // Tick for the per-turn AFK timer
   useEffect(() => {
@@ -59,10 +73,32 @@ export default function ControlPanel({
     return () => clearInterval(t);
   }, [turnDeadline]);
 
-  // Reset trade builder when turn or phase changes
+  // Close a normal (proposing) builder when the turn moves on. A counter
+  // composer survives turn changes — the offer it answers does too — and
+  // closes only when that offer disappears (cancelled/resolved elsewhere).
   useEffect(() => {
-    setShowTradeBuilder(false);
-  }, [currentPlayerIndex, phase]);
+    if (!counterMode) {
+      setShowTradeBuilder(false);
+      setInitialTradeOffer(undefined);
+    }
+  }, [currentPlayerIndex, counterMode]);
+  useEffect(() => {
+    if (counterMode && !activeTrade) {
+      setShowTradeBuilder(false);
+      setInitialTradeOffer(undefined);
+      setCounterMode(false);
+    }
+  }, [activeTrade, counterMode]);
+
+  // Debt rescue is done when the debt is gone (auto-settled or paid).
+  useEffect(() => {
+    if (showDebtRescue && !inDebt) setShowDebtRescue(false);
+  }, [showDebtRescue, inDebt]);
+
+  // Let App pause auto-end-turn while any composer is open.
+  useEffect(() => {
+    onComposerOpenChange?.(showTradeBuilder || showDebtRescue);
+  }, [showTradeBuilder, showDebtRescue, onComposerOpenChange]);
 
   const turnMsLeft = turnDeadline && turnDeadline > 0 ? Math.max(0, turnDeadline - now) : 0;
   const turnSecsLeft = Math.ceil(turnMsLeft / 1000);
@@ -78,7 +114,7 @@ export default function ControlPanel({
     <div className="console-panel glass-panel" style={{ padding: 0, overflow: "hidden" }}>
       {/* Trade overlays (animated modals) */}
       <AnimatePresence>
-        {activeTrade && (
+        {activeTrade && !showTradeBuilder && (
           <TradeOverlay
             key="trade-response"
             activeTrade={activeTrade}
@@ -88,7 +124,10 @@ export default function ControlPanel({
             onSendAction={onSendAction}
             liveState={liveState}
             onCounterOffer={(reversedTrade) => {
+              // The original offer stays on the table while the counter is
+              // composed; sending the counter answers it in one engine action.
               setInitialTradeOffer(reversedTrade);
+              setCounterMode(true);
               setShowTradeBuilder(true);
             }}
           />
@@ -102,9 +141,11 @@ export default function ControlPanel({
             onClose={() => {
               setShowTradeBuilder(false);
               setInitialTradeOffer(undefined);
+              setCounterMode(false);
             }}
             liveState={liveState}
             initialOffer={initialTradeOffer}
+            counterMode={counterMode}
           />
         )}
         {showDebtRescue && me && (
@@ -112,6 +153,7 @@ export default function ControlPanel({
             key="debt-rescue"
             engineState={engineState}
             me={me}
+            ledgerDebt={myLedgerDebt}
             onSendAction={onSendAction}
             onClose={() => setShowDebtRescue(false)}
             onOpenTrade={() => setShowTradeBuilder(true)}
@@ -290,8 +332,9 @@ export default function ControlPanel({
         )}
       </AnimatePresence>
 
-      {/* Bankruptcy warning */}
-      {me && me.cash < 0 && !isBankrupt && (
+      {/* Bankruptcy warning — covers negative cash AND ledger debts (rent owed
+          while short on cash), which used to be invisible here. */}
+      {me && inDebt && (
         <div
           style={{
             margin: "0.75rem",
@@ -314,7 +357,8 @@ export default function ControlPanel({
               gap: "0.3rem",
             }}
           >
-            <IconWarning size={16} /> DEBT: ₦{me.cash.toLocaleString()}
+            <IconWarning size={16} /> DEBT: ₦
+            {(Math.max(0, -me.cash) + myLedgerDebt).toLocaleString()}
           </div>
           <button
             className="button-primary"
@@ -351,7 +395,22 @@ export default function ControlPanel({
             background: "rgba(232,182,74,0.03)",
           }}
         >
-          🤝 Waiting for trade response...
+          <div style={{ marginBottom: "0.35rem" }}>🤝 Waiting for trade response...</div>
+          <button
+            className="button-primary"
+            style={{
+              width: "100%",
+              background: "transparent",
+              border: "1px solid rgba(232,182,74,0.35)",
+              color: "var(--color-gold)",
+              fontSize: "0.68rem",
+              padding: "0.25rem",
+              borderRadius: "2px",
+            }}
+            onClick={() => onSendAction({ type: "CANCEL_TRADE" })}
+          >
+            Withdraw Offer
+          </button>
         </div>
       )}
       {activeTrade && activeTrade.fromId !== mySessionId && activeTrade.toId !== mySessionId && (
@@ -389,6 +448,7 @@ export default function ControlPanel({
             activeTrade={activeTrade ?? null}
             onSendAction={onSendAction}
             onShowTradeBuilder={() => setShowTradeBuilder(true)}
+            tokenWalking={!!myTokenWalking}
           />
         )}
       </div>

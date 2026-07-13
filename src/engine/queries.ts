@@ -38,10 +38,34 @@ export function canSellHouseOn(state: GameState, playerId: PlayerId, pos: number
   const ts = state.tiles[pos];
   if (!ts || ts.ownerId !== playerId || ts.houses === 0) return false;
 
+  // Downgrading a hotel puts 4 houses back on the tile — the bank must have them.
+  if (ts.houses === 5) {
+    let totalHouses = 0;
+    Object.values(state.tiles).forEach((s) => {
+      if (s.houses >= 1 && s.houses <= 4) totalHouses += s.houses;
+    });
+    if (HOUSE_SUPPLY - totalHouses < 4) return false;
+  }
+
   const group = BOARD.filter(
     (t): t is PropertyTile => t.type === "property" && t.group === tile.group,
   );
   return !group.some((t) => (state.tiles[t.pos]?.houses ?? 0) > ts.houses);
+}
+
+// 10% interest owed to the bank by a player who receives mortgaged properties
+// (via trade or bankruptcy transfer). Shared by the engine, the AI, and the
+// client so all three quote the same fee. Takes just the tiles slice so UI
+// components without a full GameState can call it too.
+export function mortgageTransferFee(state: Pick<GameState, "tiles">, positions: number[]): number {
+  return positions.reduce((sum, pos) => {
+    const tile = BOARD[pos];
+    const ts = state.tiles[pos];
+    if (ts?.mortgaged && tile && "mortgage" in tile) {
+      return sum + Math.round(tile.mortgage * 0.1);
+    }
+    return sum;
+  }, 0);
 }
 
 export function canMortgageAt(state: GameState, playerId: PlayerId, pos: number): boolean {

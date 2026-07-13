@@ -7,7 +7,7 @@
 
 import { BOARD, PropertyTile, JAIL_FINE } from "../data/board";
 import type { GameState, PlayerId, Action } from "./types";
-import { canBuildOn } from "./queries";
+import { canBuildOn, canSellHouseOn, mortgageTransferFee } from "./queries";
 // Default cash buffer to keep on hand rather than spending to zero.
 const DEFAULT_CASH_BUFFER = 50_000;
 
@@ -41,14 +41,12 @@ function findMortgageable(state: GameState, playerId: PlayerId): number | null {
 }
 
 // A property with a sellable house (used to raise cash when in debt).
+// canSellHouseOn also enforces the hotel-downgrade house-supply rule, so the
+// AI never emits a SELL_HOUSE the engine would reject.
 function findSellableHouse(state: GameState, playerId: PlayerId): number | null {
   for (const tile of BOARD) {
-    const ts = state.tiles[tile.pos];
-    if (!ts || ts.ownerId !== playerId || tile.type !== "property" || ts.houses === 0) continue;
-    // Even-sell: only sell from the most-developed property in the group.
-    const group = groupTiles(tile);
-    if (group.some((t) => (state.tiles[t.pos]?.houses ?? 0) > ts.houses)) continue;
-    return tile.pos;
+    if (tile.type !== "property") continue;
+    if (canSellHouseOn(state, playerId, tile.pos)) return tile.pos;
   }
   return null;
 }
@@ -78,12 +76,15 @@ export function getAIAction(state: GameState, playerId: PlayerId, opts?: AIOptio
   // --- Trades: respond to an offer addressed to us.
   if (state.activeTrade && state.activeTrade.toId === playerId) {
     const t = state.activeTrade;
-    const receive = t.giveCash + t.giveTiles.reduce((s, p) => s + tilePrice(p), 0);
+    // Accepting mortgaged tiles costs 10% bank interest on the spot — budget it.
+    const interest = mortgageTransferFee(state, t.giveTiles);
+    const receive = t.giveCash - interest + t.giveTiles.reduce((s, p) => s + tilePrice(p), 0);
     const giveUp = t.getCash + t.getTiles.reduce((s, p) => s + tilePrice(p), 0);
-    let accept = t.getCash <= me.cash && receive >= giveUp;
+    const affordable = t.getCash + interest <= me.cash;
+    let accept = affordable && receive >= giveUp;
 
     // Trader accepts slight losses to keep things moving
-    if (style === "Trader" && t.getCash <= me.cash && receive >= giveUp * 0.9) {
+    if (style === "Trader" && affordable && receive >= giveUp * 0.9) {
       accept = true;
     }
 
@@ -181,15 +182,24 @@ export function getAIAction(state: GameState, playerId: PlayerId, opts?: AIOptio
             const ownedInGroup = group.filter(
               (t) => state.tiles[t.pos]?.ownerId === playerId,
             ).length;
-            if (ownedInGroup > 0) {
+            // Skip groups carrying buildings — the engine (correctly) refuses
+            // to trade tiles out of a developed group.
+            const groupBuilt = groupTiles(tile as PropertyTile).some(
+              (t) => (state.tiles[t.pos]?.houses ?? 0) > 0,
+            );
+            if (ownedInGroup > 0 && !groupBuilt) {
               const targetOwner = state.tiles[tile.pos]!.ownerId!;
+              // Receiving a mortgaged tile costs 10% interest — keep it in hand.
+              const interest = mortgageTransferFee(state, [tile.pos]);
+              const giveCash = Math.min(me.cash - interest, tilePrice(tile.pos) + 20000);
+              if (giveCash < 0) continue;
               // propose trade for this tile
               return {
                 type: "PROPOSE_TRADE",
                 trade: {
                   fromId: playerId,
                   toId: targetOwner,
-                  giveCash: Math.min(me.cash, tilePrice(tile.pos) + 20000),
+                  giveCash,
                   getCash: 0,
                   giveTiles: [],
                   getTiles: [tile.pos],

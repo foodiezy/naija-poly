@@ -1,11 +1,14 @@
 import { motion } from "framer-motion";
 import { GameState, Player, Action } from "../../engine/types";
-import { BOARD, PropertyTile } from "../../data/board";
+import { BOARD } from "../../data/board";
+import { canSellHouseOn, canMortgageAt } from "../../engine/queries";
 import { IconBankrupt, IconTrade, IconWarning } from "./icons";
 
 interface Props {
   engineState: GameState;
   me: Player;
+  // Rent owed to the ledger while short on cash (separate from negative cash).
+  ledgerDebt?: number;
   onSendAction: (action: Action) => void;
   onClose: () => void;
   onOpenTrade: () => void;
@@ -14,45 +17,33 @@ interface Props {
 export default function DebtRescueModal({
   engineState,
   me,
+  ledgerDebt = 0,
   onSendAction,
   onClose,
   onOpenTrade,
 }: Props) {
-  // Find properties that can be mortgaged or houses that can be sold
+  // Only offer moves the engine will actually accept: canSellHouseOn enforces
+  // even-selling AND the hotel-downgrade house-supply rule; canMortgageAt
+  // enforces the no-buildings-in-group rule. Listing illegal moves here just
+  // produced error toasts on click.
   const sellableHouses: { pos: number; name: string; value: number }[] = [];
   const mortgageableProperties: { pos: number; name: string; value: number }[] = [];
 
   Object.entries(engineState.tiles).forEach(([posStr, ts]) => {
-    if (ts.ownerId === me.id) {
-      const pos = parseInt(posStr, 10);
-      const tile = BOARD[pos];
-      if (tile.type === "property" && ts.houses > 0) {
-        // Can sell house. Value is half the cost.
-        sellableHouses.push({
-          pos,
-          name: tile.name,
-          value: tile.houseCost / 2,
-        });
-      } else if (!ts.mortgaged && "mortgage" in tile) {
-        // Can be mortgaged if no houses are on any property in its color group
-        let canMortgage = true;
-        if (tile.type === "property") {
-          const groupTiles = BOARD.filter(
-            (t) => t.type === "property" && t.group === (tile as PropertyTile).group,
-          );
-          const hasHouses = groupTiles.some((t) => (engineState.tiles[t.pos]?.houses ?? 0) > 0);
-          if (hasHouses) canMortgage = false;
-        }
-        if (canMortgage) {
-          mortgageableProperties.push({
-            pos,
-            name: tile.name,
-            value: tile.mortgage,
-          });
-        }
+    if (ts.ownerId !== me.id) return;
+    const pos = parseInt(posStr, 10);
+    const tile = BOARD[pos];
+    if (ts.houses > 0) {
+      if (canSellHouseOn(engineState, me.id, pos) && "houseCost" in tile) {
+        sellableHouses.push({ pos, name: tile.name, value: Math.floor(tile.houseCost / 2) });
       }
+    } else if (canMortgageAt(engineState, me.id, pos) && "mortgage" in tile) {
+      mortgageableProperties.push({ pos, name: tile.name, value: tile.mortgage });
     }
   });
+
+  // Total shortfall shown at the top: overdrawn cash + any ledgered rent debt.
+  const totalOwed = Math.max(0, -me.cash) + ledgerDebt;
 
   return (
     <div className="modal-overlay" style={{ zIndex: 100 }}>
@@ -81,11 +72,10 @@ export default function DebtRescueModal({
             <IconWarning size={24} /> Debt Rescue
           </h2>
           <p style={{ color: "var(--text-secondary)", margin: 0 }}>
-            You are in debt by{" "}
-            <strong style={{ color: "var(--color-danger)" }}>
-              ₦{Math.abs(me.cash).toLocaleString()}
-            </strong>
-            . You must raise cash or declare bankruptcy!
+            You owe{" "}
+            <strong style={{ color: "var(--color-danger)" }}>₦{totalOwed.toLocaleString()}</strong>.
+            Raise the cash (sell, mortgage, or trade) and it will be settled automatically —
+            otherwise you must declare bankruptcy.
           </p>
         </div>
 
