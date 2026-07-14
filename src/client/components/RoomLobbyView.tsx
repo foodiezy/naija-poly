@@ -48,7 +48,14 @@ export default function RoomLobbyView({
         >
           🔗 Invite Players
         </button>
-        <p style={{ textAlign: "center", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
+        <p
+          style={{
+            textAlign: "center",
+            color: "var(--text-secondary)",
+            fontSize: "0.82rem",
+            margin: 0,
+          }}
+        >
           Share code {room.roomId} — tap the button to copy the invite link.
         </p>
         {isHost && (
@@ -56,7 +63,8 @@ export default function RoomLobbyView({
             style={{
               textAlign: "center",
               color: "var(--color-gold, #e8b64a)",
-              fontSize: "0.85rem",
+              fontSize: "0.8rem",
+              margin: 0,
             }}
           >
             Invite friends before you start — the room locks once the game begins.
@@ -99,14 +107,14 @@ export default function RoomLobbyView({
           <div
             className="form-group"
             style={{
-              marginTop: "1rem",
+              marginTop: 0,
               background: "rgba(0,0,0,0.2)",
-              padding: "1rem",
+              padding: "0.85rem",
               borderRadius: "var(--radius-md)",
             }}
           >
             <h3
-              style={{ fontSize: "1rem", marginBottom: "0.75rem", color: "var(--text-secondary)" }}
+              style={{ fontSize: "0.95rem", margin: "0 0 0.6rem", color: "var(--text-secondary)" }}
             >
               ⚙️ Host Settings
             </h3>
@@ -116,7 +124,7 @@ export default function RoomLobbyView({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                marginBottom: "0.75rem",
+                marginBottom: "0.55rem",
               }}
             >
               <label style={{ margin: 0, fontSize: "0.9rem" }}>Starting Cash (₦)</label>
@@ -137,7 +145,7 @@ export default function RoomLobbyView({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                marginBottom: "0.75rem",
+                marginBottom: "0.55rem",
               }}
             >
               <label style={{ margin: 0, fontSize: "0.9rem" }}>Turn Limit (0 = ∞)</label>
@@ -159,7 +167,7 @@ export default function RoomLobbyView({
                 gap: "0.5rem",
                 fontSize: "0.9rem",
                 cursor: "pointer",
-                marginBottom: "0.75rem",
+                marginBottom: "0.55rem",
               }}
             >
               <input
@@ -177,7 +185,7 @@ export default function RoomLobbyView({
                 gap: "0.5rem",
                 fontSize: "0.9rem",
                 cursor: "pointer",
-                marginBottom: "0.75rem",
+                marginBottom: "0.55rem",
               }}
             >
               <input
@@ -201,7 +209,7 @@ export default function RoomLobbyView({
                 gap: "0.5rem",
                 fontSize: "0.9rem",
                 cursor: "pointer",
-                marginBottom: "0.75rem",
+                marginBottom: "0.55rem",
               }}
             >
               <input
@@ -260,7 +268,7 @@ export default function RoomLobbyView({
         {isHost && (
           <button
             className="button-secondary full-width-btn"
-            style={{ padding: "0.75rem", fontSize: "0.95rem", marginBottom: "0.75rem" }}
+            style={{ padding: "0.6rem", fontSize: "0.95rem" }}
             onClick={onAddAI}
             disabled={roomFull}
             title={roomFull ? "Room is full" : "Add a bot opponent"}
