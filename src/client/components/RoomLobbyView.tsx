@@ -1,10 +1,9 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { TOKENS, tokenEmoji } from "../../data/tokens";
 import { Room } from "colyseus.js";
 import { ChatMessage } from "../../shared/chat";
 import { RoomState, RoomSettings, LobbyPlayerView } from "../../shared/room";
 import { countHumans } from "../lib/players";
-import { useTriviaRotation } from "../hooks/useTriviaRotation";
 
 interface RoomLobbyViewProps {
   room: Room;
@@ -35,8 +34,6 @@ export default function RoomLobbyView({
   const myTokenId = roomState?.lobbyPlayers?.get(room.sessionId)?.tokenId;
   const humanCount = countHumans(roomState?.lobbyPlayers ? roomState.lobbyPlayers.keys() : []);
 
-  const trivia = useTriviaRotation(6000);
-
   return (
     <div className="lobby-columns-container">
       <div className="lobby-card glass-panel">
@@ -48,7 +45,14 @@ export default function RoomLobbyView({
         >
           🔗 Invite Players
         </button>
-        <p style={{ textAlign: "center", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
+        <p
+          style={{
+            textAlign: "center",
+            color: "var(--text-secondary)",
+            fontSize: "0.82rem",
+            margin: 0,
+          }}
+        >
           Share code {room.roomId} — tap the button to copy the invite link.
         </p>
         {isHost && (
@@ -56,7 +60,8 @@ export default function RoomLobbyView({
             style={{
               textAlign: "center",
               color: "var(--color-gold, #e8b64a)",
-              fontSize: "0.85rem",
+              fontSize: "0.8rem",
+              margin: 0,
             }}
           >
             Invite friends before you start — the room locks once the game begins.
@@ -82,7 +87,7 @@ export default function RoomLobbyView({
               return (
                 <button
                   key={token.id}
-                  className={`token-btn ${isMine ? "selected" : ""} ${takenBy ? "taken" : ""}`}
+                  className={`token-option ${isMine ? "selected" : ""} ${takenBy ? "taken" : ""}`}
                   disabled={!!takenBy}
                   onClick={() => onSelectToken(token.id)}
                   title={takenBy ? `Taken by ${takenBy}` : token.name}
@@ -99,14 +104,14 @@ export default function RoomLobbyView({
           <div
             className="form-group"
             style={{
-              marginTop: "1rem",
+              marginTop: 0,
               background: "rgba(0,0,0,0.2)",
-              padding: "1rem",
-              borderRadius: "8px",
+              padding: "0.85rem",
+              borderRadius: "var(--radius-md)",
             }}
           >
             <h3
-              style={{ fontSize: "1rem", marginBottom: "0.75rem", color: "var(--text-secondary)" }}
+              style={{ fontSize: "0.95rem", margin: "0 0 0.6rem", color: "var(--text-secondary)" }}
             >
               ⚙️ Host Settings
             </h3>
@@ -116,7 +121,7 @@ export default function RoomLobbyView({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                marginBottom: "0.75rem",
+                marginBottom: "0.55rem",
               }}
             >
               <label style={{ margin: 0, fontSize: "0.9rem" }}>Starting Cash (₦)</label>
@@ -137,7 +142,7 @@ export default function RoomLobbyView({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                marginBottom: "0.75rem",
+                marginBottom: "0.55rem",
               }}
             >
               <label style={{ margin: 0, fontSize: "0.9rem" }}>Turn Limit (0 = ∞)</label>
@@ -159,7 +164,7 @@ export default function RoomLobbyView({
                 gap: "0.5rem",
                 fontSize: "0.9rem",
                 cursor: "pointer",
-                marginBottom: "0.75rem",
+                marginBottom: "0.55rem",
               }}
             >
               <input
@@ -177,7 +182,7 @@ export default function RoomLobbyView({
                 gap: "0.5rem",
                 fontSize: "0.9rem",
                 cursor: "pointer",
-                marginBottom: "0.75rem",
+                marginBottom: "0.55rem",
               }}
             >
               <input
@@ -201,7 +206,7 @@ export default function RoomLobbyView({
                 gap: "0.5rem",
                 fontSize: "0.9rem",
                 cursor: "pointer",
-                marginBottom: "0.75rem",
+                marginBottom: "0.55rem",
               }}
             >
               <input
@@ -260,7 +265,7 @@ export default function RoomLobbyView({
         {isHost && (
           <button
             className="button-secondary full-width-btn"
-            style={{ padding: "0.75rem", fontSize: "0.95rem", marginBottom: "0.75rem" }}
+            style={{ padding: "0.6rem", fontSize: "0.95rem" }}
             onClick={onAddAI}
             disabled={roomFull}
             title={roomFull ? "Room is full" : "Add a bot opponent"}
@@ -300,7 +305,7 @@ export default function RoomLobbyView({
               padding: "1rem",
               textAlign: "center",
               background: "rgba(0,0,0,0.2)",
-              borderRadius: "8px",
+              borderRadius: "var(--radius-md)",
             }}
           >
             ⏳ Waiting for host to start the game...
@@ -362,23 +367,6 @@ export default function RoomLobbyView({
             }}
           />
         </div>
-      </div>
-
-      {/* Trivia Ticker — shown while players wait */}
-      <div className="lobby-trivia-ticker">
-        <span className="trivia-label">🇳🇬 Did you know?</span>
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={trivia}
-            className="trivia-text"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.4 }}
-          >
-            {trivia}
-          </motion.p>
-        </AnimatePresence>
       </div>
     </div>
   );

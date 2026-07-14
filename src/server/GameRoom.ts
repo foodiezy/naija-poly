@@ -4,6 +4,7 @@ import { createGame, applyAction } from "../engine/engine";
 import { getAIAction } from "../engine/ai";
 import type { Action, GameState } from "../engine/types";
 import { TOKEN_IDS, MAX_PLAYERS } from "../data/tokens";
+import { censorProfanity } from "../data/profanity";
 import type { ChatMessage } from "../shared/chat";
 
 // AI (computer) players use reserved session ids that no real client can have.
@@ -601,8 +602,11 @@ export class GameRoom extends Room<GameRoomState> {
       // `toId` type must not reach the MapSchema lookup.
       if (!message || typeof message.text !== "string") return;
       const toId = typeof message.toId === "string" ? message.toId : null;
-      const text = message.text.trim().substring(0, 500);
-      if (!text) return;
+      const trimmed = message.text.trim().substring(0, 500);
+      if (!trimmed) return;
+      // Censor curses/slurs before the message leaves the server, so no client
+      // (recipient OR sender echo) ever receives the raw text.
+      const text = censorProfanity(trimmed);
 
       const sender = this.state.lobbyPlayers.get(client.sessionId);
       const senderName = sender ? sender.name : "System";

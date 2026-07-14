@@ -80,7 +80,7 @@ export default function ChatPanel({
       className="console-panel glass-panel"
       style={{
         background: "#1c1835",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
+        border: "1px solid var(--border-subtle)",
         borderRadius: "2px",
       }}
     >
@@ -93,7 +93,7 @@ export default function ChatPanel({
             color: "var(--text-secondary)",
             textTransform: "uppercase",
             marginBottom: "0.5rem",
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            borderBottom: "1px solid var(--border-subtle)",
             paddingBottom: "0.5rem",
           }}
         >

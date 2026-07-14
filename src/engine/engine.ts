@@ -717,9 +717,13 @@ export function applyAction(
   // Auction actions are open to any participant; RESOLVE_AUCTION is a server-only timer event.
   const isAuctionAction =
     action.type === "BID" || action.type === "PASS_BID" || action.type === "RESOLVE_AUCTION";
-  // Trades outlive the proposer's turn, so responding AND withdrawing must
-  // both be legal out of turn.
-  const isTradeResponse = action.type === "RESPOND_TRADE" || action.type === "CANCEL_TRADE";
+  // Trades outlive the proposer's turn, so proposing, responding AND
+  // withdrawing must all be legal out of turn — deals can be struck at any
+  // time, not only on the dealmaker's turn.
+  const isTradeAction =
+    action.type === "PROPOSE_TRADE" ||
+    action.type === "RESPOND_TRADE" ||
+    action.type === "CANCEL_TRADE";
   // A disconnect can land on any player at any time, not just the active one.
   const isForfeit = action.type === "FORFEIT";
   const isVoteKick = action.type === "VOTE_KICK";
@@ -727,7 +731,7 @@ export function applyAction(
   if (
     playerId !== currentPlayer.id &&
     !isAuctionAction &&
-    !isTradeResponse &&
+    !isTradeAction &&
     !isForfeit &&
     !isVoteKick
   ) {
@@ -1384,8 +1388,10 @@ export function applyAction(
     }
 
     case "PROPOSE_TRADE": {
-      // Allowed in roll or end turn phases
-      if (nextState.phase !== "awaiting-roll" && nextState.phase !== "awaiting-end-turn") {
+      // Trades can be struck at any time by any player. The only phases that
+      // block a proposal are an in-progress auction (a focused, timed sub-flow)
+      // and game-over.
+      if (nextState.phase === "auction" || nextState.phase === "game-over") {
         throw new Error(`Cannot propose trade in phase ${nextState.phase}`);
       }
       // One offer on the table at a time: a new proposal must not silently
@@ -1403,7 +1409,7 @@ export function applyAction(
         throw new Error("Malformed trade offer");
       }
       if (trade.fromId !== playerId) {
-        throw new Error("Proposer ID must match active player");
+        throw new Error("Proposer ID must match the requesting player");
       }
       validateTradeOffer(nextState, trade);
 

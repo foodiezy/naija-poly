@@ -175,7 +175,7 @@ export default function ControlPanel({
           style={{
             padding: "0.5rem 1rem",
             background: "rgba(70,199,141,0.05)",
-            borderBottom: "1px solid rgba(255,255,255,0.05)",
+            borderBottom: "1px solid var(--border-subtle)",
           }}
         >
           <div
@@ -236,7 +236,7 @@ export default function ControlPanel({
         style={{
           background: "rgba(0,0,0,0.15)",
           margin: 0,
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
+          borderBottom: "1px solid var(--border-subtle)",
           borderRadius: 0,
         }}
       >
@@ -278,7 +278,7 @@ export default function ControlPanel({
               marginTop: "0.75rem",
               width: "100%",
               background: "rgba(0,0,0,0.3)",
-              borderRadius: "4px",
+              borderRadius: "var(--radius-md)",
               padding: "0.5rem",
               borderLeft: "2px solid var(--color-gold)",
               fontSize: "0.75rem",
@@ -435,7 +435,7 @@ export default function ControlPanel({
         style={{
           padding: "0.75rem 1rem",
           background: "#1c1835",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          borderBottom: "1px solid var(--border-subtle)",
         }}
       >
         {!isAuctionActive && (
@@ -459,7 +459,7 @@ export default function ControlPanel({
           <div
             style={{
               padding: "0.4rem 1rem",
-              borderBottom: "1px solid rgba(255,255,255,0.05)",
+              borderBottom: "1px solid var(--border-subtle)",
               textAlign: "center",
             }}
           >
@@ -493,7 +493,7 @@ export default function ControlPanel({
               justifyContent: "space-between",
               padding: "0.4rem 1rem",
               background: "rgba(0,0,0,0.2)",
-              borderBottom: "1px solid rgba(255,255,255,0.05)",
+              borderBottom: "1px solid var(--border-subtle)",
             }}
           >
             <label

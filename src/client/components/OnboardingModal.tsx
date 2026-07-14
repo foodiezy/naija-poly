@@ -1,21 +1,22 @@
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
+import { useDialog } from "../hooks/useDialog";
 
 interface OnboardingModalProps {
   onClose: () => void;
 }
 
 export default function OnboardingModal({ onClose }: OnboardingModalProps) {
-  return (
+  const dialogRef = useDialog<HTMLDivElement>(onClose);
+  return createPortal(
     <div className="modal-overlay" style={{ zIndex: 10000 }}>
       <motion.div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="How to play Odogwu Empire"
         className="modal-content"
-        style={{
-          maxWidth: "600px",
-          background: "var(--surface-2)",
-          border: "1px solid var(--border-color)",
-          padding: "2rem",
-          position: "relative",
-        }}
+        style={{ maxWidth: "600px", padding: "2rem" }}
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
@@ -50,7 +51,7 @@ export default function OnboardingModal({ onClose }: OnboardingModalProps) {
             style={{
               background: "var(--surface-3)",
               padding: "1rem",
-              borderRadius: "8px",
+              borderRadius: "var(--radius-md)",
               borderLeft: "4px solid var(--color-property-2)",
             }}
           >
@@ -74,7 +75,7 @@ export default function OnboardingModal({ onClose }: OnboardingModalProps) {
             style={{
               background: "var(--surface-3)",
               padding: "1rem",
-              borderRadius: "8px",
+              borderRadius: "var(--radius-md)",
               borderLeft: "4px solid var(--color-gold)",
             }}
           >
@@ -98,7 +99,7 @@ export default function OnboardingModal({ onClose }: OnboardingModalProps) {
             style={{
               background: "var(--surface-3)",
               padding: "1rem",
-              borderRadius: "8px",
+              borderRadius: "var(--radius-md)",
               borderLeft: "4px solid var(--color-naira)",
             }}
           >
@@ -129,6 +130,7 @@ export default function OnboardingModal({ onClose }: OnboardingModalProps) {
           </button>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body,
   );
 }

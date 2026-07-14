@@ -1,5 +1,7 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
+import { useDialog } from "../hooks/useDialog";
 import confetti from "canvas-confetti";
 import { BOARD, Tile } from "../../data/board";
 import { tokenEmoji } from "../../data/tokens";
@@ -113,16 +115,17 @@ export default function GameOverModal({
 
   const isHost = roomState?.hostId === mySessionId;
 
-  return (
+  const dialogRef = useDialog<HTMLDivElement>(onClose);
+
+  return createPortal(
     <div className="modal-overlay">
       <motion.div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Game over — final results"
         className="modal-content"
-        style={{
-          maxWidth: "800px",
-          background: "var(--surface-2)",
-          border: "1px solid var(--border-color)",
-          padding: "2rem",
-        }}
+        style={{ maxWidth: "800px", padding: "2rem" }}
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
@@ -204,27 +207,14 @@ export default function GameOverModal({
           >
             Final Leaderboard
           </h3>
-          <div
-            className="leaderboard-table"
-            style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
-          >
-            <div
-              className="leaderboard-header"
-              style={{
-                display: "flex",
-                fontSize: "0.85rem",
-                color: "var(--text-secondary)",
-                fontWeight: "bold",
-                paddingBottom: "0.5rem",
-                borderBottom: "1px solid rgba(255,255,255,0.1)",
-              }}
-            >
-              <span style={{ width: "10%" }}>Rank</span>
-              <span style={{ width: "25%" }}>Player</span>
-              <span style={{ width: "15%" }}>Status</span>
-              <span style={{ width: "20%" }}>Cash</span>
-              <span style={{ width: "15%" }}>Assets</span>
-              <span style={{ width: "15%" }}>Net Worth</span>
+          <div className="leaderboard-table">
+            <div className="leaderboard-header">
+              <span>Rank</span>
+              <span>Player</span>
+              <span>Status</span>
+              <span>Cash</span>
+              <span>Assets</span>
+              <span>Net Worth</span>
             </div>
             {getLeaderboard().map((p, index) => {
               const lobbyPlayer = roomState?.lobbyPlayers?.get(p.id);
@@ -233,52 +223,27 @@ export default function GameOverModal({
                 <motion.div
                   key={p.id}
                   className={`leaderboard-row ${p.id === engineState.winnerId ? "winner-row" : ""}`}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    padding: "0.75rem 0",
-                    borderBottom: "1px solid rgba(255,255,255,0.05)",
-                    background:
-                      p.id === engineState.winnerId ? "rgba(232, 182, 74, 0.05)" : "transparent",
-                  }}
                   initial={{ opacity: 0, x: -30 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.6 + index * 0.1, duration: 0.35, ease: "easeOut" }}
                 >
-                  <span className="player-rank" style={{ width: "10%", fontSize: "1.2rem" }}>
+                  <span className="player-rank">
                     {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `#${index + 1}`}
                   </span>
-                  <span
-                    className="player-identity"
-                    style={{ width: "25%", display: "flex", gap: "0.5rem", alignItems: "center" }}
-                  >
+                  <span className="player-identity">
                     <span>{playerToken}</span>
                     <span style={{ fontWeight: 600 }}>
                       {p.name} {p.id === mySessionId && "(You)"}
                     </span>
                   </span>
-                  <span
-                    className={`player-status ${p.bankrupt ? "bankrupt" : "active"}`}
-                    style={{
-                      width: "15%",
-                      color: p.bankrupt ? "var(--color-red)" : "var(--color-green)",
-                    }}
-                  >
+                  <span className={`player-status ${p.bankrupt ? "bankrupt" : "active"}`}>
                     {p.bankrupt ? "Bankrupt 💀" : "Solvent"}
                   </span>
-                  <span className="player-cash" style={{ width: "20%" }}>
-                    ₦{p.cash.toLocaleString()}
-                  </span>
-                  <span className="player-assets" style={{ width: "15%" }}>
-                    {p.assetsCount} properties
-                  </span>
+                  <span className="player-cash">₦{p.cash.toLocaleString()}</span>
+                  <span className="player-assets">{p.assetsCount} properties</span>
                   <span
                     className="player-networth"
-                    style={{
-                      width: "15%",
-                      fontWeight: "bold",
-                      color: index === 0 ? "var(--color-gold)" : "var(--color-naira)",
-                    }}
+                    style={{ color: index === 0 ? "var(--color-gold)" : "var(--color-naira)" }}
                   >
                     ₦{p.netWorth.toLocaleString()}
                   </span>
@@ -473,6 +438,7 @@ export default function GameOverModal({
           </button>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body,
   );
 }

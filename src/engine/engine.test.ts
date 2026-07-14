@@ -641,9 +641,10 @@ describe("Game Engine", () => {
       const proposed = applyAction(state, "p1", { type: "PROPOSE_TRADE", trade: tradeOffer });
       expect(proposed.activeTrade).toEqual(tradeOffer);
 
-      // p2 is not the current player (it's still p1's turn context), so p2
-      // trying to counter-propose via PROPOSE_TRADE must be rejected outright
-      // rather than silently overwriting the pending offer.
+      // A second PROPOSE_TRADE while one is already on the table must be
+      // rejected outright rather than silently overwriting the pending offer
+      // (proposing itself is legal off-turn — the guard here is the one-at-a-
+      // time rule, not whose turn it is).
       const counterOffer = {
         fromId: "p2",
         toId: "p1",
@@ -654,11 +655,54 @@ describe("Game Engine", () => {
       };
       expect(() =>
         applyAction(proposed, "p2", { type: "PROPOSE_TRADE", trade: counterOffer }),
-      ).toThrow("It is not player p2's turn");
+      ).toThrow("Another trade is already pending");
 
       // The original trade remains intact and untouched.
       expect(proposed.activeTrade).toEqual(tradeOffer);
       expect(proposed.activeTrade?.toId).toBe("p2");
+    });
+
+    it("lets any player propose a trade off-turn, in any non-auction phase", () => {
+      const state = createGame(["p1", "p2"]);
+      // It is p1's turn and they've landed on an unowned tile (a phase that
+      // previously blocked all trade proposals).
+      state.currentPlayerIndex = 0;
+      state.phase = "awaiting-buy-decision";
+      state.tiles[1].ownerId = "p1";
+      state.tiles[3].ownerId = "p2";
+
+      // p2 — NOT the current player — proposes a trade to p1.
+      const offer = {
+        fromId: "p2",
+        toId: "p1",
+        giveCash: 0,
+        getCash: 0,
+        giveTiles: [3],
+        getTiles: [1],
+      };
+      const next = applyAction(state, "p2", { type: "PROPOSE_TRADE", trade: offer });
+      expect(next.activeTrade).toEqual(offer);
+      // The turn/phase are untouched by the proposal.
+      expect(next.phase).toBe("awaiting-buy-decision");
+      expect(next.currentPlayerIndex).toBe(0);
+    });
+
+    it("blocks trade proposals during an auction", () => {
+      const state = createGame(["p1", "p2"]);
+      state.phase = "auction";
+      state.tiles[1].ownerId = "p1";
+      state.tiles[3].ownerId = "p2";
+      const offer = {
+        fromId: "p1",
+        toId: "p2",
+        giveCash: 0,
+        getCash: 0,
+        giveTiles: [1],
+        getTiles: [3],
+      };
+      expect(() =>
+        applyAction(state, "p1", { type: "PROPOSE_TRADE", trade: offer }),
+      ).toThrow("Cannot propose trade in phase auction");
     });
 
     it("rejects trade offers with non-integer or NaN cash (wire poisoning)", () => {
