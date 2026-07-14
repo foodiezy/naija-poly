@@ -1,10 +1,9 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { TOKENS, tokenEmoji } from "../../data/tokens";
 import { Room } from "colyseus.js";
 import { ChatMessage } from "../../shared/chat";
 import { RoomState, RoomSettings, LobbyPlayerView } from "../../shared/room";
 import { countHumans } from "../lib/players";
-import { useTriviaRotation } from "../hooks/useTriviaRotation";
 
 interface RoomLobbyViewProps {
   room: Room;
@@ -34,8 +33,6 @@ export default function RoomLobbyView({
   const roomFull = playerCount >= 6;
   const myTokenId = roomState?.lobbyPlayers?.get(room.sessionId)?.tokenId;
   const humanCount = countHumans(roomState?.lobbyPlayers ? roomState.lobbyPlayers.keys() : []);
-
-  const trivia = useTriviaRotation(6000);
 
   return (
     <div className="lobby-columns-container">
@@ -370,23 +367,6 @@ export default function RoomLobbyView({
             }}
           />
         </div>
-      </div>
-
-      {/* Trivia Ticker — shown while players wait */}
-      <div className="lobby-trivia-ticker">
-        <span className="trivia-label">🇳🇬 Did you know?</span>
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={trivia}
-            className="trivia-text"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.4 }}
-          >
-            {trivia}
-          </motion.p>
-        </AnimatePresence>
       </div>
     </div>
   );
