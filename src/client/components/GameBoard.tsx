@@ -25,6 +25,7 @@ interface GameBoardProps {
   mySessionId?: string;
   onTileClick?: (pos: number) => void;
   onEndTurn?: () => void;
+  onRoll?: () => void;
   // Animated token positions from the shared walker (owned by App so the buy
   // card can wait for the token to arrive). Falls back to static positions.
   displayedPositions?: Map<string, number>;
@@ -145,6 +146,7 @@ export default function GameBoard({
   mySessionId,
   onTileClick,
   onEndTurn,
+  onRoll,
   displayedPositions: displayedPositionsProp,
 }: GameBoardProps) {
   if (!engineState) {
@@ -184,6 +186,14 @@ export default function GameBoard({
   // Shake the dice briefly when a new roll comes in, then settle.
   const [diceShaking, setDiceShaking] = useState(false);
   const prevDiceKey = useRef<string>("");
+  // The dice element PERSISTS across rolls (never unmounts) and just spins to
+  // its new value. diceSpins accumulates a full extra turn per roll so the spin
+  // is always visible — even when the same value is rolled twice.
+  const diceSpins = useRef(0);
+  const lastDiceSig = useRef<string>("");
+  // Latch the board Roll button on click so a double-tap can't fire two ROLLs
+  // before the phase flips; released whenever the phase or turn changes.
+  const [rollBusy, setRollBusy] = useState(false);
 
   // In-game trivia rotation — shown during other players' turns
   const boardTrivia = useTriviaRotation(14000, isMyTurn);
@@ -231,42 +241,39 @@ export default function GameBoard({
 
   const getTokenEmoji = (playerId: string) => tokenEmoji(lobbyPlayers.get(playerId)?.tokenId);
 
-  const renderDie3D = (value: number, key: string) => {
-    let rotation = "";
+  // Render a die that STAYS mounted (stable key) and simply rotates its cube to
+  // the requested value. The `.cube` CSS `transition: transform` animates that
+  // rotation, so the die spins to its new face in place instead of vanishing
+  // and popping back. `spinTurns` adds full 360° turns for the tumble feel.
+  const renderDie3D = (value: number, key: string, spinTurns: number) => {
+    let faceX = 0;
+    let faceY = 0;
     switch (value) {
-      case 1:
-        rotation = "rotateX(0deg) rotateY(0deg)";
-        break;
       case 6:
-        rotation = "rotateX(180deg) rotateY(0deg)";
+        faceX = 180;
         break;
       case 2:
-        rotation = "rotateX(-90deg) rotateY(0deg)";
+        faceX = -90;
         break;
       case 5:
-        rotation = "rotateX(90deg) rotateY(0deg)";
+        faceX = 90;
         break;
       case 3:
-        rotation = "rotateX(0deg) rotateY(90deg)";
+        faceY = 90;
         break;
       case 4:
-        rotation = "rotateX(0deg) rotateY(-90deg)";
+        faceY = -90;
         break;
+      case 1:
       default:
-        rotation = "rotateX(0deg) rotateY(0deg)";
+        break;
     }
-    // Rest the die at a slight isometric tilt so the value face plus two side
-    // faces are visible — reads as a real 3D die instead of a flat square.
-    rotation = `rotateX(-18deg) rotateY(22deg) ${rotation}`;
+    // Slight isometric resting tilt so the value face plus two side faces show —
+    // reads as a real 3D die. Extra full turns per roll drive the visible spin.
+    const rotation = `rotateX(${-18 + faceX}deg) rotateY(${22 + faceY + spinTurns * 360}deg)`;
 
     return (
-      <motion.div
-        key={key}
-        className="die-3d-wrapper"
-        initial={{ rotateY: -360, scale: 0.5, opacity: 0 }}
-        animate={{ rotateY: 0, scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 260, damping: 18, duration: 0.5 }}
-      >
+      <div key={key} className="die-3d-wrapper">
         <div className="die-3d">
           <div className="cube" style={{ transform: rotation }}>
             <div className="face front" data-value="1">
@@ -304,7 +311,7 @@ export default function GameBoard({
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   };
 
@@ -338,9 +345,41 @@ export default function GameBoard({
     return () => clearTimeout(t);
   }, [lastLog, activeArrived]);
 
+  // Release the roll latch once the turn advances or the phase changes.
+  useEffect(() => {
+    setRollBusy(false);
+  }, [engineState.phase, engineState.currentPlayerIndex]);
+
   // Can the local player end their turn right now?
   const canEndTurn =
     isMyTurn && engineState.phase === "awaiting-end-turn" && (myPlayer?.cash ?? 0) >= 0;
+
+  // Can the local player roll right now? (Board-centre Roll button.)
+  const canRoll = isMyTurn && engineState.phase === "awaiting-roll";
+  const handleRoll = () => {
+    if (rollBusy) return;
+    setRollBusy(true);
+    onRoll?.();
+  };
+
+  // Dice stay on the board at all times: before the first roll (or at the top
+  // of a turn) they rest showing a neutral pair rather than vanishing.
+  const hasRolled = !!engineState.dice;
+  const displayDice: [number, number] = engineState.dice
+    ? [engineState.dice[0], engineState.dice[1]]
+    : [1, 1];
+
+  // Bump the spin counter in the SAME render the dice change (guarded by the
+  // last signature so React StrictMode's double-invoke doesn't double-count),
+  // keeping the spin in sync with the new value.
+  const diceSig = hasRolled
+    ? `${displayDice[0]}-${displayDice[1]}-${engineState.currentTurn}`
+    : "idle";
+  if (diceSig !== lastDiceSig.current) {
+    lastDiceSig.current = diceSig;
+    if (hasRolled) diceSpins.current += 1;
+  }
+  const diceSpin = diceSpins.current;
 
   return (
     <div className="monopoly-board">
@@ -506,33 +545,19 @@ export default function GameBoard({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            flex: "0 1 auto",
+            flex: "0 0 auto",
             marginTop: "1.5rem",
             zIndex: 10,
           }}
         >
-          {/* Dice — bigger stage, shake-then-settle */}
-          <AnimatePresence mode="wait">
-            {engineState.dice && (
-              <motion.div
-                key={`${engineState.dice[0]}-${engineState.dice[1]}-${engineState.currentTurn}`}
-                className={`dice-stage${diceShaking ? " shaking" : ""}`}
-                initial={{ opacity: 0, scale: 0.6 }}
-                animate={{ opacity: 1, scale: 1.55 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                {renderDie3D(
-                  engineState.dice[0],
-                  `die0-${engineState.dice[0]}-${engineState.currentTurn}`,
-                )}
-                {renderDie3D(
-                  engineState.dice[1],
-                  `die1-${engineState.dice[1]}-${engineState.currentTurn}`,
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Dice — permanently on the stage. Stable keys mean the dice never
+              unmount: on each roll the cubes spin to their new value in place
+              (a brief shake adds tumble). They rest on a neutral pair before
+              the first roll of a turn. */}
+          <div className={`dice-stage${diceShaking ? " shaking" : ""}${hasRolled ? "" : " dice-idle"}`}>
+            {renderDie3D(displayDice[0], "die0", diceSpin)}
+            {renderDie3D(displayDice[1], "die1", diceSpin)}
+          </div>
 
           {/* Active Player Hero card */}
           {activePlayerId ? (
@@ -555,6 +580,36 @@ export default function GameBoard({
             <div style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
               Waiting for players...
             </div>
+          )}
+
+          {/* Roll Dice — right on the board when it's your turn, so you never
+              have to hunt for it in the side panel. */}
+          {canRoll && onRoll && (
+            <motion.button
+              className="board-roll-btn"
+              onClick={handleRoll}
+              disabled={rollBusy}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              whileHover={{ scale: rollBusy ? 1 : 1.05 }}
+              whileTap={{ scale: rollBusy ? 1 : 0.95 }}
+              style={{
+                marginTop: "1rem",
+                padding: "0.6rem 2rem",
+                fontSize: "1rem",
+                fontWeight: 700,
+                borderRadius: "2px",
+                background: "linear-gradient(135deg, var(--color-gold) 0%, #f97316 100%)",
+                boxShadow: "0 4px 15px rgba(232, 182, 74, 0.4)",
+                border: "none",
+                color: "#1a1205",
+                cursor: rollBusy ? "default" : "pointer",
+                opacity: rollBusy ? 0.6 : 1,
+              }}
+            >
+              🎲 {myPlayer?.inJail ? "Roll (Jail)" : "Roll Dice"}
+            </motion.button>
           )}
 
           {/* End Turn button — prominently centered */}
@@ -603,13 +658,17 @@ export default function GameBoard({
           )}
         </div>
 
-        {/* Bottom Section: Game Feed & Card draws */}
+        {/* Bottom Section: Game Feed & Card draws — grows to fill the space
+            below the dice, then scrolls internally. */}
         <div
           style={{
             width: "100%",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
+            justifyContent: "flex-end",
+            flex: "1 1 0",
+            minHeight: 0,
             zIndex: 5,
           }}
         >
@@ -646,7 +705,8 @@ export default function GameBoard({
               margin: 0,
               background: "transparent",
               border: "none",
-              maxHeight: "110px",
+              flex: "1 1 0",
+              minHeight: 0,
             }}
           >
             <div

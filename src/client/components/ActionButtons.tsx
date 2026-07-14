@@ -24,7 +24,6 @@ export default function ActionButtons({
   me,
   mySessionId,
   isMyTurn,
-  canManage,
   activeTrade,
   onSendAction,
   onShowTradeBuilder,
@@ -33,6 +32,16 @@ export default function ActionButtons({
   const { phase, players } = engineState;
   const currentPlayer = players[engineState.currentPlayerIndex];
   const isBankrupt = me?.bankrupt;
+
+  // Trades can be struck at ANY time, by anyone — not just on your turn. The
+  // only blockers are: you're bankrupt, there aren't two players, a deal is
+  // already pending (one at a time), or we're mid-auction / game-over.
+  const canTrade =
+    !isBankrupt &&
+    players.length >= 2 &&
+    activeTrade === null &&
+    phase !== "auction" &&
+    phase !== "game-over";
 
   // In-flight guard: a turn action changes the phase, so a second click before
   // the server responds would land in the wrong phase and just toast an error.
@@ -67,7 +76,8 @@ export default function ActionButtons({
     <button
       className="sidebar-action-btn sidebar-action-btn-outline"
       onClick={onShowTradeBuilder}
-      disabled={!canManage || players.length < 2 || activeTrade !== null}
+      disabled={!canTrade}
+      title={activeTrade ? "A trade is already on the table" : "Propose a trade"}
       style={{
         display: "flex",
         alignItems: "center",
@@ -116,6 +126,7 @@ export default function ActionButtons({
           >
             Jail Card
           </button>
+          {tradeBtn}
         </>
       );
     }
@@ -169,6 +180,7 @@ export default function ActionButtons({
         >
           Auction
         </button>
+        {tradeBtn}
       </>
     );
   }
@@ -179,21 +191,25 @@ export default function ActionButtons({
 
   if (!isMyTurn) {
     return (
-      <div
-        style={{
-          flex: 1,
-          textAlign: "center",
-          fontSize: "0.75rem",
-          color: "var(--text-muted)",
-          padding: "0.25rem",
-        }}
-      >
-        ⏳ Waiting for {currentPlayer?.name || "—"}
-      </div>
+      <>
+        <div
+          style={{
+            flex: 1,
+            textAlign: "center",
+            fontSize: "0.75rem",
+            color: "var(--text-muted)",
+            padding: "0.25rem",
+          }}
+        >
+          ⏳ Waiting for {currentPlayer?.name || "—"}
+        </div>
+        {tradeBtn}
+      </>
     );
   }
 
   // suppress unused warning — mySessionId is passed for future use
   void mySessionId;
-  return null;
+  // Any other on-turn phase (e.g. transient "resolving"): still allow trading.
+  return tradeBtn;
 }

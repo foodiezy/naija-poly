@@ -334,6 +334,7 @@ export default function App() {
                 mySessionId={mySessionId || undefined}
                 onTileClick={(pos) => setSelectedTilePos(pos)}
                 onEndTurn={() => sendAction({ type: "END_TURN" })}
+                onRoll={() => sendAction({ type: "ROLL" })}
                 displayedPositions={displayedPositions}
               />
             </div>

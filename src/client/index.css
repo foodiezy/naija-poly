@@ -1168,12 +1168,20 @@ h6 {
 }
 
 .board-center-feed-logs {
-  max-height: 180px;
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
   padding-right: 4px;
+}
+
+/* Keep the feed anchored to its newest line: free space collects above the
+   first entry (pushing the log to the bottom of the tall feed area), and
+   collapses to zero once the log overflows so scrolling still reaches the top. */
+.board-center-feed-logs > .log-entry:first-child {
+  margin-top: auto;
 }
 
 .board-center-bottom-row {
@@ -1225,6 +1233,18 @@ h6 {
 .board-end-turn-btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+/* Board-centre Roll Dice button — the primary call-to-action on your turn. */
+.board-roll-btn {
+  transition: all 0.2s;
+  z-index: 5;
+}
+
+.board-roll-btn:focus-visible,
+.board-end-turn-btn:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
 }
 
 .board-center-logo {
@@ -2659,7 +2679,9 @@ html.high-contrast .glass-panel {
   }
 
   .board-center-feed-logs {
-    max-height: 110px;
+    /* Fill the board-centre on mobile too (flex-driven, no fixed cap). */
+    flex: 1 1 0;
+    min-height: 0;
   }
 
   .tile-tooltip {
