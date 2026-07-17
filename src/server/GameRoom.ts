@@ -21,10 +21,10 @@ import { censorProfanity } from "../data/profanity";
 import type { ChatMessage } from "../shared/chat";
 
 // Dev-only testing tools (e.g. force-a-specific-chaos-card) are compiled into
-// every build but INERT unless this is true. Production runs with
-// NODE_ENV=production (see render.yaml / start script), so the guarded handlers
-// below reject every request there — they can never touch a real game.
-const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== "production";
+// every build but INERT unless explicitly opted in.  The guard fails closed:
+// an unset or missing ENABLE_DEV_TOOLS env var means dev tools are OFF.
+// In local dev, the dev:server script sets this automatically via cross-env.
+const DEV_TOOLS_ENABLED = process.env.ENABLE_DEV_TOOLS === "true";
 
 // AI (computer) players use reserved session ids that no real client can have.
 function isAIPlayer(id: string): boolean {

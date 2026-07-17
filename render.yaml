@@ -1,16 +1,27 @@
 services:
   # Single web service: the Express+Colyseus server also serves the built
   # Vite client as static files, so there is no separate static site to create.
+  #
+  # NOTE: If this service was created via the Render dashboard (not from this
+  # blueprint), the dashboard settings are authoritative and changes here won't
+  # auto-apply.  Keep the two in sync manually, or reconnect the blueprint.
   - type: web
     name: odogwu-empire-server
     runtime: node
-    buildCommand: npm install --legacy-peer-deps && npm run build:client
+    buildCommand: npm install --legacy-peer-deps && npm run build
     startCommand: npm run start
     healthCheckPath: /health
     envVars:
+      - key: NODE_ENV
+        value: production
       # Comma-separated exact origins allowed to make credentialed requests.
       # Set this to your deployed URL, e.g. https://odogwu-empire-server.onrender.com
       # (localhost is always allowed). Leave unset if the client is served
       # same-origin from this service — same-origin requests don't need it.
       - key: ALLOWED_ORIGINS
         sync: false
+      # Dev tools (DEV_FORCE_CHAOS, etc.) are OFF unless this is explicitly
+      # "true".  Never set this in production.
+      - key: ENABLE_DEV_TOOLS
+        sync: false
+

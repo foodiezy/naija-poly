@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"*.{ts,html,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"*.{ts,html,json}\"",
-    "dev:server": "tsx watch src/server/index.ts",
+    "dev:server": "cross-env ENABLE_DEV_TOOLS=true tsx watch src/server/index.ts",
     "dev:client": "vite",
     "build": "vite build",
     "build:client": "vite build",
@@ -23,6 +23,7 @@
     "@types/express": "^5.0.6",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "cross-env": "^7.0.3",
     "prettier": "^3.9.5",
     "vitest": "^2.0.0"
   },

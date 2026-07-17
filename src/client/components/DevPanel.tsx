@@ -2,7 +2,7 @@ import { useState } from "react";
 
 // Dev-only playtesting panel. The whole component is behind `import.meta.env.DEV`
 // at its mount site, so it is tree-shaken out of production builds entirely; the
-// matching server command is also inert unless NODE_ENV !== "production".
+// matching server command is also inert unless ENABLE_DEV_TOOLS=true is set.
 interface Props {
   status: "lobby" | "in_progress" | "finished" | string;
   onStartChaosGame: () => void;

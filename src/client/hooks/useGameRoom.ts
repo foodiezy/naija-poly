@@ -358,7 +358,7 @@ export function useGameRoom() {
   };
 
   // ---- DEV-ONLY helpers (no-ops in production; the server ignores the dev
-  // message unless NODE_ENV !== "production"). Used to playtest chaos panels. ----
+  // message unless ENABLE_DEV_TOOLS=true). Used to playtest chaos panels. ----
   const devForceChaos = (cardId: string) => {
     if (room && isDev) room.send("DEV_FORCE_CHAOS", { cardId });
   };
