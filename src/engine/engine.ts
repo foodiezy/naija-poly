@@ -18,8 +18,12 @@ import {
   HOUSE_SUPPLY,
   HOTEL_SUPPLY,
   AUCTION_BID_DURATION_MS,
+  GENERATOR_COST,
+  STOCKPILE_MULTIPLIER,
+  EFCC_RICHEST_THRESHOLD,
   auctionIncrements,
   type PropertyTile,
+  type ColorGroup,
 } from "../data/board";
 import type {
   Action,
@@ -51,6 +55,26 @@ function expireRoundEffects(state: GameState): void {
   if (state.airportStrike && state.currentTurn >= state.airportStrike.untilRound) {
     state.airportStrike = null;
     state.log.push(`🛬 Aviation workers don resume work! Airport rent dey collect again.`);
+  }
+  // C3 "Fuel Queue Stockpile": pay out any doubled payouts that have come due.
+  if (state.deferredPayouts && state.deferredPayouts.length > 0) {
+    const stillPending: typeof state.deferredPayouts = [];
+    for (const payout of state.deferredPayouts) {
+      if (state.currentTurn < payout.dueRound) {
+        stillPending.push(payout);
+        continue;
+      }
+      const receiver = state.players.find((p) => p.id === payout.playerId);
+      if (receiver && !receiver.bankrupt) {
+        receiver.cash += payout.amount;
+        state.bank -= payout.amount;
+        state.log.push(
+          `⛽ ${receiver.name} collected the stockpiled fuel money: ₦${payout.amount.toLocaleString("en-NG")}.`,
+        );
+      }
+      // A bankrupt receiver simply forfeits the payout; it is dropped either way.
+    }
+    state.deferredPayouts = stillPending;
   }
 }
 
@@ -266,6 +290,175 @@ export function getRent(state: GameState, pos: number, diceTotal: number): numbe
   return 0;
 }
 
+// ---------------------------------------------------------------------------
+// Chaos Mode helpers (pure, no I/O)
+// ---------------------------------------------------------------------------
+
+// Is rent on `pos` currently waived by a blackout, for the tile's owner?
+// A zone-scoped blackout (C1) only darkens property tiles in its color group,
+// and an owner who fueled a generator (C2) keeps collecting. A zone-less
+// blackout is the legacy global one (darkens every tile).
+function isBlackedOut(state: GameState, pos: number, ownerId: PlayerId | null): boolean {
+  const bo = state.blackout;
+  if (!bo) return false;
+  if (ownerId !== null && bo.generatorOwners?.includes(ownerId)) return false;
+  if (bo.zone === undefined) return true; // legacy global blackout
+  const tile = BOARD[pos];
+  return tile.type === "property" && tile.group === bo.zone;
+}
+
+// Color groups that have at least one owned, un-mortgaged property — the only
+// zones a blackout can meaningfully target (an empty zone would waive nothing).
+function zonesWithCollectibleRent(state: GameState): ColorGroup[] {
+  const zones = new Set<ColorGroup>();
+  for (const tile of BOARD) {
+    if (tile.type !== "property") continue;
+    const ts = state.tiles[tile.pos];
+    if (ts && ts.ownerId !== null && !ts.mortgaged) zones.add(tile.group);
+  }
+  return [...zones];
+}
+
+// Positions of every currently-unowned ownable tile (fire-sale candidates).
+function unownedOwnableTiles(state: GameState): number[] {
+  const positions: number[] = [];
+  for (const tile of BOARD) {
+    if (tile.type === "property" || tile.type === "airport" || tile.type === "utility") {
+      if (state.tiles[tile.pos]?.ownerId === null) positions.push(tile.pos);
+    }
+  }
+  return positions;
+}
+
+// Positions of every tile a player owns (EFCC surrender candidates).
+function ownedTilesOf(state: GameState, playerId: PlayerId): number[] {
+  return Object.keys(state.tiles)
+    .map((s) => parseInt(s, 10))
+    .filter((pos) => state.tiles[pos].ownerId === playerId);
+}
+
+// A player's building income for C3 (same accounting as the Market Boom bonus).
+function buildingIncome(
+  state: GameState,
+  playerId: PlayerId,
+  perHouse: number,
+  perHotel: number,
+): number {
+  let houses = 0;
+  let hotels = 0;
+  Object.values(state.tiles).forEach((ts) => {
+    if (ts.ownerId === playerId) {
+      if (ts.houses === 5) hotels += 1;
+      else if (ts.houses >= 1 && ts.houses <= 4) houses += ts.houses;
+    }
+  });
+  return houses * perHouse + hotels * perHotel;
+}
+
+// Total net worth for a player: cash + property/building value − pending debts.
+// Mirrors the turn-limit scoring in END_TURN; factored out so EFCC targeting is
+// deterministic and testable.
+export function computeNetWorth(state: GameState, playerId: PlayerId): number {
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player) return 0;
+  let netWorth = player.cash;
+  Object.keys(state.tiles).forEach((posStr) => {
+    const pos = parseInt(posStr, 10);
+    const ts = state.tiles[pos];
+    if (ts.ownerId !== playerId) return;
+    const tile = BOARD[pos];
+    if (!("price" in tile)) return;
+    if (ts.mortgaged) {
+      netWorth += tile.mortgage;
+    } else {
+      netWorth += tile.price;
+      if (tile.type === "property" && ts.houses > 0) netWorth += ts.houses * tile.houseCost;
+    }
+  });
+  const pendingDebts = state.debtLedger
+    .filter((d) => d.debtorId === playerId)
+    .reduce((sum, d) => sum + d.amount, 0);
+  return netWorth - pendingDebts;
+}
+
+// The richest non-bankrupt player, if their net worth clears the EFCC threshold.
+// Ties are broken by turn order (lowest player index wins) so the pure engine is
+// reproducible. Returns null when nobody qualifies (the card then fizzles).
+function findRichestPlayer(state: GameState): PlayerId | null {
+  let bestId: PlayerId | null = null;
+  let bestWorth = -Infinity;
+  // players are stored in turn order; strict `>` keeps the first (lowest-index)
+  // player on a tie.
+  for (const player of state.players) {
+    if (player.bankrupt) continue;
+    const worth = computeNetWorth(state, player.id);
+    if (worth > bestWorth) {
+      bestWorth = worth;
+      bestId = player.id;
+    }
+  }
+  if (bestId === null || bestWorth < EFCC_RICHEST_THRESHOLD) return null;
+  return bestId;
+}
+
+// Which player must act on the live chaos pending-decision, if any. The server
+// uses this to route AFK auto-play and AI moves; null when no chaos decision is
+// pending. Pure — derives entirely from state.
+export function pendingChaosDecider(state: GameState): PlayerId | null {
+  switch (state.phase) {
+    case "awaiting-blackout-target":
+      return state.pendingBlackout?.drawerId ?? null;
+    case "awaiting-stockpile-choice":
+      return state.pendingStockpile?.playerId ?? null;
+    case "awaiting-firesale-pick":
+      return state.pendingFireSale?.drawerId ?? null;
+    case "awaiting-efcc-choice":
+      return state.pendingEfcc?.targetId ?? null;
+    default:
+      return null;
+  }
+}
+
+// A safe default intent to auto-resolve a live chaos decision (AFK timeout / AI).
+// Defaults are the least-disruptive legal move: take blackout's first zone, take
+// stockpile now, decline the fire sale, and settle EFCC in cash (falling back to
+// surrendering the cheapest property if the target cannot pay and has one).
+// Returns null when no chaos decision is pending. Pure — no mutation.
+export function defaultChaosResolution(state: GameState): Action | null {
+  switch (state.phase) {
+    case "awaiting-blackout-target": {
+      const zone = state.pendingBlackout?.selectableZones[0];
+      return zone ? { type: "CHOOSE_BLACKOUT_ZONE", zone } : null;
+    }
+    case "awaiting-stockpile-choice":
+      return { type: "CHOOSE_STOCKPILE", mode: "now" };
+    case "awaiting-firesale-pick":
+      return { type: "DECLINE_FIRESALE" };
+    case "awaiting-efcc-choice": {
+      const pending = state.pendingEfcc;
+      if (!pending) return null;
+      const target = state.players.find((p) => p.id === pending.targetId);
+      if (target && target.cash >= pending.cashAmount) {
+        return { type: "EFCC_PAY_CASH" };
+      }
+      if (pending.surrenderableTiles.length > 0) {
+        // Give up the cheapest tile — the smallest asset loss.
+        const cheapest = [...pending.surrenderableTiles].sort((a, b) => {
+          const pa = "price" in BOARD[a] ? (BOARD[a] as PropertyTile).price : 0;
+          const pb = "price" in BOARD[b] ? (BOARD[b] as PropertyTile).price : 0;
+          return pa - pb;
+        })[0];
+        return { type: "EFCC_SURRENDER", pos: cheapest };
+      }
+      // No property to surrender and can't pay: settle in cash and let the debt/
+      // bankruptcy path take over — never a softlock.
+      return { type: "EFCC_PAY_CASH" };
+    }
+    default:
+      return null;
+  }
+}
+
 const DEFAULT_SETTINGS: GameSettings = {
   startingCash: STARTING_CASH,
   turnLimit: 0,
@@ -369,6 +562,11 @@ export function createGame(
     currentTurn: 1,
     freeParkingPot: 0,
     blackout: null,
+    pendingBlackout: null,
+    pendingStockpile: null,
+    pendingFireSale: null,
+    pendingEfcc: null,
+    deferredPayouts: [],
     debtLedger: [],
     votekicks: {},
     stats,
@@ -727,13 +925,26 @@ export function applyAction(
   // A disconnect can land on any player at any time, not just the active one.
   const isForfeit = action.type === "FORFEIT";
   const isVoteKick = action.type === "VOTE_KICK";
+  // Chaos-mode interactive intents. The decider is validated inside each case
+  // (drawer / affected owner / EFCC target) — which for BUY_GENERATOR and the
+  // EFCC choice may be a player other than the current one, so they must bypass
+  // the blanket current-player turn check, exactly like auction/trade actions.
+  const isChaosDecisionAction =
+    action.type === "CHOOSE_BLACKOUT_ZONE" ||
+    action.type === "BUY_GENERATOR" ||
+    action.type === "CHOOSE_STOCKPILE" ||
+    action.type === "CHOOSE_FIRESALE_TILE" ||
+    action.type === "DECLINE_FIRESALE" ||
+    action.type === "EFCC_PAY_CASH" ||
+    action.type === "EFCC_SURRENDER";
 
   if (
     playerId !== currentPlayer.id &&
     !isAuctionAction &&
     !isTradeAction &&
     !isForfeit &&
-    !isVoteKick
+    !isVoteKick &&
+    !isChaosDecisionAction
   ) {
     const playerObj = nextState.players.find((p) => p.id === playerId);
     const isDeclaringBankruptInDebt =
@@ -1750,6 +1961,206 @@ export function applyAction(
       break;
     }
 
+    // ---- Chaos Mode interactive resolutions --------------------------------
+
+    case "CHOOSE_BLACKOUT_ZONE": {
+      // C1: the drawer names which zone goes dark.
+      if (nextState.phase !== "awaiting-blackout-target" || !nextState.pendingBlackout) {
+        throw new Error("No blackout target is pending");
+      }
+      const pending = nextState.pendingBlackout;
+      if (playerId !== pending.drawerId) {
+        throw new Error("Only the player who drew the card can choose the blackout zone");
+      }
+      if (!pending.selectableZones.includes(action.zone)) {
+        throw new Error("That zone cannot be blacked out");
+      }
+      nextState.blackout = {
+        untilRound: nextState.currentTurn + 1,
+        zone: action.zone,
+        generatorOwners: [],
+      };
+      nextState.pendingBlackout = null;
+      nextState.phase = "awaiting-end-turn";
+      nextState.log.push(
+        `⚡ The ${action.zone} zone don enter total darkness! No rent there till the round waka back — unless an owner fuels a generator.`,
+      );
+      break;
+    }
+
+    case "BUY_GENERATOR": {
+      // C2: an owner in the darkened zone pays the bank to keep collecting rent
+      // there. Available to any solvent owner while a zone blackout is live —
+      // the defended-against-the-leader counterplay to C1.
+      const bo = nextState.blackout;
+      if (!bo || bo.zone === undefined) {
+        throw new Error("No zone blackout is active");
+      }
+      if (nextState.phase === "game-over") {
+        throw new Error("The game is over");
+      }
+      const buyer = nextState.players.find((p) => p.id === playerId);
+      if (!buyer || buyer.bankrupt) {
+        throw new Error("Not an active player");
+      }
+      const ownsLitTileInZone = BOARD.some(
+        (t) =>
+          t.type === "property" &&
+          t.group === bo.zone &&
+          nextState.tiles[t.pos]?.ownerId === playerId &&
+          !nextState.tiles[t.pos]?.mortgaged,
+      );
+      if (!ownsLitTileInZone) {
+        throw new Error("You have no un-mortgaged property in the blacked-out zone");
+      }
+      if (bo.generatorOwners?.includes(playerId)) {
+        throw new Error("You already fuelled a generator for this blackout");
+      }
+      if (buyer.cash < GENERATOR_COST) {
+        throw new Error(`Insufficient cash (₦${buyer.cash}) for a generator (₦${GENERATOR_COST})`);
+      }
+      buyer.cash -= GENERATOR_COST;
+      nextState.bank += GENERATOR_COST;
+      bo.generatorOwners = [...(bo.generatorOwners ?? []), playerId];
+      nextState.log.push(
+        `🔌 ${buyer.name} fuelled a generator (₦${GENERATOR_COST.toLocaleString("en-NG")}) — their ${bo.zone} rent keeps flowing through the blackout.`,
+      );
+      break;
+    }
+
+    case "CHOOSE_STOCKPILE": {
+      // C3: take the building income now, or forgo it for double next round.
+      if (nextState.phase !== "awaiting-stockpile-choice" || !nextState.pendingStockpile) {
+        throw new Error("No stockpile choice is pending");
+      }
+      const pending = nextState.pendingStockpile;
+      if (playerId !== pending.playerId) {
+        throw new Error("This stockpile choice is not yours to make");
+      }
+      const owner = nextState.players.find((p) => p.id === pending.playerId)!;
+      if (action.mode === "now") {
+        owner.cash += pending.amount;
+        nextState.bank -= pending.amount;
+        nextState.log.push(
+          `⛽ ${owner.name} cashed ₦${pending.amount.toLocaleString("en-NG")} of building income now.`,
+        );
+      } else {
+        const doubled = pending.amount * STOCKPILE_MULTIPLIER;
+        const dueRound = nextState.currentTurn + 1;
+        (nextState.deferredPayouts ??= []).push({
+          playerId: owner.id,
+          amount: doubled,
+          dueRound,
+        });
+        nextState.log.push(
+          `⛽ ${owner.name} stockpiled — ₦${doubled.toLocaleString("en-NG")} will land when the round waka back around.`,
+        );
+      }
+      nextState.pendingStockpile = null;
+      nextState.phase = "awaiting-end-turn";
+      break;
+    }
+
+    case "CHOOSE_FIRESALE_TILE": {
+      // C4: the drawer buys one unowned tile at a discount.
+      if (nextState.phase !== "awaiting-firesale-pick" || !nextState.pendingFireSale) {
+        throw new Error("No fire sale is pending");
+      }
+      const pending = nextState.pendingFireSale;
+      if (playerId !== pending.drawerId) {
+        throw new Error("Only the player who drew the card can buy in the fire sale");
+      }
+      if (!pending.eligibleTiles.includes(action.pos)) {
+        throw new Error("That property is not available in the fire sale");
+      }
+      const tile = BOARD[action.pos];
+      const listPrice = "price" in tile ? tile.price : 0;
+      const cost = Math.floor((listPrice * (100 - pending.discountPct)) / 100);
+      // Drawer is the current player (the card resolved on their turn).
+      if (currentPlayer.cash < cost) {
+        throw new Error(
+          `Insufficient cash (₦${currentPlayer.cash}) for the fire sale price (₦${cost})`,
+        );
+      }
+      currentPlayer.cash -= cost;
+      nextState.bank += cost;
+      nextState.tiles[action.pos] = { ownerId: currentPlayer.id, houses: 0, mortgaged: false };
+      nextState.stats[currentPlayer.id].propertiesBought += 1;
+      nextState.pendingFireSale = null;
+      nextState.phase = "awaiting-end-turn";
+      nextState.log.push(
+        `🏷️ ${currentPlayer.name} grabbed ${tile.name} in the fire sale for ₦${cost.toLocaleString("en-NG")} (${pending.discountPct}% off)!`,
+      );
+      break;
+    }
+
+    case "DECLINE_FIRESALE": {
+      if (nextState.phase !== "awaiting-firesale-pick" || !nextState.pendingFireSale) {
+        throw new Error("No fire sale is pending");
+      }
+      if (playerId !== nextState.pendingFireSale.drawerId) {
+        throw new Error("Only the player who drew the card can decline the fire sale");
+      }
+      nextState.pendingFireSale = null;
+      nextState.phase = "awaiting-end-turn";
+      nextState.log.push(`🏷️ ${currentPlayer.name} waved off the fire sale.`);
+      break;
+    }
+
+    case "EFCC_PAY_CASH": {
+      // C5: the richest player settles in cash. addDebt handles solvency — a
+      // current-player target who can't pay ledgers the debt (then must
+      // mortgage/sell/declare bankrupt); a non-current target pays what they can.
+      if (nextState.phase !== "awaiting-efcc-choice" || !nextState.pendingEfcc) {
+        throw new Error("No EFCC settlement is pending");
+      }
+      const pending = nextState.pendingEfcc;
+      if (playerId !== pending.targetId) {
+        throw new Error("Only the EFCC target can respond to the settlement");
+      }
+      const target = nextState.players.find((p) => p.id === pending.targetId)!;
+      const cashAmount = pending.cashAmount;
+      nextState.pendingEfcc = null;
+      nextState.phase = "awaiting-end-turn";
+      nextState.log.push(
+        `🕵🏾 ${target.name} chose to settle with the EFCC for ₦${cashAmount.toLocaleString("en-NG")}.`,
+      );
+      addDebt(nextState, target.id, "bank", cashAmount);
+      break;
+    }
+
+    case "EFCC_SURRENDER": {
+      // C5: the richest player forfeits one property to the bank instead of cash.
+      if (nextState.phase !== "awaiting-efcc-choice" || !nextState.pendingEfcc) {
+        throw new Error("No EFCC settlement is pending");
+      }
+      const pending = nextState.pendingEfcc;
+      if (playerId !== pending.targetId) {
+        throw new Error("Only the EFCC target can respond to the settlement");
+      }
+      if (!pending.surrenderableTiles.includes(action.pos)) {
+        throw new Error("You cannot surrender that property");
+      }
+      const target = nextState.players.find((p) => p.id === pending.targetId)!;
+      const tile = BOARD[action.pos];
+      const ts = nextState.tiles[action.pos];
+      // Liquidate any buildings back to the bank first (proceeds to the owner),
+      // mirroring how bankruptcy handles developed tiles, then clear ownership.
+      if (tile.type === "property" && ts.houses > 0) {
+        const refund = Math.floor(tile.houseCost / 2) * ts.houses;
+        target.cash += refund;
+        nextState.bank -= refund;
+        nextState.log.push(
+          `${target.name}'s buildings on ${tile.name} were sold back for ₦${refund.toLocaleString("en-NG")} before forfeiture.`,
+        );
+      }
+      nextState.tiles[action.pos] = { ownerId: null, houses: 0, mortgaged: false };
+      nextState.pendingEfcc = null;
+      nextState.phase = "awaiting-end-turn";
+      nextState.log.push(`🕵🏾 ${target.name} forfeited ${tile.name} to the EFCC.`);
+      break;
+    }
+
     case "VOTE_KICK": {
       const targetId = action.targetId;
       const targetPlayer = nextState.players.find((p) => p.id === targetId);
@@ -1841,8 +2252,9 @@ function resolveLanding(
           `${player.name} landed on ${tile.name} (owned by ${tileState.ownerId}), but it is mortgaged.`,
         );
         state.phase = "awaiting-end-turn";
-      } else if (state.blackout) {
-        // NEPA don take light — no light, no rent.
+      } else if (isBlackedOut(state, pos, tileState.ownerId)) {
+        // NEPA don take light — no light, no rent (zone-scoped for C1; a
+        // generator owner is exempt and still collects).
         state.log.push(
           `⚡ Blackout! ${player.name} landed on ${tile.name} but NEPA don take light — no rent collected.`,
         );
@@ -2138,12 +2550,13 @@ function applyCardAction(
 
       const tileState = state.tiles[targetPos];
       if (
-        state.blackout &&
+        isBlackedOut(state, targetPos, tileState.ownerId) &&
         tileState.ownerId !== null &&
         tileState.ownerId !== player.id &&
         !tileState.mortgaged
       ) {
-        // NEPA blackout — utility owner can't charge either.
+        // NEPA blackout — utility owner can't charge either. (A zone-scoped C1
+        // blackout only darkens property groups, so utilities stay lit under it.)
         state.log.push(
           `⚡ Blackout! ${player.name} reached ${BOARD[targetPos].name} but NEPA don take light — no rent collected.`,
         );
@@ -2230,6 +2643,94 @@ function applyCardAction(
       }
 
       state.phase = "awaiting-end-turn";
+      break;
+    }
+
+    case "aimableBlackout": {
+      // C1: open the zone picker for the drawer. If no zone has collectible rent
+      // yet (e.g. nobody owns property), the threat has no teeth — fizzle rather
+      // than stall on an empty choice.
+      const zones = zonesWithCollectibleRent(state);
+      if (zones.length === 0) {
+        state.log.push(
+          `⚡ NEPA threaten blackout, but no landlord get light to lose yet — e fizzle.`,
+        );
+        state.phase = "awaiting-end-turn";
+        break;
+      }
+      state.pendingBlackout = {
+        drawerId: player.id,
+        selectableZones: zones,
+        deadline: null,
+      };
+      state.phase = "awaiting-blackout-target";
+      state.log.push(`⚡ ${player.name} must choose which zone go into darkness!`);
+      break;
+    }
+
+    case "fuelStockpile": {
+      // C3: compute building income; if there is none, there is nothing to take
+      // or double, so skip the choice. Otherwise open the take-now/double fork.
+      const amount = buildingIncome(state, player.id, action.perHouse, action.perHotel);
+      if (amount === 0) {
+        state.log.push(`⛽ ${player.name} get no building wey fit earn fuel money.`);
+        state.phase = "awaiting-end-turn";
+        break;
+      }
+      state.pendingStockpile = {
+        playerId: player.id,
+        amount,
+        deadline: null,
+      };
+      state.phase = "awaiting-stockpile-choice";
+      state.log.push(
+        `⛽ ${player.name}: collect ₦${amount.toLocaleString("en-NG")} now, or stockpile for double next round?`,
+      );
+      break;
+    }
+
+    case "fireSale": {
+      // C4: open the discounted buy. If every ownable tile already has an owner,
+      // there is nothing to sell — resolve gracefully instead of softlocking.
+      const eligibleTiles = unownedOwnableTiles(state);
+      if (eligibleTiles.length === 0) {
+        state.log.push(`🏷️ Fire sale, but every property don get owner — nothing to grab.`);
+        state.phase = "awaiting-end-turn";
+        break;
+      }
+      state.pendingFireSale = {
+        drawerId: player.id,
+        discountPct: action.discountPct,
+        eligibleTiles,
+        deadline: null,
+      };
+      state.phase = "awaiting-firesale-pick";
+      state.log.push(
+        `🏷️ ${player.name} fit grab one unowned property at ${action.discountPct}% off — or pass.`,
+      );
+      break;
+    }
+
+    case "efccSettlement": {
+      // C5: target the richest player (if any clears the threshold) and open the
+      // pay-or-surrender fork for them.
+      const targetId = findRichestPlayer(state);
+      if (targetId === null) {
+        state.log.push(`🕵🏾 EFCC come around, but nobody rich enough to bother — e fizzle.`);
+        state.phase = "awaiting-end-turn";
+        break;
+      }
+      const target = state.players.find((p) => p.id === targetId)!;
+      state.pendingEfcc = {
+        targetId,
+        cashAmount: action.cashAmount,
+        surrenderableTiles: ownedTilesOf(state, targetId),
+        deadline: null,
+      };
+      state.phase = "awaiting-efcc-choice";
+      state.log.push(
+        `🕵🏾 EFCC dey investigate ${target.name} (richest player)! Dem must settle ₦${action.cashAmount.toLocaleString("en-NG")} or forfeit a property.`,
+      );
       break;
     }
 

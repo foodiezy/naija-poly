@@ -103,7 +103,19 @@ export type CardAction =
   | { kind: "nearestUtility" } // advance to next utility
   | { kind: "blackout" } // chaos mode: NEPA takes light — no rent for a round
   | { kind: "airportStrike" } // chaos mode: no airport rent for a round
-  | { kind: "propertyBonus"; perHouse: number; perHotel: number }; // chaos mode: market boom
+  | { kind: "propertyBonus"; perHouse: number; perHotel: number } // chaos mode: market boom
+  // --- Chaos Mode redesign (aimable / defendable / fork mechanics) ---
+  // C1: the drawer chooses a zone (ColorGroup) to plunge into darkness. Owners
+  // in that zone may pay for a generator (BUY_GENERATOR) to keep collecting.
+  | { kind: "aimableBlackout" }
+  // C3: compute the drawer's building income; they choose to take it now or
+  // forgo it for a doubled payout at the next round wrap.
+  | { kind: "fuelStockpile"; perHouse: number; perHotel: number }
+  // C4: the drawer may buy one currently-unowned tile from the bank at a discount.
+  | { kind: "fireSale"; discountPct: number }
+  // C5: targets the richest player, who chooses to pay a cash settlement or
+  // surrender one property to the bank.
+  | { kind: "efccSettlement"; cashAmount: number };
 
 export interface Card {
   id: string;
@@ -119,6 +131,27 @@ export const JAIL_POSITION = 10;
 export const JAIL_FINE = 50_000;
 export const HOUSE_SUPPLY = 32;
 export const HOTEL_SUPPLY = 12;
+
+// ----------------------------- Chaos Mode ------------------------------------
+// Every knob the redesigned Chaos deck turns lives here so feel can be
+// rebalanced by editing data, never engine logic (data-is-data). All values are
+// whole Naira / plain integers.
+//
+// C2 "I Get Generator!": an owner in a blacked-out zone pays the bank this to
+// keep collecting rent there through the blackout.
+export const GENERATOR_COST = 75_000;
+// C3 "Fuel Queue Stockpile": building income per house/hotel if taken NOW, and
+// the multiplier applied instead if the player defers to next round.
+export const STOCKPILE_PER_HOUSE = 20_000;
+export const STOCKPILE_PER_HOTEL = 100_000;
+export const STOCKPILE_MULTIPLIER = 2;
+// C4 "Government Fire Sale": percent off a tile's list price (0–100).
+export const FIRE_SALE_DISCOUNT_PCT = 50;
+// C5 "EFCC Settlement": the cash the richest player pays if they settle, and the
+// minimum net worth the richest player must have for the EFCC to bother — below
+// this the card finds no target and fizzles (no rubber-banding a poor leader).
+export const EFCC_SETTLEMENT = 250_000;
+export const EFCC_RICHEST_THRESHOLD = 1_000_000;
 
 export const formatNaira = (n: number): string => "₦" + Math.round(n).toLocaleString("en-NG");
 
@@ -631,50 +664,62 @@ export const HUSTLE_CARDS: Card[] = [
 // Mode; kept separate so the base game stays predictable. Mixed into the Chance
 // deck. drawCard looks cards up in ALL_CHANCE_CARDS so these resolve either way.
 export const CHAOS_CHANCE_CARDS: Card[] = [
+  // --- C1 NEPA Load-Shedding (aimable blackout, defendable via BUY_GENERATOR) ---
   {
     id: "cx01",
-    text: "⚡ NEPA don take light! Total blackout — nobody fit collect rent until the round waka back around.",
-    action: { kind: "blackout" },
+    text: "⚡ NEPA Load-Shedding! Point one zone go total darkness — landlords for there fit fuel gen to keep their rent.",
+    action: { kind: "aimableBlackout" },
   },
   {
     id: "cx02",
-    text: "⛽ Fuel Scarcity! Waka back 3 spaces and you no fit move quick.",
-    action: { kind: "moveRelative", steps: -3 },
-  },
-  {
-    id: "cx03",
-    text: "📈 Market Boom! Collect ₦20,000 per house and ₦100,000 per hotel you own.",
-    action: { kind: "propertyBonus", perHouse: 20_000, perHotel: 100_000 },
-  },
-  {
-    id: "cx04",
-    text: "🎉 Owambe Expenses! You spray money for party: pay each player ₦20,000.",
-    action: { kind: "payEach", amount: 20_000 },
-  },
-  {
-    id: "cx05",
-    text: "💻 Bank Network Failure! Transfer hang, you lose ₦50,000.",
-    action: { kind: "money", amount: -50_000 },
-  },
-  {
-    id: "cx06",
-    text: "🚧 Area Boys Levy! Settle the boys on your street. Pay ₦30,000.",
-    action: { kind: "money", amount: -30_000 },
-  },
-  {
-    id: "cx07",
-    text: "📝 Election Contract! Your candidate win, collect ₦30,000 from each player.",
-    action: { kind: "collectFromEach", amount: 30_000 },
+    text: "⚡ Transformer don blow! Choose one zone wey go dark — rent no dey collect there unless owners fuel their gen.",
+    action: { kind: "aimableBlackout" },
   },
   {
     id: "cx08",
-    text: "❄️ Rent Freeze! Government say no landlord fit collect rent until next round.",
-    action: { kind: "blackout" },
-  }, // re-uses blackout mechanic
+    text: "⚡ Grid Collapse! Aim the blackout: one whole zone loses light till the round waka back — gen owners still collect.",
+    action: { kind: "aimableBlackout" },
+  },
+  // --- C3 Fuel Queue Stockpile (take-now vs double-next-round fork) ---
+  {
+    id: "cx03",
+    text: "⛽ Fuel Queue! Collect your building income now, or stockpile am for DOUBLE next round.",
+    action: {
+      kind: "fuelStockpile",
+      perHouse: STOCKPILE_PER_HOUSE,
+      perHotel: STOCKPILE_PER_HOTEL,
+    },
+  },
+  {
+    id: "cx07",
+    text: "⛽ Subsidy Windfall! Cash your building income sharp-sharp, or hold am for double when the queue mad next round.",
+    action: {
+      kind: "fuelStockpile",
+      perHouse: STOCKPILE_PER_HOUSE,
+      perHotel: STOCKPILE_PER_HOTEL,
+    },
+  },
+  // --- C4 Government Fire Sale (discounted buy — edge to seize) ---
+  {
+    id: "cx04",
+    text: "🏷️ Government Fire Sale! Grab any one unowned property from the bank at half price.",
+    action: { kind: "fireSale", discountPct: FIRE_SALE_DISCOUNT_PCT },
+  },
+  {
+    id: "cx06",
+    text: "🏷️ Privatisation Bonanza! Snap up one unowned property cheap-cheap before the hammer fall.",
+    action: { kind: "fireSale", discountPct: FIRE_SALE_DISCOUNT_PCT },
+  },
+  // --- C5 EFCC Settlement (targets the richest; pay-or-surrender fork) ---
+  {
+    id: "cx05",
+    text: "🕵🏾 EFCC Settlement! The richest landlord must settle cash or forfeit one property to the state.",
+    action: { kind: "efccSettlement", cashAmount: EFCC_SETTLEMENT },
+  },
   {
     id: "cx09",
-    text: "✈️ Airport Strike! Aviation workers don lock gate. No airport rent collected until next round.",
-    action: { kind: "airportStrike" },
+    text: "🕵🏾 Panama Papers Leak! EFCC knock the richest player — settle or give up a property.",
+    action: { kind: "efccSettlement", cashAmount: EFCC_SETTLEMENT },
   },
 ];
 

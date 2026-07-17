@@ -369,17 +369,29 @@ describe("Game Engine", () => {
       expect(nextState.players[1].cash).toBe(STARTING_CASH + 70);
     });
 
-    it("drawing the NEPA chaos card triggers a blackout", () => {
+    it("drawing the NEPA chaos card opens the aimable blackout picker, then darkens the chosen zone", () => {
       const state = createGame(["p1", "p2"], { chaosMode: true });
-      state.chanceOrder = ["cx01"]; // force NEPA blackout on top of the deck
+      state.chanceOrder = ["cx01"]; // force NEPA Load-Shedding on top of the deck
+      // p1 owns a brown property so the brown zone is a legal blackout target.
+      state.tiles[1] = { ownerId: "p1", houses: 0, mortgaged: false };
       state.players[0].position = 5; // MM Airport
 
       const mockRng = MockRNG.makeRoll(1, 1); // roll 2 -> lands on pos 7 (Chance)
-      const nextState = applyAction(state, "p1", { type: "ROLL" }, mockRng.getRNG());
+      let s = applyAction(state, "p1", { type: "ROLL" }, mockRng.getRNG());
 
-      expect(nextState.blackout).not.toBeNull();
-      expect(nextState.blackout?.untilRound).toBe(2); // currentTurn (1) + 1
-      expect(nextState.phase).toBe("awaiting-end-turn");
+      // The redesigned card no longer inflicts a global blackout — it hands the
+      // drawer an aimable choice (a decision, not a passive swing).
+      expect(s.phase).toBe("awaiting-blackout-target");
+      expect(s.blackout).toBeNull();
+      expect(s.pendingBlackout?.drawerId).toBe("p1");
+      expect(s.pendingBlackout?.selectableZones).toContain("brown");
+
+      // The drawer aims the blackout at the brown zone.
+      s = applyAction(s, "p1", { type: "CHOOSE_BLACKOUT_ZONE", zone: "brown" });
+      expect(s.blackout).not.toBeNull();
+      expect(s.blackout?.zone).toBe("brown");
+      expect(s.blackout?.untilRound).toBe(2); // currentTurn (1) + 1
+      expect(s.phase).toBe("awaiting-end-turn");
     });
 
     it("waives all rent during a blackout, then restores it when the round wraps", () => {

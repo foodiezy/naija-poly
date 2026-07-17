@@ -40,7 +40,12 @@ export type Phase =
   | "auction"
   | "resolving" // rent/tax/card being applied
   | "awaiting-end-turn"
-  | "game-over";
+  | "game-over"
+  // --- Chaos Mode interactive decisions (each pauses play for one choice) ---
+  | "awaiting-blackout-target" // C1: drawer picks which zone goes dark
+  | "awaiting-stockpile-choice" // C3: drawer picks take-now vs double-next-round
+  | "awaiting-firesale-pick" // C4: drawer picks a discounted tile (or declines)
+  | "awaiting-efcc-choice"; // C5: the richest player picks pay-cash vs surrender
 
 export interface AuctionState {
   tilePos: number;
@@ -57,6 +62,45 @@ export interface AuctionState {
   // bid) so clients can render the timer and the room can auto-resolve on expiry.
   bidDurationMs: number;
   deadline: number | null;
+}
+
+// ---- Chaos Mode pending-decision payloads --------------------------------
+// Each mirrors AuctionState: a nullable field on GameState, populated only
+// while its choice is live and cleared the moment the reducer resolves it.
+// The `deadline` (server-stamped countdown) stays null in the pure engine.
+
+export interface PendingBlackout {
+  drawerId: PlayerId; // who chooses the zone
+  selectableZones: ColorGroup[]; // zones that have an owned, un-mortgaged property
+  deadline: number | null;
+}
+
+export interface PendingStockpile {
+  playerId: PlayerId; // the drawer, deciding now vs double
+  amount: number; // building income collectible immediately
+  deadline: number | null;
+}
+
+export interface PendingFireSale {
+  drawerId: PlayerId; // who may buy
+  discountPct: number; // percent off list price (0–100)
+  eligibleTiles: number[]; // positions of currently-unowned ownable tiles
+  deadline: number | null;
+}
+
+export interface PendingEfcc {
+  targetId: PlayerId; // the richest player (may not be the current player)
+  cashAmount: number; // the cash settlement if they pay
+  surrenderableTiles: number[]; // positions of tiles the target may forfeit
+  deadline: number | null;
+}
+
+// A doubled payout the player earned by stockpiling (C3), paid out when the
+// round counter reaches `dueRound` (same wrap semantics as a blackout window).
+export interface DeferredPayout {
+  playerId: PlayerId;
+  amount: number;
+  dueRound: number;
 }
 
 export interface GameSettings {
@@ -94,11 +138,25 @@ export interface GameState {
   currentTurn: number; // current round number
   freeParkingPot: number; // Mama Put Rest Stop jackpot pot
   bank: number; // Bank's cash balance, tracks money minted/destroyed
-  // Chaos-mode "NEPA blackout": while set, no rent is collected. Ends once the
-  // round counter reaches `untilRound` (i.e. play wraps back around once).
-  blackout?: { untilRound: number } | null;
+  // Chaos-mode "NEPA blackout": while set, rent is waived. Ends once the round
+  // counter reaches `untilRound` (i.e. play wraps back around once).
+  //   - `zone` scopes the blackout to one property color group (C1 aimable
+  //     blackout). Absent/undefined = a legacy global blackout (all zones dark).
+  //   - `generatorOwners` are owners who paid to keep collecting in the zone (C2).
+  blackout?: {
+    untilRound: number;
+    zone?: ColorGroup;
+    generatorOwners?: PlayerId[];
+  } | null;
   // Chaos-mode "Airport Strike": while set, no rent is collected on airports.
   airportStrike?: { untilRound: number } | null;
+  // --- Chaos Mode interactive decisions (see the Pending* interfaces) ---
+  pendingBlackout?: PendingBlackout | null; // C1
+  pendingStockpile?: PendingStockpile | null; // C3
+  pendingFireSale?: PendingFireSale | null; // C4
+  pendingEfcc?: PendingEfcc | null; // C5
+  // C3 doubled payouts awaiting their round wrap.
+  deferredPayouts?: DeferredPayout[];
   votekicks: Record<PlayerId, PlayerId[]>; // targetId -> array of voterIds
   stats: Record<
     PlayerId,
@@ -133,7 +191,15 @@ export type Action =
   | { type: "DECLARE_BANKRUPT" }
   | { type: "FORFEIT" } // a player permanently left (disconnect): eliminate them
   | { type: "VOTE_KICK"; targetId: PlayerId }
-  | { type: "END_TURN" };
+  | { type: "END_TURN" }
+  // --- Chaos Mode interactive intents (routed to the pure reducer) ---
+  | { type: "CHOOSE_BLACKOUT_ZONE"; zone: ColorGroup } // C1
+  | { type: "BUY_GENERATOR" } // C2: an owner keeps their zone rent alive
+  | { type: "CHOOSE_STOCKPILE"; mode: "now" | "double" } // C3
+  | { type: "CHOOSE_FIRESALE_TILE"; pos: number } // C4
+  | { type: "DECLINE_FIRESALE" } // C4
+  | { type: "EFCC_PAY_CASH" } // C5
+  | { type: "EFCC_SURRENDER"; pos: number }; // C5
 
 export interface TradeOffer {
   fromId: PlayerId;

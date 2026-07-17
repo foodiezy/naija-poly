@@ -52,8 +52,13 @@ cards (written in Pidgin), and try to bankrupt each other. "Free parking" is the
 ## Current state
 Feature-complete and deployment-ready. Engine: full rules (roll/buy/rent/cards,
 building with bank supply caps, mortgage, auctions, multi-asset trading,
-bankruptcy, forfeit) plus opt-in Chaos Mode (NEPA blackout card freezes rent
-for a round). Server: Colyseus room with lobby/settings/AI bots/turn & auction
+bankruptcy, forfeit) plus opt-in Chaos Mode — a redesigned deck (C1–C5) where
+every card is an interactive decision, not a passive swing: aimable NEPA
+blackout defendable by a generator buyout, a fuel-queue stockpile fork, a
+government fire sale (discounted buy), and an EFCC settlement targeting the
+richest player. All routed through pending-decision state in the pure engine
+(tunables in board.ts); see chaos-redesign.md. Server: Colyseus room with
+lobby/settings/AI bots/turn & auction
 timers, reconnection (60s grace), room lock on start, per-client rate
 limiting, redacted state sync (deck order hidden from clients), CORS pinned
 via ALLOWED_ORIGINS. Client: full board UI with real place photos, deed cards

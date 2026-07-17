@@ -1,8 +1,20 @@
 import { Schema, type, MapSchema } from "@colyseus/schema";
 import { Room, Client } from "colyseus";
-import { createGame, applyAction } from "../engine/engine";
+import {
+  createGame,
+  applyAction,
+  pendingChaosDecider,
+  defaultChaosResolution,
+} from "../engine/engine";
 import { getAIAction } from "../engine/ai";
 import type { Action, GameState } from "../engine/types";
+
+// How long a Chaos-mode interactive decision (aim the blackout, stockpile
+// fork, fire-sale pick, EFCC settlement) stays open before the server
+// auto-resolves it with a safe default. Like the auction timer, this runs
+// regardless of the optional per-turn AFK timer: a chaos decision blocks every
+// player, so it must never be able to hang the room.
+const CHAOS_DECISION_MS = 20_000;
 import { TOKEN_IDS, MAX_PLAYERS } from "../data/tokens";
 import { censorProfanity } from "../data/profanity";
 import type { ChatMessage } from "../shared/chat";
@@ -39,6 +51,8 @@ export class GameRoom extends Room<GameRoomState> {
 
   // Server-owned countdown for the active auction (Colyseus clock timer).
   private auctionTimer?: ReturnType<typeof this.clock.setTimeout>;
+  // Server-owned countdown for a live Chaos-mode interactive decision.
+  private decisionTimer?: ReturnType<typeof this.clock.setTimeout>;
   // Pending scheduled move for a computer player.
   private aiTimer?: ReturnType<typeof this.clock.setTimeout>;
   // Last AI trade proposal (actor + round). The engine is pure and a declined
@@ -153,6 +167,7 @@ export class GameRoom extends Room<GameRoomState> {
     if (!this.fullState) throw new Error("Game has not started");
     const nextEngineState = applyAction(this.fullState, playerId, action);
     this.armAuctionTimer(nextEngineState);
+    this.armDecisionTimer(nextEngineState);
     this.persist(nextEngineState);
 
     // (Re)arm the AFK turn timer for the new turn/phase.
@@ -247,13 +262,20 @@ export class GameRoom extends Room<GameRoomState> {
       if (recipient && !recipient.bankrupt) actorId = trade.toId;
     }
     if (!actorId) {
-      if (engineState.phase === "auction" && engineState.auctionState) {
+      // A live chaos decision (which may belong to a non-current player, e.g.
+      // an EFCC target) takes priority: if a bot must decide, let it.
+      const chaosDecider = pendingChaosDecider(engineState);
+      if (chaosDecider && isAIPlayer(chaosDecider)) {
+        actorId = chaosDecider;
+      } else if (engineState.phase === "auction" && engineState.auctionState) {
         const a = engineState.auctionState;
         actorId =
           a.participantIds.find(
             (id: string) => isAIPlayer(id) && !a.passedIds.includes(id) && a.highestBidderId !== id,
           ) ?? null;
-      } else {
+      } else if (pendingChaosDecider(engineState) === null) {
+        // Only hand the turn to the current bot when no chaos decision is
+        // pending (a pending decision owned by a human must not be pre-empted).
         const current = engineState.players[engineState.currentPlayerIndex];
         if (current && isAIPlayer(current.id) && !current.bankrupt) actorId = current.id;
       }
@@ -271,6 +293,22 @@ export class GameRoom extends Room<GameRoomState> {
 
     const engineState = this.fullState;
     if (!engineState) return;
+
+    // A pending chaos decision isn't something the general AI planner models —
+    // resolve it with the engine's safe default (take-now / decline / settle).
+    if (pendingChaosDecider(engineState) === actorId) {
+      const chaosMove = defaultChaosResolution(engineState);
+      if (chaosMove) {
+        try {
+          this.runEngineAction(actorId, chaosMove);
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`AI ${actorId} chaos decision failed: ${msg}`);
+          this.scheduleAIIfNeeded();
+        }
+        return;
+      }
+    }
 
     const suppressTradeProposal =
       this.lastAITradeProposal?.actorId === actorId &&
@@ -296,6 +334,48 @@ export class GameRoom extends Room<GameRoomState> {
     if (this.auctionTimer) {
       this.auctionTimer.clear();
       this.auctionTimer = undefined;
+    }
+  }
+
+  private clearDecisionTimer() {
+    if (this.decisionTimer) {
+      this.decisionTimer.clear();
+      this.decisionTimer = undefined;
+    }
+  }
+
+  // Stamp a deadline onto the live chaos decision and schedule its auto-resolve.
+  // Called after every engine action: arms the window while a chaos decision is
+  // pending, and clears the timer once it is resolved. Human deciders get the
+  // full window; the AI scheduler resolves bot deciders sooner (see below).
+  private armDecisionTimer(state: GameState) {
+    this.clearDecisionTimer();
+    const decider = pendingChaosDecider(state);
+    if (!decider) return;
+    const deadline = Date.now() + CHAOS_DECISION_MS;
+    // Surface the countdown to clients via the pending field's `deadline`.
+    const pending =
+      state.pendingBlackout ?? state.pendingStockpile ?? state.pendingFireSale ?? state.pendingEfcc;
+    if (pending) pending.deadline = deadline;
+    this.decisionTimer = this.clock.setTimeout(() => this.onDecisionTimeout(), CHAOS_DECISION_MS);
+  }
+
+  private onDecisionTimeout() {
+    this.decisionTimer = undefined;
+    if (this.state.status !== "in_progress") return;
+    const state = this.fullState;
+    if (!state) return;
+    const decider = pendingChaosDecider(state);
+    const fallback = defaultChaosResolution(state);
+    if (!decider || !fallback) return;
+    try {
+      this.runEngineAction(decider, fallback);
+      this.broadcast("ERROR", {
+        message: `The chaos decision timed out — resolved automatically.`,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`Error auto-resolving chaos decision: ${msg}`);
     }
   }
 

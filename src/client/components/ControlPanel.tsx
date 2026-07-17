@@ -9,6 +9,7 @@ import { netWorth } from "../lib/holdings";
 import { IconTimer, IconBankrupt, IconWarning } from "./icons";
 import PlayerList from "./PlayerList";
 import AuctionPanel from "./AuctionPanel";
+import ChaosDecisionPanel from "./ChaosDecisionPanel";
 import ActionButtons from "./ActionButtons";
 import PropertyList from "./PropertyList";
 import TradeOverlay from "./TradeOverlay";
@@ -327,6 +328,18 @@ export default function ControlPanel({
             players={players}
             mySessionId={mySessionId}
             myCash={me?.cash ?? 0}
+            onSendAction={onSendAction}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* 3b. Chaos-mode interactive decisions (aim blackout / stockpile / fire
+          sale / EFCC) and the standing generator option. */}
+      <AnimatePresence>
+        {mySessionId && (
+          <ChaosDecisionPanel
+            engineState={engineState}
+            mySessionId={mySessionId}
             onSendAction={onSendAction}
           />
         )}
