@@ -16,6 +16,7 @@ import TileInspector from "./components/TileInspector";
 import GameOverModal from "./components/GameOverModal";
 import BuyDeedModal from "./components/BuyDeedModal";
 import OnboardingModal from "./components/OnboardingModal";
+import DevPanel from "./components/DevPanel";
 
 // Hooks & Utilities
 import { useGameRoom } from "./hooks/useGameRoom";
@@ -47,6 +48,8 @@ export default function App() {
     startGame,
     sendChatMessage,
     resetGame,
+    devForceChaos,
+    devStartChaosGame,
   } = useGameRoom();
 
   const [muted, setMuted] = useState(sound.getMuted());
@@ -447,6 +450,15 @@ export default function App() {
         </div>
         <div className="footer-right">© 2026 Odogwu Games · Made with Lagos vibes.</div>
       </footer>
+
+      {/* DEV-ONLY playtesting controls — tree-shaken out of production builds. */}
+      {import.meta.env.DEV && room && (
+        <DevPanel
+          status={roomState?.status ?? "lobby"}
+          onStartChaosGame={devStartChaosGame}
+          onForceChaos={devForceChaos}
+        />
+      )}
     </div>
   );
 }

@@ -357,6 +357,21 @@ export function useGameRoom() {
     if (room) room.send("RESET_GAME");
   };
 
+  // ---- DEV-ONLY helpers (no-ops in production; the server ignores the dev
+  // message unless NODE_ENV !== "production"). Used to playtest chaos panels. ----
+  const devForceChaos = (cardId: string) => {
+    if (room && isDev) room.send("DEV_FORCE_CHAOS", { cardId });
+  };
+
+  const devStartChaosGame = () => {
+    if (!room || !isDev) return;
+    // Turn chaos on, ensure at least 2 players (top up with a bot), then start.
+    room.send("UPDATE_SETTINGS", { chaosMode: true });
+    const count = roomState?.lobbyPlayers?.size ?? 1;
+    for (let i = count; i < 2; i++) room.send("ADD_AI");
+    room.send("START_GAME");
+  };
+
   return {
     playerName,
     room,
@@ -376,5 +391,7 @@ export function useGameRoom() {
     startGame,
     sendChatMessage,
     resetGame,
+    devForceChaos,
+    devStartChaosGame,
   };
 }

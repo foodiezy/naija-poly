@@ -16,8 +16,15 @@ import type { Action, GameState } from "../engine/types";
 // player, so it must never be able to hang the room.
 const CHAOS_DECISION_MS = 20_000;
 import { TOKEN_IDS, MAX_PLAYERS } from "../data/tokens";
+import { CHAOS_CHANCE_CARDS } from "../data/board";
 import { censorProfanity } from "../data/profanity";
 import type { ChatMessage } from "../shared/chat";
+
+// Dev-only testing tools (e.g. force-a-specific-chaos-card) are compiled into
+// every build but INERT unless this is true. Production runs with
+// NODE_ENV=production (see render.yaml / start script), so the guarded handlers
+// below reject every request there — they can never touch a real game.
+const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== "production";
 
 // AI (computer) players use reserved session ids that no real client can have.
 function isAIPlayer(id: string): boolean {
@@ -631,6 +638,34 @@ export class GameRoom extends Room<GameRoomState> {
         this.sendError(client, message);
         console.error(`Error applying action from client ${client.sessionId}: ${message}`);
       }
+    });
+
+    // DEV-ONLY: seed a chosen chaos card at the top of the Chance deck so the
+    // NEXT time anyone lands on a Chance tile they draw it — used to playtest the
+    // C1–C5 decision panels on demand. Inert in production (DEV_TOOLS_ENABLED).
+    // This only REORDERS the (already-shuffled) deck; it never changes the RNG,
+    // the shuffle, or any game rule, so with the flag off the game is untouched.
+    this.onMessage("DEV_FORCE_CHAOS", (client, message: { cardId?: string }) => {
+      if (!DEV_TOOLS_ENABLED) return; // production: silently ignore
+      if (this.state.status !== "in_progress" || !this.fullState) return;
+      const cardId = message?.cardId;
+      const isChaosCard = CHAOS_CHANCE_CARDS.some((c) => c.id === cardId);
+      if (!cardId || !isChaosCard) {
+        this.sendError(client, "[DEV] Unknown chaos card id");
+        return;
+      }
+      // Splice the forced card in at the current draw pointer so it is the very
+      // next Chance draw. A duplicate id elsewhere in the deck is harmless — the
+      // engine looks cards up by id and just advances the pointer.
+      const next: GameState = {
+        ...this.fullState,
+        chanceOrder: [...this.fullState.chanceOrder],
+      };
+      next.chanceOrder.splice(next.chancePtr, 0, cardId);
+      this.persist(next);
+      this.broadcast("ERROR", {
+        message: `[DEV] Next Chance card forced to ${cardId}. Land on a Chance tile to draw it.`,
+      });
     });
 
     // A reconnecting client re-registers its message handlers from scratch, so
