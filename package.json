@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "A Nigerian-themed online multiplayer board game. Buy the land. Become the Odogwu.",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
