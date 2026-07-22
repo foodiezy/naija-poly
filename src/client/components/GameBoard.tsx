@@ -851,8 +851,13 @@ export default function GameBoard({
             {/* Special tile icon */}
             {tileIcon && <span className="tile-type-icon">{tileIcon}</span>}
 
-            {/* Tile Name */}
-            <span className="tile-name">{boardLabel(tile)}</span>
+            {/* Tile Name — the short label only shows on narrow phones (CSS
+                media query), where side tiles are too tight for the full
+                name to read without collapsing into a vertical letter-stack. */}
+            <span className="tile-name">
+              <span className="tile-name-full">{boardLabel(tile)}</span>
+              <span className="tile-name-short">{tile.shortName ?? boardLabel(tile)}</span>
+            </span>
 
             {/* Richup.io permanent bottom price stripe. Mortgaged tiles keep the
                 price (the word "Mortgaged" overflows narrow side tiles); state is

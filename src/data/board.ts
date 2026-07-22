@@ -48,6 +48,11 @@ interface BaseTile {
   pos: number; // 0–39, position on the board
   type: TileType;
   name: string;
+  // Optional compact label (~≤12 chars) for narrow-phone board tiles, where
+  // the full name (esp. after stripping "Airport"/"Corporation" for display)
+  // would crush into a vertical letter-stack. Only set on tiles that need it;
+  // the UI falls back to the full name when absent.
+  shortName?: string;
 }
 
 export interface PropertyTile extends BaseTile {
@@ -203,12 +208,13 @@ export const BOARD: Tile[] = [
     mortgage: 30_000,
   },
 
-  { pos: 4, type: "tax", name: "FIRS Income Tax", amount: 200_000 },
+  { pos: 4, type: "tax", name: "FIRS Income Tax", shortName: "FIRS Tax", amount: 200_000 },
 
   {
     pos: 5,
     type: "airport",
     name: "Murtala Muhammed Airport",
+    shortName: "MMA",
     price: 200_000,
     rent: [25_000, 50_000, 100_000, 200_000],
     mortgage: 100_000,
@@ -250,7 +256,7 @@ export const BOARD: Tile[] = [
     mortgage: 60_000,
   },
 
-  { pos: 10, type: "jail", name: "Kirikiri Prison (Just Visiting)" },
+  { pos: 10, type: "jail", name: "Kirikiri Prison (Just Visiting)", shortName: "Kirikiri" },
 
   // ── Enugu (₦140–160k tier) ───────────────────────────────────────────
   {
@@ -292,6 +298,7 @@ export const BOARD: Tile[] = [
     pos: 15,
     type: "airport",
     name: "Nnamdi Azikiwe Airport",
+    shortName: "NAA",
     price: 200_000,
     rent: [25_000, 50_000, 100_000, 200_000],
     mortgage: 100_000,
@@ -333,7 +340,7 @@ export const BOARD: Tile[] = [
     mortgage: 100_000,
   },
 
-  { pos: 20, type: "free", name: "Mama Put Rest Stop (Free Parking)" },
+  { pos: 20, type: "free", name: "Mama Put Rest Stop (Free Parking)", shortName: "Mama Put" },
 
   // ── Edo (₦220–240k tier) ─────────────────────────────────────────────
   {
@@ -375,6 +382,7 @@ export const BOARD: Tile[] = [
     pos: 25,
     type: "airport",
     name: "Port Harcourt Airport",
+    shortName: "PH Airport",
     price: 200_000,
     rent: [25_000, 50_000, 100_000, 200_000],
     mortgage: 100_000,
@@ -385,6 +393,7 @@ export const BOARD: Tile[] = [
     pos: 26,
     type: "property",
     name: "Port Harcourt",
+    shortName: "P'Harcourt",
     group: "yellow",
     price: 260_000,
     rent: [22_000, 110_000, 330_000, 800_000, 975_000, 1_150_000],
@@ -423,13 +432,14 @@ export const BOARD: Tile[] = [
     mortgage: 140_000,
   },
 
-  { pos: 30, type: "gotojail", name: "Go to Kirikiri Prison" },
+  { pos: 30, type: "gotojail", name: "Go to Kirikiri Prison", shortName: "Go to Kirikiri" },
 
   // ── Abuja (₦300–320k tier) ───────────────────────────────────────────
   {
     pos: 31,
     type: "property",
     name: "Maitama, Abuja",
+    shortName: "Maitama",
     group: "green",
     price: 300_000,
     rent: [26_000, 130_000, 390_000, 900_000, 1_100_000, 1_275_000],
@@ -441,6 +451,7 @@ export const BOARD: Tile[] = [
     pos: 32,
     type: "property",
     name: "Asokoro, Abuja",
+    shortName: "Asokoro",
     group: "green",
     price: 300_000,
     rent: [26_000, 130_000, 390_000, 900_000, 1_100_000, 1_275_000],
@@ -454,6 +465,7 @@ export const BOARD: Tile[] = [
     pos: 34,
     type: "property",
     name: "Wuse, Abuja",
+    shortName: "Wuse",
     group: "green",
     price: 320_000,
     rent: [28_000, 150_000, 450_000, 1_000_000, 1_200_000, 1_400_000],
@@ -465,6 +477,7 @@ export const BOARD: Tile[] = [
     pos: 35,
     type: "airport",
     name: "Mallam Aminu Kano Airport",
+    shortName: "MAK",
     price: 200_000,
     rent: [25_000, 50_000, 100_000, 200_000],
     mortgage: 100_000,
@@ -477,6 +490,7 @@ export const BOARD: Tile[] = [
     pos: 37,
     type: "property",
     name: "Victoria Island",
+    shortName: "VI",
     group: "darkblue",
     price: 350_000,
     rent: [35_000, 175_000, 500_000, 1_100_000, 1_300_000, 1_500_000],
