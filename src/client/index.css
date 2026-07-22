@@ -993,11 +993,14 @@ h6 {
     overflow-wrap: break-word;
   }
 
-  .tile-name-full {
+  /* Must out-rank the later base `.tile-name-short { display: none }` rule
+     (same-specificity source order would let the base hide win, blanking
+     both labels on phones), so these use the parent-qualified selector. */
+  .tile-name .tile-name-full {
     display: none;
   }
 
-  .tile-name-short {
+  .tile-name .tile-name-short {
     display: block;
   }
 
