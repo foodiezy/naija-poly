@@ -985,7 +985,20 @@ h6 {
   }
 
   .tile-name {
-    font-size: clamp(0.5rem, 2.1vw, 0.7rem);
+    /* Side tiles now get ~45% more track width (1.5fr corners vs 1fr
+       interior), so the short label fits comfortably without shrinking to
+       the old floor; `break-word` (vs `anywhere`) avoids splitting short
+       words mid-letter now that they mostly fit on one line. */
+    font-size: clamp(0.55rem, 2.1vw, 0.7rem);
+    overflow-wrap: break-word;
+  }
+
+  .tile-name-full {
+    display: none;
+  }
+
+  .tile-name-short {
+    display: block;
   }
 
   .tile-price {
@@ -999,10 +1012,12 @@ h6 {
     border-width: 1.5px;
   }
 
-  /* Board center HUD: smaller fonts so nothing overflows */
-  .board-center-logo {
-    font-size: 2.1rem !important;
-  }
+  /* Board center HUD: smaller fonts so nothing overflows. The wordmark used
+     to get an `!important` bump to 2.1rem here — BIGGER than its 1.2rem
+     inline base size — which blew up the logo on phones instead of shrinking
+     it. Inline styles already beat plain class rules on specificity, so
+     simply not overriding it here lets it fall back to the 1.2rem base,
+     which is in step with the rest of the phone-scale HUD. */
 
   .board-center {
     padding: 0.7rem !important;
@@ -1113,8 +1128,11 @@ h6 {
   height: auto;
   max-height: var(--board-size);
   display: grid;
-  grid-template-columns: repeat(11, 1fr);
-  grid-template-rows: repeat(11, 1fr);
+  /* Corner + side columns/rows get more room than the interior; real Monopoly
+     boards use oversized corner squares, and it also frees up width for the
+     side tiles' long Nigerian place names on small screens. */
+  grid-template-columns: 1.5fr repeat(9, 1fr) 1.5fr;
+  grid-template-rows: 1.5fr repeat(9, 1fr) 1.5fr;
   background:
     radial-gradient(ellipse at 50% 45%, rgba(70, 199, 141, 0.12) 0%, transparent 70%), #0f172a;
   border: 6px solid rgba(232, 182, 74, 0.25);
@@ -1463,6 +1481,14 @@ h6 {
   max-width: 100%;
   padding: 0 2px;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
+/* .tile-name is now a wrapper around two labels: the full name (default) and
+   a shortened one that only appears on narrow phones, where side tiles are
+   too tight for the full name to read without collapsing into a letter
+   stack. Both spans inherit the sizing/colour rules above. */
+.tile-name-short {
+  display: none;
 }
 
 /* Richup.io signature bottom price stripe block */
