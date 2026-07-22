@@ -382,7 +382,7 @@ export const BOARD: Tile[] = [
     pos: 25,
     type: "airport",
     name: "Port Harcourt Airport",
-    shortName: "P'Harcourt",
+    shortName: "PH Airport",
     price: 200_000,
     rent: [25_000, 50_000, 100_000, 200_000],
     mortgage: 100_000,
