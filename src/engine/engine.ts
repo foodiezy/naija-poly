@@ -955,1258 +955,1371 @@ export function applyAction(
   }
 
   switch (action.type) {
-    case "ROLL": {
-      if (nextState.phase !== "awaiting-roll") {
-        throw new Error(`Cannot roll in phase ${nextState.phase}`);
-      }
-
-      const d1 = Math.floor(rng() * 6) + 1;
-      const d2 = Math.floor(rng() * 6) + 1;
-      const diceTotal = d1 + d2;
-      nextState.dice = [d1, d2];
-
-      if (currentPlayer.inJail) {
-        if (d1 === d2) {
-          currentPlayer.inJail = false;
-          currentPlayer.jailTurns = 0;
-          nextState.doublesCount = 0; // escape jail doubles does not count towards 3x doubles jail limit
-          nextState.log.push(
-            `${currentPlayer.name} rolled doubles [${d1}, ${d2}] and escaped Jail!`,
-          );
-
-          movePlayerAndResolve(nextState, currentPlayer, diceTotal, rng);
-        } else {
-          currentPlayer.jailTurns += 1;
-          if (currentPlayer.jailTurns >= 3) {
-            currentPlayer.cash -= JAIL_FINE;
-            currentPlayer.inJail = false;
-            currentPlayer.jailTurns = 0;
-            if (nextState.settings.freeParkingJackpot) {
-              nextState.freeParkingPot += JAIL_FINE;
-              nextState.log.push(
-                `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine (added to Mama Put Pot) and moved.`,
-              );
-            } else {
-              nextState.bank += JAIL_FINE;
-              nextState.log.push(
-                `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine and moved.`,
-              );
-            }
-
-            movePlayerAndResolve(nextState, currentPlayer, diceTotal, rng);
-          } else {
-            nextState.log.push(
-              `${currentPlayer.name} rolled [${d1}, ${d2}] in Jail. Remain in Jail (attempt ${currentPlayer.jailTurns}/3).`,
-            );
-            nextState.phase = "awaiting-end-turn";
-          }
-        }
-      } else {
-        // Normal roll
-        if (d1 === d2) {
-          nextState.doublesCount += 1;
-          if (nextState.doublesCount === 3) {
-            currentPlayer.inJail = true;
-            currentPlayer.jailTurns = 0;
-            currentPlayer.position = JAIL_POSITION;
-            nextState.doublesCount = 0;
-            nextState.stats[currentPlayer.id].jailTimes += 1;
-            nextState.log.push(
-              `${currentPlayer.name} rolled doubles 3 times in a row and went to Kirikiri Prison!`,
-            );
-            nextState.phase = "awaiting-end-turn";
-            return nextState;
-          }
-        } else {
-          nextState.doublesCount = 0;
-        }
-
-        nextState.log.push(`${currentPlayer.name} rolled [${d1}, ${d2}].`);
-        movePlayerAndResolve(nextState, currentPlayer, diceTotal, rng);
-      }
+    case "ROLL":
+      applyRoll(nextState, currentPlayer, rng);
       break;
-    }
 
-    case "BUY": {
-      if (nextState.phase !== "awaiting-buy-decision") {
-        throw new Error(`Cannot buy in phase ${nextState.phase}`);
-      }
-
-      const pos = currentPlayer.position;
-      const tile = BOARD[pos];
-      if (!tile || !("price" in tile)) {
-        throw new Error(`Tile at position ${pos} is not ownable`);
-      }
-
-      const tileState = nextState.tiles[pos];
-      if (!tileState || tileState.ownerId !== null) {
-        throw new Error("Tile is already owned");
-      }
-
-      if (currentPlayer.cash < tile.price) {
-        throw new Error(
-          `Insufficient cash (₦${currentPlayer.cash}) to buy ${tile.name} (₦${tile.price})`,
-        );
-      }
-
-      currentPlayer.cash -= tile.price;
-      nextState.bank += tile.price;
-      nextState.tiles[pos] = { ownerId: currentPlayer.id, houses: 0, mortgaged: false };
-      nextState.stats[currentPlayer.id].propertiesBought += 1;
-      nextState.log.push(
-        `${currentPlayer.name} bought ${tile.name} for ₦${tile.price.toLocaleString("en-NG")}.`,
-      );
-      nextState.phase = "awaiting-end-turn";
+    case "BUY":
+      applyBuy(nextState, currentPlayer);
       break;
-    }
 
-    case "DECLINE_BUY": {
-      if (nextState.phase !== "awaiting-buy-decision") {
-        throw new Error(`Cannot decline buy in phase ${nextState.phase}`);
-      }
-
-      const pos = currentPlayer.position;
-      const tile = BOARD[pos];
-      nextState.log.push(`${currentPlayer.name} declined to buy ${tile.name}. Starting auction!`);
-
-      const activePlayers = nextState.players.filter((p) => !p.bankrupt);
-      if (activePlayers.length === 0) {
-        nextState.phase = "awaiting-end-turn";
-        break;
-      }
-
-      const price = "price" in tile ? (tile as PropertyTile).price : 0;
-      const { minIncrement, bidIncrements } = auctionIncrements(price);
-
-      nextState.auctionState = {
-        tilePos: pos,
-        highestBid: 0,
-        highestBidderId: null,
-        participantIds: activePlayers.map((p) => p.id),
-        passedIds: [],
-        minIncrement,
-        bidIncrements,
-        bidDurationMs: AUCTION_BID_DURATION_MS,
-        deadline: null, // the server stamps this when it arms the timer
-      };
-      nextState.phase = "auction";
-
-      nextState.log.push(
-        `Auction started for ${tile.name}! Bidding is open — raise fast before the clock runs out.`,
-      );
+    case "DECLINE_BUY":
+      applyDeclineBuy(nextState, currentPlayer);
       break;
-    }
 
-    case "BUILD": {
-      if (nextState.phase !== "awaiting-roll" && nextState.phase !== "awaiting-end-turn") {
-        throw new Error(`Cannot build in phase ${nextState.phase}`);
-      }
-      const pos = action.pos;
-      const tile = BOARD[pos];
-      if (!tile || tile.type !== "property") {
-        throw new Error(`Position ${pos} is not a buildable property`);
-      }
-
-      const tileState = nextState.tiles[pos];
-      if (!tileState || tileState.ownerId !== currentPlayer.id) {
-        throw new Error("You do not own this property");
-      }
-      if (tileState.mortgaged) {
-        throw new Error("Cannot build on a mortgaged property");
-      }
-
-      // Ownership check: must own the entire color group
-      const group = tile.group;
-      const groupTiles = BOARD.filter(
-        (t): t is PropertyTile => t.type === "property" && t.group === group,
-      );
-      const ownsAll = groupTiles.every((t) => nextState.tiles[t.pos]?.ownerId === currentPlayer.id);
-      if (!ownsAll) {
-        throw new Error("You must own the full color group to build");
-      }
-
-      // Mortgage check: none of the properties in the group can be mortgaged
-      const anyMortgaged = groupTiles.some((t) => nextState.tiles[t.pos]?.mortgaged);
-      if (anyMortgaged) {
-        throw new Error("Cannot build when any property in the group is mortgaged");
-      }
-
-      // Upgrade capacity: max is 5 (hotel)
-      if (tileState.houses >= 5) {
-        throw new Error("Property is already fully developed (Hotel)");
-      }
-
-      // Even build constraint: cannot build a house on this property if it has more houses than another in the group
-      const targetHouses = tileState.houses;
-      const violatesEven = groupTiles.some(
-        (t) => (nextState.tiles[t.pos]?.houses ?? 0) < targetHouses,
-      );
-      if (violatesEven) {
-        throw new Error("You must build evenly across all properties in the color group");
-      }
-
-      // Bank supply check
-      let currentTotalHouses = 0;
-      let currentTotalHotels = 0;
-      Object.values(nextState.tiles).forEach((ts) => {
-        if (ts.houses === 5) {
-          currentTotalHotels += 1;
-        } else if (ts.houses >= 1 && ts.houses <= 4) {
-          currentTotalHouses += ts.houses;
-        }
-      });
-
-      const isUpgradingToHotel = tileState.houses === 4;
-      if (isUpgradingToHotel) {
-        // consumes 1 hotel, frees 4 houses
-        if (currentTotalHotels >= HOTEL_SUPPLY) {
-          throw new Error("No Hotels remaining in the bank");
-        }
-      } else {
-        // consumes 1 house
-        if (currentTotalHouses >= HOUSE_SUPPLY) {
-          throw new Error("No Bungalows/Duplexes/Mansions/Estates remaining in the bank");
-        }
-      }
-
-      // Cash check
-      if (currentPlayer.cash < tile.houseCost) {
-        throw new Error(`Insufficient cash to build (requires ₦${tile.houseCost})`);
-      }
-
-      currentPlayer.cash -= tile.houseCost;
-      nextState.bank += tile.houseCost;
-      tileState.houses += 1;
-
-      const buildType = getDevelopmentName(tileState.houses);
-      nextState.log.push(
-        `${currentPlayer.name} built a ${buildType} on ${tile.name} for ₦${tile.houseCost.toLocaleString("en-NG")}.`,
-      );
+    case "BUILD":
+      applyBuild(nextState, currentPlayer, action);
       break;
-    }
 
-    case "SELL_HOUSE": {
-      if (nextState.phase !== "awaiting-roll" && nextState.phase !== "awaiting-end-turn") {
-        throw new Error(`Cannot sell developments in phase ${nextState.phase}`);
-      }
-      const pos = action.pos;
-      const tile = BOARD[pos];
-      if (!tile || tile.type !== "property") {
-        throw new Error(`Position ${pos} is not a property`);
-      }
-
-      const tileState = nextState.tiles[pos];
-      if (!tileState || tileState.ownerId !== currentPlayer.id) {
-        throw new Error("You do not own this property");
-      }
-      if (tileState.houses === 0) {
-        throw new Error("No buildings on this property to sell");
-      }
-
-      // Even selling constraint: cannot sell if target has fewer houses than another in the group (must be max)
-      const targetHouses = tileState.houses;
-      const group = tile.group;
-      const groupTiles = BOARD.filter(
-        (t): t is PropertyTile => t.type === "property" && t.group === group,
-      );
-      const violatesEven = groupTiles.some(
-        (t) => (nextState.tiles[t.pos]?.houses ?? 0) > targetHouses,
-      );
-      if (violatesEven) {
-        throw new Error("You must sell buildings evenly across the color group");
-      }
-
-      // Hotel degrading check
-      const isDegradingHotel = tileState.houses === 5;
-      if (isDegradingHotel) {
-        // Requires 4 houses to replace the hotel. Check house supply in bank.
-        let currentTotalHouses = 0;
-        Object.values(nextState.tiles).forEach((ts) => {
-          if (ts.houses >= 1 && ts.houses <= 4) {
-            currentTotalHouses += ts.houses;
-          }
-        });
-
-        if (HOUSE_SUPPLY - currentTotalHouses < 4) {
-          throw new Error("Not enough Bungalows/Duplexes in the bank to downgrade Hotel");
-        }
-      }
-
-      // Sell back to the bank at half price. Floor keeps money an exact integer
-      // of Naira even if a retheme sets an odd houseCost (data is data).
-      const refund = Math.floor(tile.houseCost / 2);
-      currentPlayer.cash += refund;
-      nextState.bank -= refund;
-      tileState.houses -= 1;
-
-      const sellType = getDevelopmentName(tileState.houses + 1);
-      nextState.log.push(
-        `${currentPlayer.name} sold a ${sellType} on ${tile.name} for ₦${refund.toLocaleString("en-NG")}.`,
-      );
-      // The raised cash may now cover an outstanding debt — settle immediately
-      // so the player isn't forced into bankruptcy while solvent.
-      autoSettleAffordableDebts(nextState, currentPlayer.id);
+    case "SELL_HOUSE":
+      applySellHouse(nextState, currentPlayer, action);
       break;
-    }
 
-    case "MORTGAGE": {
-      if (nextState.phase !== "awaiting-roll" && nextState.phase !== "awaiting-end-turn") {
-        throw new Error(`Cannot mortgage in phase ${nextState.phase}`);
-      }
-      const pos = action.pos;
-      const tile = BOARD[pos];
-      if (!tile || !("mortgage" in tile)) {
-        throw new Error(`Tile at position ${pos} is not mortgageable`);
-      }
-
-      const tileState = nextState.tiles[pos];
-      if (!tileState || tileState.ownerId !== currentPlayer.id) {
-        throw new Error("You do not own this property");
-      }
-      if (tileState.mortgaged) {
-        throw new Error("Property is already mortgaged");
-      }
-
-      // Property and group must have no buildings
-      if (tile.type === "property") {
-        const group = tile.group;
-        const groupTiles = BOARD.filter(
-          (t): t is PropertyTile => t.type === "property" && t.group === group,
-        );
-        const hasBuildings = groupTiles.some((t) => (nextState.tiles[t.pos]?.houses ?? 0) > 0);
-        if (hasBuildings) {
-          throw new Error("Must sell all buildings in the color group before mortgaging");
-        }
-      }
-
-      tileState.mortgaged = true;
-      currentPlayer.cash += tile.mortgage;
-      nextState.bank -= tile.mortgage;
-      nextState.log.push(
-        `${currentPlayer.name} mortgaged ${tile.name} for ₦${tile.mortgage.toLocaleString("en-NG")}.`,
-      );
-      // The raised cash may now cover an outstanding debt — settle immediately
-      // so the player isn't forced into bankruptcy while solvent.
-      autoSettleAffordableDebts(nextState, currentPlayer.id);
+    case "MORTGAGE":
+      applyMortgage(nextState, currentPlayer, action);
       break;
-    }
 
-    case "UNMORTGAGE": {
-      if (nextState.phase !== "awaiting-roll" && nextState.phase !== "awaiting-end-turn") {
-        throw new Error(`Cannot unmortgage in phase ${nextState.phase}`);
-      }
-      const pos = action.pos;
-      const tile = BOARD[pos];
-      if (!tile || !("mortgage" in tile)) {
-        throw new Error(`Tile at position ${pos} is not mortgageable`);
-      }
-
-      const tileState = nextState.tiles[pos];
-      if (!tileState || tileState.ownerId !== currentPlayer.id) {
-        throw new Error("You do not own this property");
-      }
-      if (!tileState.mortgaged) {
-        throw new Error("Property is not mortgaged");
-      }
-
-      const cost = Math.round(tile.mortgage * 1.1);
-      if (currentPlayer.cash < cost) {
-        throw new Error(`Insufficient cash to unmortgage (requires ₦${cost})`);
-      }
-
-      currentPlayer.cash -= cost;
-      nextState.bank += cost;
-      tileState.mortgaged = false;
-      nextState.log.push(
-        `${currentPlayer.name} unmortgaged ${tile.name} for ₦${cost.toLocaleString("en-NG")}.`,
-      );
+    case "UNMORTGAGE":
+      applyUnmortgage(nextState, currentPlayer, action);
       break;
-    }
 
-    case "PAY_JAIL_FINE": {
-      if (!currentPlayer.inJail) {
-        throw new Error("Player is not in Jail");
-      }
-      if (nextState.phase !== "awaiting-roll") {
-        throw new Error("Can only pay fine in awaiting-roll phase");
-      }
-      if (currentPlayer.cash < JAIL_FINE) {
-        throw new Error("Insufficient cash to pay jail fine");
-      }
-
-      currentPlayer.cash -= JAIL_FINE;
-      currentPlayer.inJail = false;
-      currentPlayer.jailTurns = 0;
-      if (nextState.settings.freeParkingJackpot) {
-        nextState.freeParkingPot += JAIL_FINE;
-        nextState.log.push(
-          `${currentPlayer.name} paid ₦50,000 fine (added to Mama Put Pot) and was released from Jail.`,
-        );
-      } else {
-        nextState.bank += JAIL_FINE;
-        nextState.log.push(`${currentPlayer.name} paid ₦50,000 fine and was released from Jail.`);
-      }
-      // Remain in awaiting-roll so the player can take their turn normally
+    case "PAY_JAIL_FINE":
+      applyPayJailFine(nextState, currentPlayer);
       break;
-    }
 
-    case "USE_JAIL_CARD": {
-      if (!currentPlayer.inJail) {
-        throw new Error("Player is not in Jail");
-      }
-      if (nextState.phase !== "awaiting-roll") {
-        throw new Error("Can only use card in awaiting-roll phase");
-      }
-      if (currentPlayer.jailCardSources.length <= 0) {
-        throw new Error("Player does not have a Get Out of Jail Free card");
-      }
-
-      const source = currentPlayer.jailCardSources.pop()!;
-      currentPlayer.inJail = false;
-      currentPlayer.jailTurns = 0;
-
-      // Restore the card to whichever deck it originally came from.
-      if (source === "chance") {
-        nextState.chanceOrder.push(CHANCE_JAIL_CARD_ID);
-      } else {
-        nextState.hustleOrder.push(HUSTLE_JAIL_CARD_ID);
-      }
-
-      nextState.log.push(
-        `${currentPlayer.name} used a Get Out of Jail Free card and was released from Jail.`,
-      );
-      // Remain in awaiting-roll
+    case "USE_JAIL_CARD":
+      applyUseJailCard(nextState, currentPlayer);
       break;
-    }
 
-    case "END_TURN": {
-      if (nextState.phase !== "awaiting-end-turn") {
-        throw new Error(`Cannot end turn in phase ${nextState.phase}`);
-      }
-
-      // Settle whatever the player can now afford before deciding whether to
-      // block: a debtor who raised enough cash (mortgage/sale/trade) must be
-      // able to pay up and move on, never be forced into bankruptcy.
-      autoSettleAffordableDebts(nextState, currentPlayer.id);
-
-      // Block if the current player STILL has unsettled debts in the ledger
-      const playerDebts = nextState.debtLedger.filter((d) => d.debtorId === currentPlayer.id);
-      if (playerDebts.length > 0) {
-        throw new Error(
-          "Cannot end turn with unsettled debts. You must mortgage properties, sell houses, or declare bankruptcy.",
-        );
-      }
-
-      if (currentPlayer.cash < 0) {
-        throw new Error(
-          "Cannot end turn with negative cash. You must mortgage properties, sell houses, or declare bankruptcy.",
-        );
-      }
-
-      // If player rolled doubles and is not in jail, they get another turn
-      if (nextState.doublesCount > 0 && !currentPlayer.inJail) {
-        nextState.phase = "awaiting-roll";
-        nextState.dice = null; // reset for next roll
-        nextState.log.push(`${currentPlayer.name} gets another roll for rolling doubles.`);
-      } else {
-        // Advance player index
-        let nextIndex = (nextState.currentPlayerIndex + 1) % nextState.players.length;
-        while (nextState.players[nextIndex].bankrupt) {
-          nextIndex = (nextIndex + 1) % nextState.players.length;
-        }
-
-        // Did we complete a round?
-        if (nextIndex < nextState.currentPlayerIndex) {
-          // Yes, we wrapped around. Check turn limit BEFORE incrementing round count to limit current round play
-          if (
-            nextState.settings.turnLimit > 0 &&
-            nextState.currentTurn >= nextState.settings.turnLimit
-          ) {
-            // Game over! Pay out any secret objective completed at this
-            // boundary FIRST — the bonus is part of the final net worth.
-            evaluateObjectivesAtBoundary(nextState);
-
-            // Calculate winner by net worth
-            const solventPlayers = nextState.players.filter((p) => !p.bankrupt);
-            let highestNetWorth = -Infinity;
-            let winnerId: string | null = null;
-
-            nextState.log.push("Turn limit reached! Calculating player net worths...");
-
-            solventPlayers.forEach((p) => {
-              // Cash
-              let netWorth = p.cash;
-
-              // Value of all properties owned by this player
-              Object.keys(nextState.tiles).forEach((posStr) => {
-                const pos = parseInt(posStr, 10);
-                const ts = nextState.tiles[pos];
-                if (ts.ownerId === p.id) {
-                  const tile = BOARD[pos];
-                  if ("price" in tile) {
-                    if (ts.mortgaged) {
-                      // Mortgaged properties have value = mortgage amount
-                      netWorth += tile.mortgage;
-                    } else {
-                      // Unmortgaged properties have full purchase value
-                      netWorth += tile.price;
-                      // Plus development costs
-                      if (tile.type === "property" && ts.houses > 0) {
-                        netWorth += ts.houses * tile.houseCost;
-                      }
-                    }
-                  }
-                }
-              });
-
-              // Subtract any pending debts this player owes
-              const pendingDebts = nextState.debtLedger
-                .filter((d) => d.debtorId === p.id)
-                .reduce((sum, d) => sum + d.amount, 0);
-              netWorth -= pendingDebts;
-
-              nextState.log.push(`${p.name}'s Net Worth: ₦${netWorth.toLocaleString("en-NG")}`);
-
-              if (netWorth > highestNetWorth) {
-                highestNetWorth = netWorth;
-                winnerId = p.id;
-              }
-            });
-
-            if (winnerId) {
-              const winnerName = nextState.players.find((p) => p.id === winnerId)!.name;
-              nextState.winnerId = winnerId;
-              nextState.phase = "game-over";
-              nextState.log.push(
-                `Turn limit of ${nextState.settings.turnLimit} rounds was reached! ${winnerName} wins the game with a net worth of ₦${highestNetWorth.toLocaleString("en-NG")}!`,
-              );
-              return nextState;
-            }
-          }
-
-          nextState.currentTurn += 1;
-          nextState.log.push(`--- Round ${nextState.currentTurn} ---`);
-          expireRoundEffects(nextState);
-        }
-
-        nextState.currentPlayerIndex = nextIndex;
-        nextState.doublesCount = 0;
-        nextState.dice = null;
-        nextState.phase = "awaiting-roll";
-        nextState.log.push(`It is now ${nextState.players[nextIndex].name}'s turn.`);
-        evaluateObjectivesAtBoundary(nextState);
-      }
+    case "END_TURN":
+      applyEndTurn(nextState, currentPlayer);
       break;
-    }
 
-    case "BID": {
-      if (nextState.phase !== "auction" || !nextState.auctionState) {
-        throw new Error("No active auction");
-      }
-
-      const auction = nextState.auctionState;
-      if (!auction.participantIds.includes(playerId)) {
-        throw new Error(`${playerId} is not part of this auction`);
-      }
-      if (auction.passedIds.includes(playerId)) {
-        throw new Error(`${playerId} has already passed and cannot bid again`);
-      }
-      if (auction.highestBidderId === playerId) {
-        throw new Error(`${playerId} is already the highest bidder`);
-      }
-
-      // Bids must raise the top bid by exactly one of the set increments.
-      const amount = action.amount;
-      if (!Number.isInteger(amount)) {
-        throw new Error("Bid amount must be a whole number");
-      }
-      const raise = amount - auction.highestBid;
-      if (!auction.bidIncrements.includes(raise)) {
-        throw new Error(
-          `Bid must raise by a set increment (${auction.bidIncrements
-            .map((i) => `₦${i.toLocaleString("en-NG")}`)
-            .join(", ")})`,
-        );
-      }
-
-      const bidder = nextState.players.find((p) => p.id === playerId)!;
-      if (bidder.cash < amount) {
-        throw new Error(`Insufficient cash (₦${bidder.cash}) for bid ₦${amount}`);
-      }
-
-      auction.highestBid = amount;
-      auction.highestBidderId = playerId;
-      auction.deadline = null; // the server resets the clock on each new bid
-      nextState.log.push(`${bidder.name} bid ₦${amount.toLocaleString("en-NG")}!`);
-
-      if (amount > nextState.stats[playerId].highestAuctionBid) {
-        nextState.stats[playerId].highestAuctionBid = amount;
-      }
-
-      // If nobody else is still in the running, the bidder wins immediately.
-      const challengers = auction.participantIds.filter(
-        (id) => id !== playerId && !auction.passedIds.includes(id),
-      );
-      if (challengers.length === 0) {
-        finalizeAuction(nextState);
-      }
+    case "BID":
+      applyBid(nextState, playerId, action);
       break;
-    }
 
-    case "PASS_BID": {
-      if (nextState.phase !== "auction" || !nextState.auctionState) {
-        throw new Error("No active auction");
-      }
-
-      const auction = nextState.auctionState;
-      if (!auction.participantIds.includes(playerId)) {
-        throw new Error(`${playerId} is not part of this auction`);
-      }
-      if (auction.passedIds.includes(playerId)) {
-        throw new Error(`${playerId} has already passed`);
-      }
-      if (auction.highestBidderId === playerId) {
-        throw new Error(`The highest bidder cannot pass`);
-      }
-
-      const bidder = nextState.players.find((p) => p.id === playerId)!;
-      auction.passedIds.push(playerId);
-      nextState.log.push(`${bidder.name} passed.`);
-
-      // Who is still able to bid?
-      const remaining = auction.participantIds.filter((id) => !auction.passedIds.includes(id));
-      if (auction.highestBidderId !== null) {
-        // Someone has bid; once no challenger is left, the top bidder wins.
-        const challengers = remaining.filter((id) => id !== auction.highestBidderId);
-        if (challengers.length === 0) {
-          finalizeAuction(nextState);
-        }
-      } else if (remaining.length === 0) {
-        // Everyone folded without a single bid.
-        finalizeAuction(nextState);
-      }
+    case "PASS_BID":
+      applyPassBid(nextState, playerId);
       break;
-    }
 
-    case "RESOLVE_AUCTION": {
-      // Fired by the server when the bid timer expires: award to the standing
-      // high bidder, or close with no sale if no one ever bid.
-      if (nextState.phase !== "auction" || !nextState.auctionState) {
-        throw new Error("No active auction");
-      }
-      finalizeAuction(nextState);
+    case "RESOLVE_AUCTION":
+      applyResolveAuction(nextState);
       break;
-    }
 
-    case "PROPOSE_TRADE": {
-      // Trades can be struck at any time by any player. The only phases that
-      // block a proposal are an in-progress auction (a focused, timed sub-flow)
-      // and game-over.
-      if (nextState.phase === "auction" || nextState.phase === "game-over") {
-        throw new Error(`Cannot propose trade in phase ${nextState.phase}`);
-      }
-      // One offer on the table at a time: a new proposal must not silently
-      // clobber a pending, unanswered one.
-      if (nextState.activeTrade) {
-        throw new Error("Another trade is already pending — respond to or cancel it first");
-      }
-
-      const trade = action.trade;
-      // The wire payload is attacker-controlled: reject anything that isn't a
-      // well-formed trade before touching money/tiles. NaN/undefined cash
-      // would slip past every `<` comparison (all NaN comparisons are false)
-      // and permanently poison a player's cash.
-      if (!trade || typeof trade !== "object") {
-        throw new Error("Malformed trade offer");
-      }
-      if (trade.fromId !== playerId) {
-        throw new Error("Proposer ID must match the requesting player");
-      }
-      validateTradeOffer(nextState, trade);
-
-      const proposer = nextState.players.find((p) => p.id === trade.fromId)!;
-      const recipient = nextState.players.find((p) => p.id === trade.toId)!;
-      nextState.activeTrade = trade;
-      nextState.log.push(`${proposer.name} proposed a trade to ${recipient.name}.`);
+    case "PROPOSE_TRADE":
+      applyProposeTrade(nextState, playerId, action);
       break;
-    }
 
-    case "RESPOND_TRADE": {
-      if (!nextState.activeTrade) {
-        throw new Error("No active trade proposal");
-      }
-      // An accept mid-auction could drain the standing high bidder below their
-      // bid and force negative cash at auction close.
-      if (nextState.phase === "auction" || nextState.phase === "game-over") {
-        throw new Error(`Cannot respond to a trade in phase ${nextState.phase}`);
-      }
-
-      const trade = nextState.activeTrade;
-      if (playerId !== trade.toId) {
-        throw new Error(
-          `Only recipient (${trade.toId}) can respond to trade. Received request from ${playerId}`,
-        );
-      }
-
-      const proposer = nextState.players.find((p) => p.id === trade.fromId)!;
-      const recipient = nextState.players.find((p) => p.id === trade.toId)!;
-
-      if (action.accept) {
-        // The offer may have gone stale while it waited (tiles sold or
-        // mortgaged, buildings added, cash spent, proposer eliminated). A
-        // stale offer is VOID — cancel it rather than move assets that are no
-        // longer the parties' to trade (or throw at an innocent recipient).
-        const proposerFee = mortgageTransferFee(nextState, trade.getTiles);
-        const recipientFee = mortgageTransferFee(nextState, trade.giveTiles);
-        try {
-          validateTradeOffer(nextState, trade);
-          if (proposer.cash - trade.giveCash + trade.getCash < proposerFee) {
-            throw new Error(
-              `${proposer.name} cannot afford the 10% interest on mortgaged properties received`,
-            );
-          }
-          if (recipient.cash - trade.getCash + trade.giveCash < recipientFee) {
-            throw new Error(
-              `${recipient.name} cannot afford the 10% interest on mortgaged properties received`,
-            );
-          }
-        } catch (err: unknown) {
-          const reason = err instanceof Error ? err.message : String(err);
-          nextState.activeTrade = null;
-          nextState.log.push(
-            `Trade between ${proposer.name} and ${recipient.name} was cancelled: ${reason}.`,
-          );
-          break;
-        }
-
-        // Execute trade: cash swap, then the 10% bank interest each side owes
-        // on any mortgaged property it receives (official mortgage-transfer rule).
-        proposer.cash = proposer.cash - trade.giveCash + trade.getCash - proposerFee;
-        recipient.cash = recipient.cash - trade.getCash + trade.giveCash - recipientFee;
-        nextState.bank += proposerFee + recipientFee;
-        if (proposerFee + recipientFee > 0) {
-          nextState.log.push(
-            `Bank collected ₦${(proposerFee + recipientFee).toLocaleString("en-NG")} interest (10%) on mortgaged properties changing hands.`,
-          );
-        }
-
-        // Transfer tiles
-        for (const pos of trade.giveTiles) {
-          nextState.tiles[pos].ownerId = recipient.id;
-        }
-        for (const pos of trade.getTiles) {
-          nextState.tiles[pos].ownerId = proposer.id;
-        }
-
-        // Transfer Get Out of Jail Free cards (each keeps its source deck).
-        for (let i = 0; i < (trade.giveJailCards ?? 0); i++) {
-          recipient.jailCardSources.push(proposer.jailCardSources.pop()!);
-        }
-        for (let i = 0; i < (trade.getJailCards ?? 0); i++) {
-          proposer.jailCardSources.push(recipient.jailCardSources.pop()!);
-        }
-
-        nextState.log.push(`Trade between ${proposer.name} and ${recipient.name} was accepted.`);
-        nextState.activeTrade = null;
-
-        // Incoming cash may cover an outstanding debt of either party.
-        autoSettleAffordableDebts(nextState, proposer.id);
-        autoSettleAffordableDebts(nextState, recipient.id);
-      } else if (action.counter) {
-        // Decline-with-counter: the counter replaces the pending trade with
-        // roles swapped, so the original proposer answers next.
-        const counter = action.counter;
-        if (!counter || typeof counter !== "object") {
-          throw new Error("Malformed counter-offer");
-        }
-        if (counter.fromId !== playerId || counter.toId !== trade.fromId) {
-          throw new Error("Counter-offer must go from the recipient back to the original proposer");
-        }
-        validateTradeOffer(nextState, counter);
-        nextState.activeTrade = counter;
-        nextState.log.push(`${recipient.name} countered ${proposer.name}'s trade offer.`);
-      } else {
-        nextState.log.push(
-          `Trade proposal from ${proposer.name} was rejected by ${recipient.name}.`,
-        );
-        nextState.activeTrade = null;
-      }
+    case "RESPOND_TRADE":
+      applyRespondTrade(nextState, playerId, action);
       break;
-    }
 
-    case "CANCEL_TRADE": {
-      if (!nextState.activeTrade) {
-        throw new Error("No active trade proposal");
-      }
-      if (nextState.activeTrade.fromId !== playerId) {
-        throw new Error("Only the proposer can withdraw a trade offer");
-      }
-      const proposer = nextState.players.find((p) => p.id === playerId)!;
-      nextState.activeTrade = null;
-      nextState.log.push(`${proposer.name} withdrew their trade offer.`);
+    case "CANCEL_TRADE":
+      applyCancelTrade(nextState, playerId);
       break;
-    }
 
-    case "FORFEIT": {
-      // A player permanently left (disconnect/quit). Eliminate them like a
-      // bankruptcy to the bank, regardless of cash or whose turn it is, and
-      // keep the game in a consistent, playable state.
-      const player = nextState.players.find((p) => p.id === playerId);
-      // Idempotent / safe no-ops: unknown player, already out, or finished game.
-      if (!player || player.bankrupt || nextState.phase === "game-over") {
-        break;
-      }
-
-      player.bankrupt = true;
-      nextState.log.push(`${player.name} left the game and forfeited.`);
-
-      // Ghost votes: this player can no longer be a live voter or a valid target.
-      pruneVoteKicks(nextState, playerId);
-
-      // Return all their holdings to the bank (demolish, clear ownership).
-      Object.keys(nextState.tiles).forEach((posStr) => {
-        const pos = parseInt(posStr, 10);
-        if (nextState.tiles[pos].ownerId === playerId) {
-          nextState.tiles[pos] = { ownerId: null, houses: 0, mortgaged: false };
-        }
-      });
-
-      // Any held Get Out of Jail Free cards go back to their decks.
-      returnJailCardsToDecks(nextState, player);
-
-      // Write off all debts this player owes (creditors get nothing since
-      // assets go to bank) and reroute debts owed TO them to the bank.
-      forceWriteOffDebts(nextState, playerId);
-      player.cash = Math.max(0, player.cash); // ensure no negative balance
-
-      // Cancel any pending trade they were part of.
-      cancelTradeInvolving(nextState, playerId);
-
-      // Pull them out of a live auction; resolve it if no contest remains.
-      pruneFromAuction(nextState, playerId);
-
-      // Win condition: last player standing.
-      const remaining = nextState.players.filter((p) => !p.bankrupt);
-      if (remaining.length <= 1) {
-        nextState.winnerId = remaining.length === 1 ? remaining[0].id : null;
-        nextState.phase = "game-over";
-        if (remaining.length === 1) {
-          nextState.log.push(`${remaining[0].name} has won the game!`);
-        }
-        evaluateObjectivesAtBoundary(nextState);
-        break;
-      }
-
-      // If it was their turn (and an auction didn't already hand it off),
-      // advance so play doesn't stall waiting on a player who is gone.
-      if (
-        nextState.phase !== "auction" &&
-        nextState.players[nextState.currentPlayerIndex].bankrupt
-      ) {
-        advanceTurnSkippingBankrupt(nextState);
-      }
+    case "FORFEIT":
+      applyForfeit(nextState, playerId);
       break;
-    }
 
-    case "DECLARE_BANKRUPT": {
-      const bankruptPlayer = nextState.players.find((p) => p.id === playerId)!;
-      // Can declare bankruptcy if in debt (negative cash) OR has unsettled debts in the ledger
-      const playerDebts = nextState.debtLedger.filter((d) => d.debtorId === playerId);
-      if (bankruptPlayer.cash >= 0 && playerDebts.length === 0) {
-        throw new Error(
-          "Cannot declare bankruptcy unless you are in debt (negative cash or unsettled debts)",
-        );
-      }
-
-      bankruptPlayer.bankrupt = true;
-
-      // Ghost votes: this player can no longer be a live voter or a valid target.
-      pruneVoteKicks(nextState, playerId);
-
-      nextState.log.push(`${bankruptPlayer.name} declared bankruptcy!`);
-
-      // Liquidate all buildings at half price FIRST — the proceeds land in the
-      // debtor's cash so debt settlement below can reach them (official rule:
-      // buildings are sold back to the bank, the money goes to the creditor).
-      let liquidated = 0;
-      Object.keys(nextState.tiles).forEach((posStr) => {
-        const pos = parseInt(posStr, 10);
-        const ts = nextState.tiles[pos];
-        const tile = BOARD[pos];
-        if (ts.ownerId === playerId && ts.houses > 0 && tile.type === "property") {
-          const refund = Math.floor(tile.houseCost / 2) * ts.houses;
-          bankruptPlayer.cash += refund;
-          nextState.bank -= refund;
-          liquidated += refund;
-          ts.houses = 0;
-        }
-      });
-      if (liquidated > 0) {
-        nextState.log.push(
-          `${bankruptPlayer.name}'s buildings were sold back to the bank for ₦${liquidated.toLocaleString("en-NG")}.`,
-        );
-      }
-
-      // Determine primary creditor from the debt ledger for property transfer
-      // If debts exist, the first non-bank creditor (if still alive) gets properties.
-      // If all creditors are bank or bankrupt, properties go to bank.
-      let primaryCreditorId: PlayerId | "bank" = "bank";
-      for (const debt of playerDebts) {
-        if (debt.creditorId !== "bank") {
-          const creditor = nextState.players.find((p) => p.id === debt.creditorId);
-          if (creditor && !creditor.bankrupt) {
-            primaryCreditorId = debt.creditorId;
-            break;
-          }
-        }
-      }
-
-      // Force-settle all debts: pay creditors up to available cash (now
-      // including the liquidation proceeds), write off shortfalls.
-      // Transfer cash BEFORE property transfer.
-      settleDebtsForPlayer(nextState, playerId);
-
-      if (primaryCreditorId === "bank" || primaryCreditorId === "pot") {
-        // Return properties to bank (clear ownership; buildings already liquidated)
-        Object.keys(nextState.tiles).forEach((posStr) => {
-          const pos = parseInt(posStr, 10);
-          if (nextState.tiles[pos].ownerId === playerId) {
-            nextState.tiles[pos] = {
-              ownerId: null,
-              houses: 0,
-              mortgaged: false,
-            };
-          }
-        });
-        // Held jail cards go back to their decks.
-        returnJailCardsToDecks(nextState, bankruptPlayer);
-        if (primaryCreditorId === "bank") {
-          nextState.bank += bankruptPlayer.cash;
-        } else {
-          nextState.freeParkingPot += bankruptPlayer.cash;
-        }
-        nextState.log.push(`All of ${bankruptPlayer.name}'s properties were returned to the bank.`);
-      } else {
-        const creditor = nextState.players.find((p) => p.id === primaryCreditorId)!;
-
-        // Transfer remaining properties to creditor. Mortgaged status remains,
-        // and the creditor owes the bank 10% interest on each mortgaged tile
-        // received (official mortgage-transfer rule).
-        const mortgagedReceived: number[] = [];
-        Object.keys(nextState.tiles).forEach((posStr) => {
-          const pos = parseInt(posStr, 10);
-          if (nextState.tiles[pos].ownerId === playerId) {
-            nextState.tiles[pos].ownerId = primaryCreditorId;
-            if (nextState.tiles[pos].mortgaged) mortgagedReceived.push(pos);
-          }
-        });
-
-        // Held jail cards pass to the creditor with the rest of the estate.
-        creditor.jailCardSources.push(...bankruptPlayer.jailCardSources);
-        bankruptPlayer.jailCardSources = [];
-
-        // Transfer remaining cash if positive (after debt settlement took what it could)
-        if (bankruptPlayer.cash > 0) {
-          creditor.cash += bankruptPlayer.cash;
-          bankruptPlayer.cash = 0;
-        }
-
-        nextState.log.push(
-          `All of ${bankruptPlayer.name}'s properties were transferred to ${creditor.name}.`,
-        );
-
-        const interest = mortgageTransferFee(nextState, mortgagedReceived);
-        if (interest > 0) {
-          // addDebt handles an insolvent creditor gracefully (pays what they
-          // can now, or ledgers it if they are the current player).
-          addDebt(nextState, creditor.id, "bank", interest);
-          nextState.log.push(
-            `${creditor.name} owes ₦${interest.toLocaleString("en-NG")} interest (10%) on mortgaged properties received.`,
-          );
-        }
-      }
-
-      // Ensure bankrupt player's cash is 0 (never negative)
-      bankruptPlayer.cash = 0;
-
-      // Reroute any debts owed TO this bankrupt player to the bank
-      nextState.debtLedger.forEach((d) => {
-        if (d.creditorId === playerId) {
-          d.creditorId = "bank";
-        }
-      });
-
-      // Their assets changed hands, so any pending trade they were part of is
-      // void; and a live auction must not keep waiting on them.
-      cancelTradeInvolving(nextState, playerId);
-      pruneFromAuction(nextState, playerId);
-
-      // Check win condition
-      const activePlayers = nextState.players.filter((p) => !p.bankrupt);
-      if (activePlayers.length === 1) {
-        nextState.winnerId = activePlayers[0].id;
-        nextState.phase = "game-over";
-        nextState.log.push(`${activePlayers[0].name} has won the game!`);
-      } else if (
-        nextState.phase !== "auction" &&
-        nextState.players[nextState.currentPlayerIndex].bankrupt
-      ) {
-        // Only advance the turn when the ACTIVE player is the one who just
-        // went bankrupt (and an auction finalization didn't already hand the
-        // turn off). An out-of-turn bankruptcy must never hijack the current
-        // player's pending roll/buy decision.
-        advanceTurnSkippingBankrupt(nextState);
-      }
-      evaluateObjectivesAtBoundary(nextState);
+    case "DECLARE_BANKRUPT":
+      applyDeclareBankrupt(nextState, playerId);
       break;
-    }
 
     // ---- Chaos Mode interactive resolutions --------------------------------
 
-    case "CHOOSE_BLACKOUT_ZONE": {
-      // C1: the drawer names which zone goes dark.
-      if (nextState.phase !== "awaiting-blackout-target" || !nextState.pendingBlackout) {
-        throw new Error("No blackout target is pending");
-      }
-      const pending = nextState.pendingBlackout;
-      if (playerId !== pending.drawerId) {
-        throw new Error("Only the player who drew the card can choose the blackout zone");
-      }
-      if (!pending.selectableZones.includes(action.zone)) {
-        throw new Error("That zone cannot be blacked out");
-      }
-      nextState.blackout = {
-        untilRound: nextState.currentTurn + 1,
-        zone: action.zone,
-        generatorOwners: [],
-      };
-      nextState.pendingBlackout = null;
-      nextState.phase = "awaiting-end-turn";
-      nextState.log.push(
-        `⚡ The ${action.zone} zone don enter total darkness! No rent there till the round waka back — unless an owner fuels a generator.`,
-      );
+    case "CHOOSE_BLACKOUT_ZONE":
+      applyChooseBlackoutZone(nextState, playerId, action);
       break;
-    }
 
-    case "BUY_GENERATOR": {
-      // C2: an owner in the darkened zone pays the bank to keep collecting rent
-      // there. Available to any solvent owner while a zone blackout is live —
-      // the defended-against-the-leader counterplay to C1.
-      const bo = nextState.blackout;
-      if (!bo || bo.zone === undefined) {
-        throw new Error("No zone blackout is active");
-      }
-      if (nextState.phase === "game-over") {
-        throw new Error("The game is over");
-      }
-      const buyer = nextState.players.find((p) => p.id === playerId);
-      if (!buyer || buyer.bankrupt) {
-        throw new Error("Not an active player");
-      }
-      const ownsLitTileInZone = BOARD.some(
-        (t) =>
-          t.type === "property" &&
-          t.group === bo.zone &&
-          nextState.tiles[t.pos]?.ownerId === playerId &&
-          !nextState.tiles[t.pos]?.mortgaged,
-      );
-      if (!ownsLitTileInZone) {
-        throw new Error("You have no un-mortgaged property in the blacked-out zone");
-      }
-      if (bo.generatorOwners?.includes(playerId)) {
-        throw new Error("You already fuelled a generator for this blackout");
-      }
-      if (buyer.cash < GENERATOR_COST) {
-        throw new Error(`Insufficient cash (₦${buyer.cash}) for a generator (₦${GENERATOR_COST})`);
-      }
-      buyer.cash -= GENERATOR_COST;
-      nextState.bank += GENERATOR_COST;
-      bo.generatorOwners = [...(bo.generatorOwners ?? []), playerId];
-      nextState.log.push(
-        `🔌 ${buyer.name} fuelled a generator (₦${GENERATOR_COST.toLocaleString("en-NG")}) — their ${bo.zone} rent keeps flowing through the blackout.`,
-      );
+    case "BUY_GENERATOR":
+      applyBuyGenerator(nextState, playerId);
       break;
-    }
 
-    case "CHOOSE_STOCKPILE": {
-      // C3: take the building income now, or forgo it for double next round.
-      if (nextState.phase !== "awaiting-stockpile-choice" || !nextState.pendingStockpile) {
-        throw new Error("No stockpile choice is pending");
-      }
-      const pending = nextState.pendingStockpile;
-      if (playerId !== pending.playerId) {
-        throw new Error("This stockpile choice is not yours to make");
-      }
-      const owner = nextState.players.find((p) => p.id === pending.playerId)!;
-      if (action.mode === "now") {
-        owner.cash += pending.amount;
-        nextState.bank -= pending.amount;
-        nextState.log.push(
-          `⛽ ${owner.name} cashed ₦${pending.amount.toLocaleString("en-NG")} of building income now.`,
-        );
-      } else {
-        const doubled = pending.amount * STOCKPILE_MULTIPLIER;
-        const dueRound = nextState.currentTurn + 1;
-        (nextState.deferredPayouts ??= []).push({
-          playerId: owner.id,
-          amount: doubled,
-          dueRound,
-        });
-        nextState.log.push(
-          `⛽ ${owner.name} stockpiled — ₦${doubled.toLocaleString("en-NG")} will land when the round waka back around.`,
-        );
-      }
-      nextState.pendingStockpile = null;
-      nextState.phase = "awaiting-end-turn";
+    case "CHOOSE_STOCKPILE":
+      applyChooseStockpile(nextState, playerId, action);
       break;
-    }
 
-    case "CHOOSE_FIRESALE_TILE": {
-      // C4: the drawer buys one unowned tile at a discount.
-      if (nextState.phase !== "awaiting-firesale-pick" || !nextState.pendingFireSale) {
-        throw new Error("No fire sale is pending");
-      }
-      const pending = nextState.pendingFireSale;
-      if (playerId !== pending.drawerId) {
-        throw new Error("Only the player who drew the card can buy in the fire sale");
-      }
-      if (!pending.eligibleTiles.includes(action.pos)) {
-        throw new Error("That property is not available in the fire sale");
-      }
-      const tile = BOARD[action.pos];
-      const listPrice = "price" in tile ? tile.price : 0;
-      const cost = Math.floor((listPrice * (100 - pending.discountPct)) / 100);
-      // Drawer is the current player (the card resolved on their turn).
-      if (currentPlayer.cash < cost) {
-        throw new Error(
-          `Insufficient cash (₦${currentPlayer.cash}) for the fire sale price (₦${cost})`,
-        );
-      }
-      currentPlayer.cash -= cost;
-      nextState.bank += cost;
-      nextState.tiles[action.pos] = { ownerId: currentPlayer.id, houses: 0, mortgaged: false };
-      nextState.stats[currentPlayer.id].propertiesBought += 1;
-      nextState.pendingFireSale = null;
-      nextState.phase = "awaiting-end-turn";
-      nextState.log.push(
-        `🏷️ ${currentPlayer.name} grabbed ${tile.name} in the fire sale for ₦${cost.toLocaleString("en-NG")} (${pending.discountPct}% off)!`,
-      );
+    case "CHOOSE_FIRESALE_TILE":
+      applyChooseFiresaleTile(nextState, playerId, currentPlayer, action);
       break;
-    }
 
-    case "DECLINE_FIRESALE": {
-      if (nextState.phase !== "awaiting-firesale-pick" || !nextState.pendingFireSale) {
-        throw new Error("No fire sale is pending");
-      }
-      if (playerId !== nextState.pendingFireSale.drawerId) {
-        throw new Error("Only the player who drew the card can decline the fire sale");
-      }
-      nextState.pendingFireSale = null;
-      nextState.phase = "awaiting-end-turn";
-      nextState.log.push(`🏷️ ${currentPlayer.name} waved off the fire sale.`);
+    case "DECLINE_FIRESALE":
+      applyDeclineFiresale(nextState, playerId, currentPlayer);
       break;
-    }
 
-    case "EFCC_PAY_CASH": {
-      // C5: the richest player settles in cash. addDebt handles solvency — a
-      // current-player target who can't pay ledgers the debt (then must
-      // mortgage/sell/declare bankrupt); a non-current target pays what they can.
-      if (nextState.phase !== "awaiting-efcc-choice" || !nextState.pendingEfcc) {
-        throw new Error("No EFCC settlement is pending");
-      }
-      const pending = nextState.pendingEfcc;
-      if (playerId !== pending.targetId) {
-        throw new Error("Only the EFCC target can respond to the settlement");
-      }
-      const target = nextState.players.find((p) => p.id === pending.targetId)!;
-      const cashAmount = pending.cashAmount;
-      nextState.pendingEfcc = null;
-      nextState.phase = "awaiting-end-turn";
-      nextState.log.push(
-        `🕵🏾 ${target.name} chose to settle with the EFCC for ₦${cashAmount.toLocaleString("en-NG")}.`,
-      );
-      addDebt(nextState, target.id, "bank", cashAmount);
+    case "EFCC_PAY_CASH":
+      applyEfccPayCash(nextState, playerId);
       break;
-    }
 
-    case "EFCC_SURRENDER": {
-      // C5: the richest player forfeits one property to the bank instead of cash.
-      if (nextState.phase !== "awaiting-efcc-choice" || !nextState.pendingEfcc) {
-        throw new Error("No EFCC settlement is pending");
-      }
-      const pending = nextState.pendingEfcc;
-      if (playerId !== pending.targetId) {
-        throw new Error("Only the EFCC target can respond to the settlement");
-      }
-      if (!pending.surrenderableTiles.includes(action.pos)) {
-        throw new Error("You cannot surrender that property");
-      }
-      const target = nextState.players.find((p) => p.id === pending.targetId)!;
-      const tile = BOARD[action.pos];
-      const ts = nextState.tiles[action.pos];
-      // Liquidate any buildings back to the bank first (proceeds to the owner),
-      // mirroring how bankruptcy handles developed tiles, then clear ownership.
-      if (tile.type === "property" && ts.houses > 0) {
-        const refund = Math.floor(tile.houseCost / 2) * ts.houses;
-        target.cash += refund;
-        nextState.bank -= refund;
-        nextState.log.push(
-          `${target.name}'s buildings on ${tile.name} were sold back for ₦${refund.toLocaleString("en-NG")} before forfeiture.`,
-        );
-      }
-      nextState.tiles[action.pos] = { ownerId: null, houses: 0, mortgaged: false };
-      nextState.pendingEfcc = null;
-      nextState.phase = "awaiting-end-turn";
-      nextState.log.push(`🕵🏾 ${target.name} forfeited ${tile.name} to the EFCC.`);
+    case "EFCC_SURRENDER":
+      applyEfccSurrender(nextState, playerId, action);
       break;
-    }
 
-    case "VOTE_KICK": {
-      const targetId = action.targetId;
-      const targetPlayer = nextState.players.find((p) => p.id === targetId);
-      const voterPlayer = nextState.players.find((p) => p.id === playerId);
-
-      if (!targetPlayer || targetPlayer.bankrupt) {
-        throw new Error("Target player is not in the game or is already bankrupt");
-      }
-      if (!voterPlayer || voterPlayer.bankrupt) {
-        throw new Error("You cannot vote if you are not an active player");
-      }
-      if (targetId === playerId) {
-        throw new Error("You cannot vote to commot yourself. Use forfeit instead.");
-      }
-
-      if (!nextState.votekicks[targetId]) {
-        nextState.votekicks[targetId] = [];
-      }
-
-      const votes = nextState.votekicks[targetId];
-      if (votes.includes(playerId)) {
-        throw new Error("You have already voted to commot this player");
-      }
-
-      votes.push(playerId);
-      nextState.log.push(
-        `${voterPlayer.name} voted to commot ${targetPlayer.name} (${votes.length} votes).`,
-      );
-
-      const activePlayerIds = new Set(
-        nextState.players.filter((p) => !p.bankrupt).map((p) => p.id),
-      );
-      const liveVoteCount = votes.filter((id) => activePlayerIds.has(id)).length;
-      if (liveVoteCount > activePlayerIds.size / 2) {
-        targetPlayer.kicked = true;
-        nextState.log.push(`Vote majority reached! ${targetPlayer.name} don commot from the game.`);
-        // Run the FORFEIT action directly to safely and fully eliminate them (handles auctions/trades/properties)
-        return applyAction(nextState, targetId, { type: "FORFEIT" }, rng);
-      }
-      break;
-    }
+    case "VOTE_KICK":
+      return applyVoteKick(nextState, playerId, action, rng);
 
     default:
       throw new Error(`Action type ${(action as { type: string }).type} is not implemented yet`);
   }
 
+  return nextState;
+}
+
+// ---------------------------------------------------------------------------
+// applyAction case handlers — one small pure(-ish, mutate-in-place-on-a-copy)
+// function per action type, dispatched from the switch in applyAction below.
+// ---------------------------------------------------------------------------
+
+function applyRoll(nextState: GameState, currentPlayer: Player, rng: () => number): void {
+  if (nextState.phase !== "awaiting-roll") {
+    throw new Error(`Cannot roll in phase ${nextState.phase}`);
+  }
+
+  const d1 = Math.floor(rng() * 6) + 1;
+  const d2 = Math.floor(rng() * 6) + 1;
+  const diceTotal = d1 + d2;
+  nextState.dice = [d1, d2];
+
+  if (currentPlayer.inJail) {
+    if (d1 === d2) {
+      currentPlayer.inJail = false;
+      currentPlayer.jailTurns = 0;
+      nextState.doublesCount = 0; // escape jail doubles does not count towards 3x doubles jail limit
+      nextState.log.push(`${currentPlayer.name} rolled doubles [${d1}, ${d2}] and escaped Jail!`);
+
+      movePlayerAndResolve(nextState, currentPlayer, diceTotal, rng);
+    } else {
+      currentPlayer.jailTurns += 1;
+      if (currentPlayer.jailTurns >= 3) {
+        currentPlayer.cash -= JAIL_FINE;
+        currentPlayer.inJail = false;
+        currentPlayer.jailTurns = 0;
+        if (nextState.settings.freeParkingJackpot) {
+          nextState.freeParkingPot += JAIL_FINE;
+          nextState.log.push(
+            `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine (added to Mama Put Pot) and moved.`,
+          );
+        } else {
+          nextState.bank += JAIL_FINE;
+          nextState.log.push(
+            `${currentPlayer.name} failed to roll doubles for the 3rd time in Jail. Paid ₦50,000 fine and moved.`,
+          );
+        }
+
+        movePlayerAndResolve(nextState, currentPlayer, diceTotal, rng);
+      } else {
+        nextState.log.push(
+          `${currentPlayer.name} rolled [${d1}, ${d2}] in Jail. Remain in Jail (attempt ${currentPlayer.jailTurns}/3).`,
+        );
+        nextState.phase = "awaiting-end-turn";
+      }
+    }
+  } else {
+    // Normal roll
+    if (d1 === d2) {
+      nextState.doublesCount += 1;
+      if (nextState.doublesCount === 3) {
+        currentPlayer.inJail = true;
+        currentPlayer.jailTurns = 0;
+        currentPlayer.position = JAIL_POSITION;
+        nextState.doublesCount = 0;
+        nextState.stats[currentPlayer.id].jailTimes += 1;
+        nextState.log.push(
+          `${currentPlayer.name} rolled doubles 3 times in a row and went to Kirikiri Prison!`,
+        );
+        nextState.phase = "awaiting-end-turn";
+        return;
+      }
+    } else {
+      nextState.doublesCount = 0;
+    }
+
+    nextState.log.push(`${currentPlayer.name} rolled [${d1}, ${d2}].`);
+    movePlayerAndResolve(nextState, currentPlayer, diceTotal, rng);
+  }
+}
+
+function applyBuy(nextState: GameState, currentPlayer: Player): void {
+  if (nextState.phase !== "awaiting-buy-decision") {
+    throw new Error(`Cannot buy in phase ${nextState.phase}`);
+  }
+
+  const pos = currentPlayer.position;
+  const tile = BOARD[pos];
+  if (!tile || !("price" in tile)) {
+    throw new Error(`Tile at position ${pos} is not ownable`);
+  }
+
+  const tileState = nextState.tiles[pos];
+  if (!tileState || tileState.ownerId !== null) {
+    throw new Error("Tile is already owned");
+  }
+
+  if (currentPlayer.cash < tile.price) {
+    throw new Error(`Insufficient cash (₦${currentPlayer.cash}) to buy ${tile.name} (₦${tile.price})`);
+  }
+
+  currentPlayer.cash -= tile.price;
+  nextState.bank += tile.price;
+  nextState.tiles[pos] = { ownerId: currentPlayer.id, houses: 0, mortgaged: false };
+  nextState.stats[currentPlayer.id].propertiesBought += 1;
+  nextState.log.push(
+    `${currentPlayer.name} bought ${tile.name} for ₦${tile.price.toLocaleString("en-NG")}.`,
+  );
+  nextState.phase = "awaiting-end-turn";
+}
+
+function applyDeclineBuy(nextState: GameState, currentPlayer: Player): void {
+  if (nextState.phase !== "awaiting-buy-decision") {
+    throw new Error(`Cannot decline buy in phase ${nextState.phase}`);
+  }
+
+  const pos = currentPlayer.position;
+  const tile = BOARD[pos];
+  nextState.log.push(`${currentPlayer.name} declined to buy ${tile.name}. Starting auction!`);
+
+  const activePlayers = nextState.players.filter((p) => !p.bankrupt);
+  if (activePlayers.length === 0) {
+    nextState.phase = "awaiting-end-turn";
+    return;
+  }
+
+  const price = "price" in tile ? (tile as PropertyTile).price : 0;
+  const { minIncrement, bidIncrements } = auctionIncrements(price);
+
+  nextState.auctionState = {
+    tilePos: pos,
+    highestBid: 0,
+    highestBidderId: null,
+    participantIds: activePlayers.map((p) => p.id),
+    passedIds: [],
+    minIncrement,
+    bidIncrements,
+    bidDurationMs: AUCTION_BID_DURATION_MS,
+    deadline: null, // the server stamps this when it arms the timer
+  };
+  nextState.phase = "auction";
+
+  nextState.log.push(
+    `Auction started for ${tile.name}! Bidding is open — raise fast before the clock runs out.`,
+  );
+}
+
+function applyBuild(
+  nextState: GameState,
+  currentPlayer: Player,
+  action: Extract<Action, { type: "BUILD" }>,
+): void {
+  if (nextState.phase !== "awaiting-roll" && nextState.phase !== "awaiting-end-turn") {
+    throw new Error(`Cannot build in phase ${nextState.phase}`);
+  }
+  const pos = action.pos;
+  const tile = BOARD[pos];
+  if (!tile || tile.type !== "property") {
+    throw new Error(`Position ${pos} is not a buildable property`);
+  }
+
+  const tileState = nextState.tiles[pos];
+  if (!tileState || tileState.ownerId !== currentPlayer.id) {
+    throw new Error("You do not own this property");
+  }
+  if (tileState.mortgaged) {
+    throw new Error("Cannot build on a mortgaged property");
+  }
+
+  // Ownership check: must own the entire color group
+  const group = tile.group;
+  const groupTiles = BOARD.filter(
+    (t): t is PropertyTile => t.type === "property" && t.group === group,
+  );
+  const ownsAll = groupTiles.every((t) => nextState.tiles[t.pos]?.ownerId === currentPlayer.id);
+  if (!ownsAll) {
+    throw new Error("You must own the full color group to build");
+  }
+
+  // Mortgage check: none of the properties in the group can be mortgaged
+  const anyMortgaged = groupTiles.some((t) => nextState.tiles[t.pos]?.mortgaged);
+  if (anyMortgaged) {
+    throw new Error("Cannot build when any property in the group is mortgaged");
+  }
+
+  // Upgrade capacity: max is 5 (hotel)
+  if (tileState.houses >= 5) {
+    throw new Error("Property is already fully developed (Hotel)");
+  }
+
+  // Even build constraint: cannot build a house on this property if it has more houses than another in the group
+  const targetHouses = tileState.houses;
+  const violatesEven = groupTiles.some((t) => (nextState.tiles[t.pos]?.houses ?? 0) < targetHouses);
+  if (violatesEven) {
+    throw new Error("You must build evenly across all properties in the color group");
+  }
+
+  // Bank supply check
+  let currentTotalHouses = 0;
+  let currentTotalHotels = 0;
+  Object.values(nextState.tiles).forEach((ts) => {
+    if (ts.houses === 5) {
+      currentTotalHotels += 1;
+    } else if (ts.houses >= 1 && ts.houses <= 4) {
+      currentTotalHouses += ts.houses;
+    }
+  });
+
+  const isUpgradingToHotel = tileState.houses === 4;
+  if (isUpgradingToHotel) {
+    // consumes 1 hotel, frees 4 houses
+    if (currentTotalHotels >= HOTEL_SUPPLY) {
+      throw new Error("No Hotels remaining in the bank");
+    }
+  } else {
+    // consumes 1 house
+    if (currentTotalHouses >= HOUSE_SUPPLY) {
+      throw new Error("No Bungalows/Duplexes/Mansions/Estates remaining in the bank");
+    }
+  }
+
+  // Cash check
+  if (currentPlayer.cash < tile.houseCost) {
+    throw new Error(`Insufficient cash to build (requires ₦${tile.houseCost})`);
+  }
+
+  currentPlayer.cash -= tile.houseCost;
+  nextState.bank += tile.houseCost;
+  tileState.houses += 1;
+
+  const buildType = getDevelopmentName(tileState.houses);
+  nextState.log.push(
+    `${currentPlayer.name} built a ${buildType} on ${tile.name} for ₦${tile.houseCost.toLocaleString("en-NG")}.`,
+  );
+}
+
+function applySellHouse(
+  nextState: GameState,
+  currentPlayer: Player,
+  action: Extract<Action, { type: "SELL_HOUSE" }>,
+): void {
+  if (nextState.phase !== "awaiting-roll" && nextState.phase !== "awaiting-end-turn") {
+    throw new Error(`Cannot sell developments in phase ${nextState.phase}`);
+  }
+  const pos = action.pos;
+  const tile = BOARD[pos];
+  if (!tile || tile.type !== "property") {
+    throw new Error(`Position ${pos} is not a property`);
+  }
+
+  const tileState = nextState.tiles[pos];
+  if (!tileState || tileState.ownerId !== currentPlayer.id) {
+    throw new Error("You do not own this property");
+  }
+  if (tileState.houses === 0) {
+    throw new Error("No buildings on this property to sell");
+  }
+
+  // Even selling constraint: cannot sell if target has fewer houses than another in the group (must be max)
+  const targetHouses = tileState.houses;
+  const group = tile.group;
+  const groupTiles = BOARD.filter(
+    (t): t is PropertyTile => t.type === "property" && t.group === group,
+  );
+  const violatesEven = groupTiles.some((t) => (nextState.tiles[t.pos]?.houses ?? 0) > targetHouses);
+  if (violatesEven) {
+    throw new Error("You must sell buildings evenly across the color group");
+  }
+
+  // Hotel degrading check
+  const isDegradingHotel = tileState.houses === 5;
+  if (isDegradingHotel) {
+    // Requires 4 houses to replace the hotel. Check house supply in bank.
+    let currentTotalHouses = 0;
+    Object.values(nextState.tiles).forEach((ts) => {
+      if (ts.houses >= 1 && ts.houses <= 4) {
+        currentTotalHouses += ts.houses;
+      }
+    });
+
+    if (HOUSE_SUPPLY - currentTotalHouses < 4) {
+      throw new Error("Not enough Bungalows/Duplexes in the bank to downgrade Hotel");
+    }
+  }
+
+  // Sell back to the bank at half price. Floor keeps money an exact integer
+  // of Naira even if a retheme sets an odd houseCost (data is data).
+  const refund = Math.floor(tile.houseCost / 2);
+  currentPlayer.cash += refund;
+  nextState.bank -= refund;
+  tileState.houses -= 1;
+
+  const sellType = getDevelopmentName(tileState.houses + 1);
+  nextState.log.push(
+    `${currentPlayer.name} sold a ${sellType} on ${tile.name} for ₦${refund.toLocaleString("en-NG")}.`,
+  );
+  // The raised cash may now cover an outstanding debt — settle immediately
+  // so the player isn't forced into bankruptcy while solvent.
+  autoSettleAffordableDebts(nextState, currentPlayer.id);
+}
+
+function applyMortgage(
+  nextState: GameState,
+  currentPlayer: Player,
+  action: Extract<Action, { type: "MORTGAGE" }>,
+): void {
+  if (nextState.phase !== "awaiting-roll" && nextState.phase !== "awaiting-end-turn") {
+    throw new Error(`Cannot mortgage in phase ${nextState.phase}`);
+  }
+  const pos = action.pos;
+  const tile = BOARD[pos];
+  if (!tile || !("mortgage" in tile)) {
+    throw new Error(`Tile at position ${pos} is not mortgageable`);
+  }
+
+  const tileState = nextState.tiles[pos];
+  if (!tileState || tileState.ownerId !== currentPlayer.id) {
+    throw new Error("You do not own this property");
+  }
+  if (tileState.mortgaged) {
+    throw new Error("Property is already mortgaged");
+  }
+
+  // Property and group must have no buildings
+  if (tile.type === "property") {
+    const group = tile.group;
+    const groupTiles = BOARD.filter(
+      (t): t is PropertyTile => t.type === "property" && t.group === group,
+    );
+    const hasBuildings = groupTiles.some((t) => (nextState.tiles[t.pos]?.houses ?? 0) > 0);
+    if (hasBuildings) {
+      throw new Error("Must sell all buildings in the color group before mortgaging");
+    }
+  }
+
+  tileState.mortgaged = true;
+  currentPlayer.cash += tile.mortgage;
+  nextState.bank -= tile.mortgage;
+  nextState.log.push(
+    `${currentPlayer.name} mortgaged ${tile.name} for ₦${tile.mortgage.toLocaleString("en-NG")}.`,
+  );
+  // The raised cash may now cover an outstanding debt — settle immediately
+  // so the player isn't forced into bankruptcy while solvent.
+  autoSettleAffordableDebts(nextState, currentPlayer.id);
+}
+
+function applyUnmortgage(
+  nextState: GameState,
+  currentPlayer: Player,
+  action: Extract<Action, { type: "UNMORTGAGE" }>,
+): void {
+  if (nextState.phase !== "awaiting-roll" && nextState.phase !== "awaiting-end-turn") {
+    throw new Error(`Cannot unmortgage in phase ${nextState.phase}`);
+  }
+  const pos = action.pos;
+  const tile = BOARD[pos];
+  if (!tile || !("mortgage" in tile)) {
+    throw new Error(`Tile at position ${pos} is not mortgageable`);
+  }
+
+  const tileState = nextState.tiles[pos];
+  if (!tileState || tileState.ownerId !== currentPlayer.id) {
+    throw new Error("You do not own this property");
+  }
+  if (!tileState.mortgaged) {
+    throw new Error("Property is not mortgaged");
+  }
+
+  const cost = Math.round(tile.mortgage * 1.1);
+  if (currentPlayer.cash < cost) {
+    throw new Error(`Insufficient cash to unmortgage (requires ₦${cost})`);
+  }
+
+  currentPlayer.cash -= cost;
+  nextState.bank += cost;
+  tileState.mortgaged = false;
+  nextState.log.push(
+    `${currentPlayer.name} unmortgaged ${tile.name} for ₦${cost.toLocaleString("en-NG")}.`,
+  );
+}
+
+function applyPayJailFine(nextState: GameState, currentPlayer: Player): void {
+  if (!currentPlayer.inJail) {
+    throw new Error("Player is not in Jail");
+  }
+  if (nextState.phase !== "awaiting-roll") {
+    throw new Error("Can only pay fine in awaiting-roll phase");
+  }
+  if (currentPlayer.cash < JAIL_FINE) {
+    throw new Error("Insufficient cash to pay jail fine");
+  }
+
+  currentPlayer.cash -= JAIL_FINE;
+  currentPlayer.inJail = false;
+  currentPlayer.jailTurns = 0;
+  if (nextState.settings.freeParkingJackpot) {
+    nextState.freeParkingPot += JAIL_FINE;
+    nextState.log.push(
+      `${currentPlayer.name} paid ₦50,000 fine (added to Mama Put Pot) and was released from Jail.`,
+    );
+  } else {
+    nextState.bank += JAIL_FINE;
+    nextState.log.push(`${currentPlayer.name} paid ₦50,000 fine and was released from Jail.`);
+  }
+  // Remain in awaiting-roll so the player can take their turn normally
+}
+
+function applyUseJailCard(nextState: GameState, currentPlayer: Player): void {
+  if (!currentPlayer.inJail) {
+    throw new Error("Player is not in Jail");
+  }
+  if (nextState.phase !== "awaiting-roll") {
+    throw new Error("Can only use card in awaiting-roll phase");
+  }
+  if (currentPlayer.jailCardSources.length <= 0) {
+    throw new Error("Player does not have a Get Out of Jail Free card");
+  }
+
+  const source = currentPlayer.jailCardSources.pop()!;
+  currentPlayer.inJail = false;
+  currentPlayer.jailTurns = 0;
+
+  // Restore the card to whichever deck it originally came from.
+  if (source === "chance") {
+    nextState.chanceOrder.push(CHANCE_JAIL_CARD_ID);
+  } else {
+    nextState.hustleOrder.push(HUSTLE_JAIL_CARD_ID);
+  }
+
+  nextState.log.push(
+    `${currentPlayer.name} used a Get Out of Jail Free card and was released from Jail.`,
+  );
+  // Remain in awaiting-roll
+}
+
+function applyEndTurn(nextState: GameState, currentPlayer: Player): void {
+  if (nextState.phase !== "awaiting-end-turn") {
+    throw new Error(`Cannot end turn in phase ${nextState.phase}`);
+  }
+
+  // Settle whatever the player can now afford before deciding whether to
+  // block: a debtor who raised enough cash (mortgage/sale/trade) must be
+  // able to pay up and move on, never be forced into bankruptcy.
+  autoSettleAffordableDebts(nextState, currentPlayer.id);
+
+  // Block if the current player STILL has unsettled debts in the ledger
+  const playerDebts = nextState.debtLedger.filter((d) => d.debtorId === currentPlayer.id);
+  if (playerDebts.length > 0) {
+    throw new Error(
+      "Cannot end turn with unsettled debts. You must mortgage properties, sell houses, or declare bankruptcy.",
+    );
+  }
+
+  if (currentPlayer.cash < 0) {
+    throw new Error(
+      "Cannot end turn with negative cash. You must mortgage properties, sell houses, or declare bankruptcy.",
+    );
+  }
+
+  // If player rolled doubles and is not in jail, they get another turn
+  if (nextState.doublesCount > 0 && !currentPlayer.inJail) {
+    nextState.phase = "awaiting-roll";
+    nextState.dice = null; // reset for next roll
+    nextState.log.push(`${currentPlayer.name} gets another roll for rolling doubles.`);
+  } else {
+    // Advance player index
+    let nextIndex = (nextState.currentPlayerIndex + 1) % nextState.players.length;
+    while (nextState.players[nextIndex].bankrupt) {
+      nextIndex = (nextIndex + 1) % nextState.players.length;
+    }
+
+    // Did we complete a round?
+    if (nextIndex < nextState.currentPlayerIndex) {
+      // Yes, we wrapped around. Check turn limit BEFORE incrementing round count to limit current round play
+      if (nextState.settings.turnLimit > 0 && nextState.currentTurn >= nextState.settings.turnLimit) {
+        // Game over! Pay out any secret objective completed at this
+        // boundary FIRST — the bonus is part of the final net worth.
+        evaluateObjectivesAtBoundary(nextState);
+
+        // Calculate winner by net worth
+        const solventPlayers = nextState.players.filter((p) => !p.bankrupt);
+        let highestNetWorth = -Infinity;
+        let winnerId: string | null = null;
+
+        nextState.log.push("Turn limit reached! Calculating player net worths...");
+
+        solventPlayers.forEach((p) => {
+          // Cash
+          let netWorth = p.cash;
+
+          // Value of all properties owned by this player
+          Object.keys(nextState.tiles).forEach((posStr) => {
+            const pos = parseInt(posStr, 10);
+            const ts = nextState.tiles[pos];
+            if (ts.ownerId === p.id) {
+              const tile = BOARD[pos];
+              if ("price" in tile) {
+                if (ts.mortgaged) {
+                  // Mortgaged properties have value = mortgage amount
+                  netWorth += tile.mortgage;
+                } else {
+                  // Unmortgaged properties have full purchase value
+                  netWorth += tile.price;
+                  // Plus development costs
+                  if (tile.type === "property" && ts.houses > 0) {
+                    netWorth += ts.houses * tile.houseCost;
+                  }
+                }
+              }
+            }
+          });
+
+          // Subtract any pending debts this player owes
+          const pendingDebts = nextState.debtLedger
+            .filter((d) => d.debtorId === p.id)
+            .reduce((sum, d) => sum + d.amount, 0);
+          netWorth -= pendingDebts;
+
+          nextState.log.push(`${p.name}'s Net Worth: ₦${netWorth.toLocaleString("en-NG")}`);
+
+          if (netWorth > highestNetWorth) {
+            highestNetWorth = netWorth;
+            winnerId = p.id;
+          }
+        });
+
+        if (winnerId) {
+          const winnerName = nextState.players.find((p) => p.id === winnerId)!.name;
+          nextState.winnerId = winnerId;
+          nextState.phase = "game-over";
+          nextState.log.push(
+            `Turn limit of ${nextState.settings.turnLimit} rounds was reached! ${winnerName} wins the game with a net worth of ₦${highestNetWorth.toLocaleString("en-NG")}!`,
+          );
+          return;
+        }
+      }
+
+      nextState.currentTurn += 1;
+      nextState.log.push(`--- Round ${nextState.currentTurn} ---`);
+      expireRoundEffects(nextState);
+    }
+
+    nextState.currentPlayerIndex = nextIndex;
+    nextState.doublesCount = 0;
+    nextState.dice = null;
+    nextState.phase = "awaiting-roll";
+    nextState.log.push(`It is now ${nextState.players[nextIndex].name}'s turn.`);
+    evaluateObjectivesAtBoundary(nextState);
+  }
+}
+
+function applyBid(
+  nextState: GameState,
+  playerId: PlayerId,
+  action: Extract<Action, { type: "BID" }>,
+): void {
+  if (nextState.phase !== "auction" || !nextState.auctionState) {
+    throw new Error("No active auction");
+  }
+
+  const auction = nextState.auctionState;
+  if (!auction.participantIds.includes(playerId)) {
+    throw new Error(`${playerId} is not part of this auction`);
+  }
+  if (auction.passedIds.includes(playerId)) {
+    throw new Error(`${playerId} has already passed and cannot bid again`);
+  }
+  if (auction.highestBidderId === playerId) {
+    throw new Error(`${playerId} is already the highest bidder`);
+  }
+
+  // Bids must raise the top bid by exactly one of the set increments.
+  const amount = action.amount;
+  if (!Number.isInteger(amount)) {
+    throw new Error("Bid amount must be a whole number");
+  }
+  const raise = amount - auction.highestBid;
+  if (!auction.bidIncrements.includes(raise)) {
+    throw new Error(
+      `Bid must raise by a set increment (${auction.bidIncrements
+        .map((i) => `₦${i.toLocaleString("en-NG")}`)
+        .join(", ")})`,
+    );
+  }
+
+  const bidder = nextState.players.find((p) => p.id === playerId)!;
+  if (bidder.cash < amount) {
+    throw new Error(`Insufficient cash (₦${bidder.cash}) for bid ₦${amount}`);
+  }
+
+  auction.highestBid = amount;
+  auction.highestBidderId = playerId;
+  auction.deadline = null; // the server resets the clock on each new bid
+  nextState.log.push(`${bidder.name} bid ₦${amount.toLocaleString("en-NG")}!`);
+
+  if (amount > nextState.stats[playerId].highestAuctionBid) {
+    nextState.stats[playerId].highestAuctionBid = amount;
+  }
+
+  // If nobody else is still in the running, the bidder wins immediately.
+  const challengers = auction.participantIds.filter(
+    (id) => id !== playerId && !auction.passedIds.includes(id),
+  );
+  if (challengers.length === 0) {
+    finalizeAuction(nextState);
+  }
+}
+
+function applyPassBid(nextState: GameState, playerId: PlayerId): void {
+  if (nextState.phase !== "auction" || !nextState.auctionState) {
+    throw new Error("No active auction");
+  }
+
+  const auction = nextState.auctionState;
+  if (!auction.participantIds.includes(playerId)) {
+    throw new Error(`${playerId} is not part of this auction`);
+  }
+  if (auction.passedIds.includes(playerId)) {
+    throw new Error(`${playerId} has already passed`);
+  }
+  if (auction.highestBidderId === playerId) {
+    throw new Error(`The highest bidder cannot pass`);
+  }
+
+  const bidder = nextState.players.find((p) => p.id === playerId)!;
+  auction.passedIds.push(playerId);
+  nextState.log.push(`${bidder.name} passed.`);
+
+  // Who is still able to bid?
+  const remaining = auction.participantIds.filter((id) => !auction.passedIds.includes(id));
+  if (auction.highestBidderId !== null) {
+    // Someone has bid; once no challenger is left, the top bidder wins.
+    const challengers = remaining.filter((id) => id !== auction.highestBidderId);
+    if (challengers.length === 0) {
+      finalizeAuction(nextState);
+    }
+  } else if (remaining.length === 0) {
+    // Everyone folded without a single bid.
+    finalizeAuction(nextState);
+  }
+}
+
+function applyResolveAuction(nextState: GameState): void {
+  // Fired by the server when the bid timer expires: award to the standing
+  // high bidder, or close with no sale if no one ever bid.
+  if (nextState.phase !== "auction" || !nextState.auctionState) {
+    throw new Error("No active auction");
+  }
+  finalizeAuction(nextState);
+}
+
+function applyProposeTrade(
+  nextState: GameState,
+  playerId: PlayerId,
+  action: Extract<Action, { type: "PROPOSE_TRADE" }>,
+): void {
+  // Trades can be struck at any time by any player. The only phases that
+  // block a proposal are an in-progress auction (a focused, timed sub-flow)
+  // and game-over.
+  if (nextState.phase === "auction" || nextState.phase === "game-over") {
+    throw new Error(`Cannot propose trade in phase ${nextState.phase}`);
+  }
+  // One offer on the table at a time: a new proposal must not silently
+  // clobber a pending, unanswered one.
+  if (nextState.activeTrade) {
+    throw new Error("Another trade is already pending — respond to or cancel it first");
+  }
+
+  const trade = action.trade;
+  // The wire payload is attacker-controlled: reject anything that isn't a
+  // well-formed trade before touching money/tiles. NaN/undefined cash
+  // would slip past every `<` comparison (all NaN comparisons are false)
+  // and permanently poison a player's cash.
+  if (!trade || typeof trade !== "object") {
+    throw new Error("Malformed trade offer");
+  }
+  if (trade.fromId !== playerId) {
+    throw new Error("Proposer ID must match the requesting player");
+  }
+  validateTradeOffer(nextState, trade);
+
+  const proposer = nextState.players.find((p) => p.id === trade.fromId)!;
+  const recipient = nextState.players.find((p) => p.id === trade.toId)!;
+  nextState.activeTrade = trade;
+  nextState.log.push(`${proposer.name} proposed a trade to ${recipient.name}.`);
+}
+
+function applyRespondTrade(
+  nextState: GameState,
+  playerId: PlayerId,
+  action: Extract<Action, { type: "RESPOND_TRADE" }>,
+): void {
+  if (!nextState.activeTrade) {
+    throw new Error("No active trade proposal");
+  }
+  // An accept mid-auction could drain the standing high bidder below their
+  // bid and force negative cash at auction close.
+  if (nextState.phase === "auction" || nextState.phase === "game-over") {
+    throw new Error(`Cannot respond to a trade in phase ${nextState.phase}`);
+  }
+
+  const trade = nextState.activeTrade;
+  if (playerId !== trade.toId) {
+    throw new Error(
+      `Only recipient (${trade.toId}) can respond to trade. Received request from ${playerId}`,
+    );
+  }
+
+  const proposer = nextState.players.find((p) => p.id === trade.fromId)!;
+  const recipient = nextState.players.find((p) => p.id === trade.toId)!;
+
+  if (action.accept) {
+    // The offer may have gone stale while it waited (tiles sold or
+    // mortgaged, buildings added, cash spent, proposer eliminated). A
+    // stale offer is VOID — cancel it rather than move assets that are no
+    // longer the parties' to trade (or throw at an innocent recipient).
+    const proposerFee = mortgageTransferFee(nextState, trade.getTiles);
+    const recipientFee = mortgageTransferFee(nextState, trade.giveTiles);
+    try {
+      validateTradeOffer(nextState, trade);
+      if (proposer.cash - trade.giveCash + trade.getCash < proposerFee) {
+        throw new Error(
+          `${proposer.name} cannot afford the 10% interest on mortgaged properties received`,
+        );
+      }
+      if (recipient.cash - trade.getCash + trade.giveCash < recipientFee) {
+        throw new Error(
+          `${recipient.name} cannot afford the 10% interest on mortgaged properties received`,
+        );
+      }
+    } catch (err: unknown) {
+      const reason = err instanceof Error ? err.message : String(err);
+      nextState.activeTrade = null;
+      nextState.log.push(
+        `Trade between ${proposer.name} and ${recipient.name} was cancelled: ${reason}.`,
+      );
+      return;
+    }
+
+    // Execute trade: cash swap, then the 10% bank interest each side owes
+    // on any mortgaged property it receives (official mortgage-transfer rule).
+    proposer.cash = proposer.cash - trade.giveCash + trade.getCash - proposerFee;
+    recipient.cash = recipient.cash - trade.getCash + trade.giveCash - recipientFee;
+    nextState.bank += proposerFee + recipientFee;
+    if (proposerFee + recipientFee > 0) {
+      nextState.log.push(
+        `Bank collected ₦${(proposerFee + recipientFee).toLocaleString("en-NG")} interest (10%) on mortgaged properties changing hands.`,
+      );
+    }
+
+    // Transfer tiles
+    for (const pos of trade.giveTiles) {
+      nextState.tiles[pos].ownerId = recipient.id;
+    }
+    for (const pos of trade.getTiles) {
+      nextState.tiles[pos].ownerId = proposer.id;
+    }
+
+    // Transfer Get Out of Jail Free cards (each keeps its source deck).
+    for (let i = 0; i < (trade.giveJailCards ?? 0); i++) {
+      recipient.jailCardSources.push(proposer.jailCardSources.pop()!);
+    }
+    for (let i = 0; i < (trade.getJailCards ?? 0); i++) {
+      proposer.jailCardSources.push(recipient.jailCardSources.pop()!);
+    }
+
+    nextState.log.push(`Trade between ${proposer.name} and ${recipient.name} was accepted.`);
+    nextState.activeTrade = null;
+
+    // Incoming cash may cover an outstanding debt of either party.
+    autoSettleAffordableDebts(nextState, proposer.id);
+    autoSettleAffordableDebts(nextState, recipient.id);
+  } else if (action.counter) {
+    // Decline-with-counter: the counter replaces the pending trade with
+    // roles swapped, so the original proposer answers next.
+    const counter = action.counter;
+    if (!counter || typeof counter !== "object") {
+      throw new Error("Malformed counter-offer");
+    }
+    if (counter.fromId !== playerId || counter.toId !== trade.fromId) {
+      throw new Error("Counter-offer must go from the recipient back to the original proposer");
+    }
+    validateTradeOffer(nextState, counter);
+    nextState.activeTrade = counter;
+    nextState.log.push(`${recipient.name} countered ${proposer.name}'s trade offer.`);
+  } else {
+    nextState.log.push(`Trade proposal from ${proposer.name} was rejected by ${recipient.name}.`);
+    nextState.activeTrade = null;
+  }
+}
+
+function applyCancelTrade(nextState: GameState, playerId: PlayerId): void {
+  if (!nextState.activeTrade) {
+    throw new Error("No active trade proposal");
+  }
+  if (nextState.activeTrade.fromId !== playerId) {
+    throw new Error("Only the proposer can withdraw a trade offer");
+  }
+  const proposer = nextState.players.find((p) => p.id === playerId)!;
+  nextState.activeTrade = null;
+  nextState.log.push(`${proposer.name} withdrew their trade offer.`);
+}
+
+function applyForfeit(nextState: GameState, playerId: PlayerId): void {
+  // A player permanently left (disconnect/quit). Eliminate them like a
+  // bankruptcy to the bank, regardless of cash or whose turn it is, and
+  // keep the game in a consistent, playable state.
+  const player = nextState.players.find((p) => p.id === playerId);
+  // Idempotent / safe no-ops: unknown player, already out, or finished game.
+  if (!player || player.bankrupt || nextState.phase === "game-over") {
+    return;
+  }
+
+  player.bankrupt = true;
+  nextState.log.push(`${player.name} left the game and forfeited.`);
+
+  // Ghost votes: this player can no longer be a live voter or a valid target.
+  pruneVoteKicks(nextState, playerId);
+
+  // Return all their holdings to the bank (demolish, clear ownership).
+  Object.keys(nextState.tiles).forEach((posStr) => {
+    const pos = parseInt(posStr, 10);
+    if (nextState.tiles[pos].ownerId === playerId) {
+      nextState.tiles[pos] = { ownerId: null, houses: 0, mortgaged: false };
+    }
+  });
+
+  // Any held Get Out of Jail Free cards go back to their decks.
+  returnJailCardsToDecks(nextState, player);
+
+  // Write off all debts this player owes (creditors get nothing since
+  // assets go to bank) and reroute debts owed TO them to the bank.
+  forceWriteOffDebts(nextState, playerId);
+  player.cash = Math.max(0, player.cash); // ensure no negative balance
+
+  // Cancel any pending trade they were part of.
+  cancelTradeInvolving(nextState, playerId);
+
+  // Pull them out of a live auction; resolve it if no contest remains.
+  pruneFromAuction(nextState, playerId);
+
+  // Win condition: last player standing.
+  const remaining = nextState.players.filter((p) => !p.bankrupt);
+  if (remaining.length <= 1) {
+    nextState.winnerId = remaining.length === 1 ? remaining[0].id : null;
+    nextState.phase = "game-over";
+    if (remaining.length === 1) {
+      nextState.log.push(`${remaining[0].name} has won the game!`);
+    }
+    evaluateObjectivesAtBoundary(nextState);
+    return;
+  }
+
+  // If it was their turn (and an auction didn't already hand it off),
+  // advance so play doesn't stall waiting on a player who is gone.
+  if (nextState.phase !== "auction" && nextState.players[nextState.currentPlayerIndex].bankrupt) {
+    advanceTurnSkippingBankrupt(nextState);
+  }
+}
+
+function applyDeclareBankrupt(nextState: GameState, playerId: PlayerId): void {
+  const bankruptPlayer = nextState.players.find((p) => p.id === playerId)!;
+  // Can declare bankruptcy if in debt (negative cash) OR has unsettled debts in the ledger
+  const playerDebts = nextState.debtLedger.filter((d) => d.debtorId === playerId);
+  if (bankruptPlayer.cash >= 0 && playerDebts.length === 0) {
+    throw new Error(
+      "Cannot declare bankruptcy unless you are in debt (negative cash or unsettled debts)",
+    );
+  }
+
+  bankruptPlayer.bankrupt = true;
+
+  // Ghost votes: this player can no longer be a live voter or a valid target.
+  pruneVoteKicks(nextState, playerId);
+
+  nextState.log.push(`${bankruptPlayer.name} declared bankruptcy!`);
+
+  // Liquidate all buildings at half price FIRST — the proceeds land in the
+  // debtor's cash so debt settlement below can reach them (official rule:
+  // buildings are sold back to the bank, the money goes to the creditor).
+  let liquidated = 0;
+  Object.keys(nextState.tiles).forEach((posStr) => {
+    const pos = parseInt(posStr, 10);
+    const ts = nextState.tiles[pos];
+    const tile = BOARD[pos];
+    if (ts.ownerId === playerId && ts.houses > 0 && tile.type === "property") {
+      const refund = Math.floor(tile.houseCost / 2) * ts.houses;
+      bankruptPlayer.cash += refund;
+      nextState.bank -= refund;
+      liquidated += refund;
+      ts.houses = 0;
+    }
+  });
+  if (liquidated > 0) {
+    nextState.log.push(
+      `${bankruptPlayer.name}'s buildings were sold back to the bank for ₦${liquidated.toLocaleString("en-NG")}.`,
+    );
+  }
+
+  // Determine primary creditor from the debt ledger for property transfer
+  // If debts exist, the first non-bank creditor (if still alive) gets properties.
+  // If all creditors are bank or bankrupt, properties go to bank.
+  let primaryCreditorId: PlayerId | "bank" = "bank";
+  for (const debt of playerDebts) {
+    if (debt.creditorId !== "bank") {
+      const creditor = nextState.players.find((p) => p.id === debt.creditorId);
+      if (creditor && !creditor.bankrupt) {
+        primaryCreditorId = debt.creditorId;
+        break;
+      }
+    }
+  }
+
+  // Force-settle all debts: pay creditors up to available cash (now
+  // including the liquidation proceeds), write off shortfalls.
+  // Transfer cash BEFORE property transfer.
+  settleDebtsForPlayer(nextState, playerId);
+
+  if (primaryCreditorId === "bank" || primaryCreditorId === "pot") {
+    // Return properties to bank (clear ownership; buildings already liquidated)
+    Object.keys(nextState.tiles).forEach((posStr) => {
+      const pos = parseInt(posStr, 10);
+      if (nextState.tiles[pos].ownerId === playerId) {
+        nextState.tiles[pos] = {
+          ownerId: null,
+          houses: 0,
+          mortgaged: false,
+        };
+      }
+    });
+    // Held jail cards go back to their decks.
+    returnJailCardsToDecks(nextState, bankruptPlayer);
+    if (primaryCreditorId === "bank") {
+      nextState.bank += bankruptPlayer.cash;
+    } else {
+      nextState.freeParkingPot += bankruptPlayer.cash;
+    }
+    nextState.log.push(`All of ${bankruptPlayer.name}'s properties were returned to the bank.`);
+  } else {
+    const creditor = nextState.players.find((p) => p.id === primaryCreditorId)!;
+
+    // Transfer remaining properties to creditor. Mortgaged status remains,
+    // and the creditor owes the bank 10% interest on each mortgaged tile
+    // received (official mortgage-transfer rule).
+    const mortgagedReceived: number[] = [];
+    Object.keys(nextState.tiles).forEach((posStr) => {
+      const pos = parseInt(posStr, 10);
+      if (nextState.tiles[pos].ownerId === playerId) {
+        nextState.tiles[pos].ownerId = primaryCreditorId;
+        if (nextState.tiles[pos].mortgaged) mortgagedReceived.push(pos);
+      }
+    });
+
+    // Held jail cards pass to the creditor with the rest of the estate.
+    creditor.jailCardSources.push(...bankruptPlayer.jailCardSources);
+    bankruptPlayer.jailCardSources = [];
+
+    // Transfer remaining cash if positive (after debt settlement took what it could)
+    if (bankruptPlayer.cash > 0) {
+      creditor.cash += bankruptPlayer.cash;
+      bankruptPlayer.cash = 0;
+    }
+
+    nextState.log.push(
+      `All of ${bankruptPlayer.name}'s properties were transferred to ${creditor.name}.`,
+    );
+
+    const interest = mortgageTransferFee(nextState, mortgagedReceived);
+    if (interest > 0) {
+      // addDebt handles an insolvent creditor gracefully (pays what they
+      // can now, or ledgers it if they are the current player).
+      addDebt(nextState, creditor.id, "bank", interest);
+      nextState.log.push(
+        `${creditor.name} owes ₦${interest.toLocaleString("en-NG")} interest (10%) on mortgaged properties received.`,
+      );
+    }
+  }
+
+  // Ensure bankrupt player's cash is 0 (never negative)
+  bankruptPlayer.cash = 0;
+
+  // Reroute any debts owed TO this bankrupt player to the bank
+  nextState.debtLedger.forEach((d) => {
+    if (d.creditorId === playerId) {
+      d.creditorId = "bank";
+    }
+  });
+
+  // Their assets changed hands, so any pending trade they were part of is
+  // void; and a live auction must not keep waiting on them.
+  cancelTradeInvolving(nextState, playerId);
+  pruneFromAuction(nextState, playerId);
+
+  // Check win condition
+  const activePlayers = nextState.players.filter((p) => !p.bankrupt);
+  if (activePlayers.length === 1) {
+    nextState.winnerId = activePlayers[0].id;
+    nextState.phase = "game-over";
+    nextState.log.push(`${activePlayers[0].name} has won the game!`);
+  } else if (
+    nextState.phase !== "auction" &&
+    nextState.players[nextState.currentPlayerIndex].bankrupt
+  ) {
+    // Only advance the turn when the ACTIVE player is the one who just
+    // went bankrupt (and an auction finalization didn't already hand the
+    // turn off). An out-of-turn bankruptcy must never hijack the current
+    // player's pending roll/buy decision.
+    advanceTurnSkippingBankrupt(nextState);
+  }
+  evaluateObjectivesAtBoundary(nextState);
+}
+
+function applyChooseBlackoutZone(
+  nextState: GameState,
+  playerId: PlayerId,
+  action: Extract<Action, { type: "CHOOSE_BLACKOUT_ZONE" }>,
+): void {
+  // C1: the drawer names which zone goes dark.
+  if (nextState.phase !== "awaiting-blackout-target" || !nextState.pendingBlackout) {
+    throw new Error("No blackout target is pending");
+  }
+  const pending = nextState.pendingBlackout;
+  if (playerId !== pending.drawerId) {
+    throw new Error("Only the player who drew the card can choose the blackout zone");
+  }
+  if (!pending.selectableZones.includes(action.zone)) {
+    throw new Error("That zone cannot be blacked out");
+  }
+  nextState.blackout = {
+    untilRound: nextState.currentTurn + 1,
+    zone: action.zone,
+    generatorOwners: [],
+  };
+  nextState.pendingBlackout = null;
+  nextState.phase = "awaiting-end-turn";
+  nextState.log.push(
+    `⚡ The ${action.zone} zone don enter total darkness! No rent there till the round waka back — unless an owner fuels a generator.`,
+  );
+}
+
+function applyBuyGenerator(nextState: GameState, playerId: PlayerId): void {
+  // C2: an owner in the darkened zone pays the bank to keep collecting rent
+  // there. Available to any solvent owner while a zone blackout is live —
+  // the defended-against-the-leader counterplay to C1.
+  const bo = nextState.blackout;
+  if (!bo || bo.zone === undefined) {
+    throw new Error("No zone blackout is active");
+  }
+  if (nextState.phase === "game-over") {
+    throw new Error("The game is over");
+  }
+  const buyer = nextState.players.find((p) => p.id === playerId);
+  if (!buyer || buyer.bankrupt) {
+    throw new Error("Not an active player");
+  }
+  const ownsLitTileInZone = BOARD.some(
+    (t) =>
+      t.type === "property" &&
+      t.group === bo.zone &&
+      nextState.tiles[t.pos]?.ownerId === playerId &&
+      !nextState.tiles[t.pos]?.mortgaged,
+  );
+  if (!ownsLitTileInZone) {
+    throw new Error("You have no un-mortgaged property in the blacked-out zone");
+  }
+  if (bo.generatorOwners?.includes(playerId)) {
+    throw new Error("You already fuelled a generator for this blackout");
+  }
+  if (buyer.cash < GENERATOR_COST) {
+    throw new Error(`Insufficient cash (₦${buyer.cash}) for a generator (₦${GENERATOR_COST})`);
+  }
+  buyer.cash -= GENERATOR_COST;
+  nextState.bank += GENERATOR_COST;
+  bo.generatorOwners = [...(bo.generatorOwners ?? []), playerId];
+  nextState.log.push(
+    `🔌 ${buyer.name} fuelled a generator (₦${GENERATOR_COST.toLocaleString("en-NG")}) — their ${bo.zone} rent keeps flowing through the blackout.`,
+  );
+}
+
+function applyChooseStockpile(
+  nextState: GameState,
+  playerId: PlayerId,
+  action: Extract<Action, { type: "CHOOSE_STOCKPILE" }>,
+): void {
+  // C3: take the building income now, or forgo it for double next round.
+  if (nextState.phase !== "awaiting-stockpile-choice" || !nextState.pendingStockpile) {
+    throw new Error("No stockpile choice is pending");
+  }
+  const pending = nextState.pendingStockpile;
+  if (playerId !== pending.playerId) {
+    throw new Error("This stockpile choice is not yours to make");
+  }
+  const owner = nextState.players.find((p) => p.id === pending.playerId)!;
+  if (action.mode === "now") {
+    owner.cash += pending.amount;
+    nextState.bank -= pending.amount;
+    nextState.log.push(
+      `⛽ ${owner.name} cashed ₦${pending.amount.toLocaleString("en-NG")} of building income now.`,
+    );
+  } else {
+    const doubled = pending.amount * STOCKPILE_MULTIPLIER;
+    const dueRound = nextState.currentTurn + 1;
+    (nextState.deferredPayouts ??= []).push({
+      playerId: owner.id,
+      amount: doubled,
+      dueRound,
+    });
+    nextState.log.push(
+      `⛽ ${owner.name} stockpiled — ₦${doubled.toLocaleString("en-NG")} will land when the round waka back around.`,
+    );
+  }
+  nextState.pendingStockpile = null;
+  nextState.phase = "awaiting-end-turn";
+}
+
+function applyChooseFiresaleTile(
+  nextState: GameState,
+  playerId: PlayerId,
+  currentPlayer: Player,
+  action: Extract<Action, { type: "CHOOSE_FIRESALE_TILE" }>,
+): void {
+  // C4: the drawer buys one unowned tile at a discount.
+  if (nextState.phase !== "awaiting-firesale-pick" || !nextState.pendingFireSale) {
+    throw new Error("No fire sale is pending");
+  }
+  const pending = nextState.pendingFireSale;
+  if (playerId !== pending.drawerId) {
+    throw new Error("Only the player who drew the card can buy in the fire sale");
+  }
+  if (!pending.eligibleTiles.includes(action.pos)) {
+    throw new Error("That property is not available in the fire sale");
+  }
+  const tile = BOARD[action.pos];
+  const listPrice = "price" in tile ? tile.price : 0;
+  const cost = Math.floor((listPrice * (100 - pending.discountPct)) / 100);
+  // Drawer is the current player (the card resolved on their turn).
+  if (currentPlayer.cash < cost) {
+    throw new Error(`Insufficient cash (₦${currentPlayer.cash}) for the fire sale price (₦${cost})`);
+  }
+  currentPlayer.cash -= cost;
+  nextState.bank += cost;
+  nextState.tiles[action.pos] = { ownerId: currentPlayer.id, houses: 0, mortgaged: false };
+  nextState.stats[currentPlayer.id].propertiesBought += 1;
+  nextState.pendingFireSale = null;
+  nextState.phase = "awaiting-end-turn";
+  nextState.log.push(
+    `🏷️ ${currentPlayer.name} grabbed ${tile.name} in the fire sale for ₦${cost.toLocaleString("en-NG")} (${pending.discountPct}% off)!`,
+  );
+}
+
+function applyDeclineFiresale(nextState: GameState, playerId: PlayerId, currentPlayer: Player): void {
+  if (nextState.phase !== "awaiting-firesale-pick" || !nextState.pendingFireSale) {
+    throw new Error("No fire sale is pending");
+  }
+  if (playerId !== nextState.pendingFireSale.drawerId) {
+    throw new Error("Only the player who drew the card can decline the fire sale");
+  }
+  nextState.pendingFireSale = null;
+  nextState.phase = "awaiting-end-turn";
+  nextState.log.push(`🏷️ ${currentPlayer.name} waved off the fire sale.`);
+}
+
+function applyEfccPayCash(nextState: GameState, playerId: PlayerId): void {
+  // C5: the richest player settles in cash. addDebt handles solvency — a
+  // current-player target who can't pay ledgers the debt (then must
+  // mortgage/sell/declare bankrupt); a non-current target pays what they can.
+  if (nextState.phase !== "awaiting-efcc-choice" || !nextState.pendingEfcc) {
+    throw new Error("No EFCC settlement is pending");
+  }
+  const pending = nextState.pendingEfcc;
+  if (playerId !== pending.targetId) {
+    throw new Error("Only the EFCC target can respond to the settlement");
+  }
+  const target = nextState.players.find((p) => p.id === pending.targetId)!;
+  const cashAmount = pending.cashAmount;
+  nextState.pendingEfcc = null;
+  nextState.phase = "awaiting-end-turn";
+  nextState.log.push(
+    `🕵🏾 ${target.name} chose to settle with the EFCC for ₦${cashAmount.toLocaleString("en-NG")}.`,
+  );
+  addDebt(nextState, target.id, "bank", cashAmount);
+}
+
+function applyEfccSurrender(
+  nextState: GameState,
+  playerId: PlayerId,
+  action: Extract<Action, { type: "EFCC_SURRENDER" }>,
+): void {
+  // C5: the richest player forfeits one property to the bank instead of cash.
+  if (nextState.phase !== "awaiting-efcc-choice" || !nextState.pendingEfcc) {
+    throw new Error("No EFCC settlement is pending");
+  }
+  const pending = nextState.pendingEfcc;
+  if (playerId !== pending.targetId) {
+    throw new Error("Only the EFCC target can respond to the settlement");
+  }
+  if (!pending.surrenderableTiles.includes(action.pos)) {
+    throw new Error("You cannot surrender that property");
+  }
+  const target = nextState.players.find((p) => p.id === pending.targetId)!;
+  const tile = BOARD[action.pos];
+  const ts = nextState.tiles[action.pos];
+  // Liquidate any buildings back to the bank first (proceeds to the owner),
+  // mirroring how bankruptcy handles developed tiles, then clear ownership.
+  if (tile.type === "property" && ts.houses > 0) {
+    const refund = Math.floor(tile.houseCost / 2) * ts.houses;
+    target.cash += refund;
+    nextState.bank -= refund;
+    nextState.log.push(
+      `${target.name}'s buildings on ${tile.name} were sold back for ₦${refund.toLocaleString("en-NG")} before forfeiture.`,
+    );
+  }
+  nextState.tiles[action.pos] = { ownerId: null, houses: 0, mortgaged: false };
+  nextState.pendingEfcc = null;
+  nextState.phase = "awaiting-end-turn";
+  nextState.log.push(`🕵🏾 ${target.name} forfeited ${tile.name} to the EFCC.`);
+}
+
+function applyVoteKick(
+  nextState: GameState,
+  playerId: PlayerId,
+  action: Extract<Action, { type: "VOTE_KICK" }>,
+  rng: () => number,
+): GameState {
+  const targetId = action.targetId;
+  const targetPlayer = nextState.players.find((p) => p.id === targetId);
+  const voterPlayer = nextState.players.find((p) => p.id === playerId);
+
+  if (!targetPlayer || targetPlayer.bankrupt) {
+    throw new Error("Target player is not in the game or is already bankrupt");
+  }
+  if (!voterPlayer || voterPlayer.bankrupt) {
+    throw new Error("You cannot vote if you are not an active player");
+  }
+  if (targetId === playerId) {
+    throw new Error("You cannot vote to commot yourself. Use forfeit instead.");
+  }
+
+  if (!nextState.votekicks[targetId]) {
+    nextState.votekicks[targetId] = [];
+  }
+
+  const votes = nextState.votekicks[targetId];
+  if (votes.includes(playerId)) {
+    throw new Error("You have already voted to commot this player");
+  }
+
+  votes.push(playerId);
+  nextState.log.push(
+    `${voterPlayer.name} voted to commot ${targetPlayer.name} (${votes.length} votes).`,
+  );
+
+  const activePlayerIds = new Set(nextState.players.filter((p) => !p.bankrupt).map((p) => p.id));
+  const liveVoteCount = votes.filter((id) => activePlayerIds.has(id)).length;
+  if (liveVoteCount > activePlayerIds.size / 2) {
+    targetPlayer.kicked = true;
+    nextState.log.push(`Vote majority reached! ${targetPlayer.name} don commot from the game.`);
+    // Run the FORFEIT action directly to safely and fully eliminate them (handles auctions/trades/properties)
+    return applyAction(nextState, targetId, { type: "FORFEIT" }, rng);
+  }
   return nextState;
 }
 
