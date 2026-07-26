@@ -69,6 +69,13 @@ export class GameRoom extends Room<GameRoomState> {
   // Per-turn AFK timeout (optional, host-configured).
   private turnTimer?: ReturnType<typeof this.clock.setTimeout>;
 
+  // The engine takes rng as an injected dependency so tests can supply a seeded
+  // one; createGame/applyAction both default it to Math.random if omitted.
+  // Wired explicitly here (rather than relying on that default) so it's clear
+  // at a glance that the server deliberately uses true, non-reproducible
+  // randomness for every deck shuffle and dice roll — never a fixed seed.
+  private readonly rng: () => number = Math.random;
+
   // Authoritative full engine state, kept in-memory only. The copy synced to
   // clients (this.state.gameStateJson) is REDACTED — it omits the shuffled
   // card decks so a player can't read upcoming Chance/Hustle cards from
@@ -172,7 +179,7 @@ export class GameRoom extends Room<GameRoomState> {
   // engine, (re)arm the auction timer if an auction is live, then persist.
   private runEngineAction(playerId: string, action: Action) {
     if (!this.fullState) throw new Error("Game has not started");
-    const nextEngineState = applyAction(this.fullState, playerId, action);
+    const nextEngineState = applyAction(this.fullState, playerId, action, this.rng);
     this.armAuctionTimer(nextEngineState);
     this.armDecisionTimer(nextEngineState);
     this.persist(nextEngineState);
@@ -405,7 +412,12 @@ export class GameRoom extends Room<GameRoomState> {
     try {
       const engineState = this.fullState;
       if (!engineState || engineState.phase !== "auction") return;
-      const nextEngineState = applyAction(engineState, "__server__", { type: "RESOLVE_AUCTION" });
+      const nextEngineState = applyAction(
+        engineState,
+        "__server__",
+        { type: "RESOLVE_AUCTION" },
+        this.rng,
+      );
       this.armAuctionTimer(nextEngineState);
       this.persist(nextEngineState);
       this.armTurnTimer(nextEngineState);
@@ -577,13 +589,17 @@ export class GameRoom extends Room<GameRoomState> {
       }
 
       // Initialize the pure game engine state with lobby settings
-      const initialEngineState = createGame(playerIds, {
-        startingCash: this.state.startingCash,
-        turnLimit: this.state.turnLimit,
-        freeParkingJackpot: this.state.freeParkingJackpot,
-        chaosMode: this.state.chaosMode,
-        secretObjectives: this.state.secretObjectives,
-      });
+      const initialEngineState = createGame(
+        playerIds,
+        {
+          startingCash: this.state.startingCash,
+          turnLimit: this.state.turnLimit,
+          freeParkingJackpot: this.state.freeParkingJackpot,
+          chaosMode: this.state.chaosMode,
+          secretObjectives: this.state.secretObjectives,
+        },
+        this.rng,
+      );
 
       // Map custom lobby player display names back to engine players
       initialEngineState.players.forEach((p) => {
