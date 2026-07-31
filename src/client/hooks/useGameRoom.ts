@@ -93,6 +93,31 @@ function errText(e: unknown, fallback: string): string {
   return e instanceof Error && e.message ? e.message : fallback;
 }
 
+// How long to wait for the matchmaking round-trip before giving up. The server
+// can cold-start on a free host (~30s), so we keep a generous window but still
+// bail eventually instead of spinning on "Connecting…" forever.
+const CONNECT_TIMEOUT_MS = 25_000;
+
+class TimeoutError extends Error {}
+
+// Reject if `promise` doesn't settle within `ms`. On timeout we surface a
+// friendly, actionable message rather than the raw connection error.
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new TimeoutError(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 export function useGameRoom() {
   const [playerName, setPlayerName] = useState("");
   const [room, setRoom] = useState<Room | null>(null);
@@ -271,9 +296,15 @@ export function useGameRoom() {
     }
   }, [handleRoomJoined]);
 
+  const TIMEOUT_MSG = "Server didn't respond — it may be waking up. Please try again.";
+
   const createRoom = async (name: string) => {
     try {
-      const roomInstance = await colyseusClient.create("odogwu", { name });
+      const roomInstance = await withTimeout(
+        colyseusClient.create("odogwu", { name }),
+        CONNECT_TIMEOUT_MS,
+        TIMEOUT_MSG,
+      );
       setPlayerName(name);
       handleRoomJoined(roomInstance);
     } catch (e) {
@@ -288,7 +319,11 @@ export function useGameRoom() {
       return;
     }
     try {
-      const roomInstance = await colyseusClient.joinById(roomId.trim(), { name });
+      const roomInstance = await withTimeout(
+        colyseusClient.joinById(roomId.trim(), { name }),
+        CONNECT_TIMEOUT_MS,
+        TIMEOUT_MSG,
+      );
       setPlayerName(name);
       handleRoomJoined(roomInstance);
     } catch (e) {
@@ -304,7 +339,11 @@ export function useGameRoom() {
 
   const quickMatch = async (name: string) => {
     try {
-      const roomInstance = await colyseusClient.joinOrCreate("odogwu", { name });
+      const roomInstance = await withTimeout(
+        colyseusClient.joinOrCreate("odogwu", { name }),
+        CONNECT_TIMEOUT_MS,
+        TIMEOUT_MSG,
+      );
       setPlayerName(name);
       handleRoomJoined(roomInstance);
     } catch (e) {

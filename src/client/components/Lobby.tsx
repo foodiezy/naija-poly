@@ -10,42 +10,50 @@ interface LobbyProps {
   initialRoomId?: string;
 }
 
+// Written for people who have NEVER played Monopoly. Each step says exactly
+// what you tap and what happens next — no board-game jargon assumed.
 const HOW_TO_PLAY = [
   {
-    emoji: "💰",
-    color: "#46c78d",
-    title: "Start with ₦1,500,000",
-    desc: "Every player kicks off with a bag of Naira. Don't finish am!",
+    emoji: "🚗",
+    color: "#e8b64a",
+    title: "Pick your token — that's you",
+    desc: "Your token is your playing piece (danfo bus, keke, agbada man…). It's how the board shows where you are. Choose one in the room, then watch it move around the board as you play.",
   },
   {
     emoji: "🎲",
     color: "#e8b64a",
-    title: "Roll dice to move",
-    desc: "Land on properties across Lagos, Abuja, and Port Harcourt. Roll doubles? You waka again!",
+    title: "Tap ROLL to move",
+    desc: "On your turn, tap ROLL. Two dice decide how many steps your token waka forward around the board. Roll the same number on both dice (doubles)? You get to roll again!",
   },
   {
     emoji: "🏘️",
     color: "#3b82f6",
-    title: "Buy and build",
-    desc: "Purchase properties and build from Bungalow → Duplex → Mansion → Hotel!",
+    title: "Land on land → buy it",
+    desc: "Wherever your token stops, if that property has no owner, you can buy it with your Naira. Own it and it's yours for the rest of the game. Say no? It goes to auction for everyone to bid.",
   },
   {
     emoji: "💸",
     color: "#ef4444",
-    title: "Collect rent",
-    desc: "When other players land on your property, dem must pay! Own a full color group to multiply rent.",
+    title: "Owning land earns you rent",
+    desc: "When another player's token lands on YOUR property, they must pay you rent automatically. Collect a full colour group (all properties of one colour) and the rent multiplies — that's how you get rich.",
+  },
+  {
+    emoji: "🏗️",
+    color: "#46c78d",
+    title: "Build to charge more",
+    desc: "Once you own a whole colour group, spend cash to build on it: Bungalow → Duplex → Mansion → Hotel. Each upgrade makes opponents pay far more when they land there.",
   },
   {
     emoji: "🤝",
     color: "#8b5cf6",
-    title: "Trade and negotiate",
-    desc: "Propose trade deals to other players. Cash, properties — anything goes.",
+    title: "Trade & make deals",
+    desc: "Anytime, you can offer other players a swap — cash, properties, jail cards — to complete a colour group. Both sides must agree for the deal to go through.",
   },
   {
     emoji: "🏆",
     color: "#e8b64a",
-    title: "Last man standing wins",
-    desc: "Bankrupt all your opponents to become the Odogwu. E get level!",
+    title: "Bankrupt everyone to win",
+    desc: "If a player can't pay what they owe, they're out. The last player left with money standing is the Odogwu. E get level!",
   },
 ];
 
@@ -58,8 +66,10 @@ export default function Lobby({
   const [name, setName] = useState("");
   const [roomId, setRoomId] = useState(initialRoomId ?? "");
   const [loading, setLoading] = useState(false);
-  const [showHowToPlay, setShowHowToPlay] = useState(false);
   const stats = getStats();
+  // Auto-open the rules for first-time visitors (no saved games yet); returning
+  // players start collapsed so they can get straight to creating a room.
+  const [showHowToPlay, setShowHowToPlay] = useState(stats.gamesPlayed === 0);
   const invited = !!initialRoomId;
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -147,6 +157,65 @@ export default function Lobby({
           </div>
         </motion.div>
       )}
+
+      {/* How to Play — placed above the action card so newcomers read the
+          rules before they create/join. Auto-open on a first visit. */}
+      <motion.div
+        style={{ textAlign: "center", marginBottom: "1.25rem", width: "100%" }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        <button
+          className="button-secondary"
+          style={{
+            background: "transparent",
+            border: "1px solid var(--border-strong)",
+            padding: "0.5rem 1.5rem",
+            fontSize: "0.9rem",
+          }}
+          onClick={() => setShowHowToPlay((v) => !v)}
+        >
+          {showHowToPlay ? "Hide Rules ▲" : "New here? How to Play 📖"}
+        </button>
+      </motion.div>
+
+      <AnimatePresence>
+        {showHowToPlay && (
+          <motion.div
+            className="how-to-play-section"
+            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+            animate={{ opacity: 1, height: "auto", marginBottom: "2rem" }}
+            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            style={{ overflow: "hidden", width: "100%" }}
+          >
+            <h2 className="how-to-play-title">How to Play</h2>
+            <div className="how-to-play-grid">
+              {HOW_TO_PLAY.map((step, i) => (
+                <motion.div
+                  key={i}
+                  className="how-to-play-card glass-panel"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 * i, duration: 0.3 }}
+                  whileHover={{ y: -4, boxShadow: `0 8px 30px -8px ${step.color}40` }}
+                >
+                  <div className="how-to-play-icon" style={{ color: step.color }}>
+                    {step.emoji}
+                  </div>
+                  <div className="how-to-play-content">
+                    <div className="how-to-play-card-title" style={{ color: step.color }}>
+                      {step.title}
+                    </div>
+                    <div className="how-to-play-card-desc">{step.desc}</div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Action Card */}
       <motion.div
@@ -251,65 +320,6 @@ export default function Lobby({
           </form>
         </div>
       </motion.div>
-
-      {/* How to Play Toggle */}
-      <motion.div
-        style={{ textAlign: "center", marginTop: "2rem" }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-      >
-        <button
-          className="button-secondary"
-          style={{
-            background: "transparent",
-            border: "1px solid var(--border-strong)",
-            padding: "0.5rem 1.5rem",
-            fontSize: "0.9rem",
-          }}
-          onClick={() => setShowHowToPlay((v) => !v)}
-        >
-          {showHowToPlay ? "Hide Rules ▲" : "How to Play 📖"}
-        </button>
-      </motion.div>
-
-      {/* How to Play Section */}
-      <AnimatePresence>
-        {showHowToPlay && (
-          <motion.div
-            className="how-to-play-section"
-            initial={{ opacity: 0, height: 0, marginTop: 0 }}
-            animate={{ opacity: 1, height: "auto", marginTop: "2rem" }}
-            exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
-            style={{ overflow: "hidden" }}
-          >
-            <h2 className="how-to-play-title">How to Play</h2>
-            <div className="how-to-play-grid">
-              {HOW_TO_PLAY.map((step, i) => (
-                <motion.div
-                  key={i}
-                  className="how-to-play-card glass-panel"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.05 * i, duration: 0.3 }}
-                  whileHover={{ y: -4, boxShadow: `0 8px 30px -8px ${step.color}40` }}
-                >
-                  <div className="how-to-play-icon" style={{ color: step.color }}>
-                    {step.emoji}
-                  </div>
-                  <div className="how-to-play-content">
-                    <div className="how-to-play-card-title" style={{ color: step.color }}>
-                      {step.title}
-                    </div>
-                    <div className="how-to-play-card-desc">{step.desc}</div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Player Stats */}
       {stats.gamesPlayed > 0 && (
