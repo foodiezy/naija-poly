@@ -1,4 +1,5 @@
 /* src/client/index.css */
+@import "./tokens.css"; /* v2 light-theme tokens — see design/REDESIGN-SPEC.md */
 
 :root {
   --font-display: "Yanone Kaffeesatz", "Nunito", system-ui, sans-serif;

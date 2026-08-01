@@ -1,0 +1,152 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Odogwu Empire — v2 design tokens (light theme)
+   Source of truth: design/REDESIGN-SPEC.md
+   These are NEW names, deliberately non-colliding with the legacy dark
+   tokens in index.css. Rebuilt screens consume these; legacy screens keep
+   the old vars until each is rebuilt, then the old vars die with them.
+   ═══════════════════════════════════════════════════════════════════ */
+
+@font-face {
+  font-family: "Figtree";
+  src: url("/fonts/figtree-latin.woff2") format("woff2-variations");
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+  /* ₦ (U+20A6) is not in the latin subset — Android's Roboto fallback
+     covers it, which the type stack below allows for. */
+}
+
+:root {
+  /* ── Font ─────────────────────────────────────────────────────── */
+  --font-v2: "Figtree", "Segoe UI", Roboto, system-ui, sans-serif;
+
+  /* ── Base & surface ───────────────────────────────────────────── */
+  --canvas: #faf7f2; /* warm sand page — never pure white */
+  --sunken: #f2ede4; /* board frame, inset wells */
+  --sf: #ffffff; /* cards, tiles, sheets */
+  --sf-hover: #f9fafb;
+  --sf-tint: #fffbf5; /* warm highlight card */
+
+  /* ── Border ───────────────────────────────────────────────────── */
+  --ln: #eaecf0;
+  --ln-2: #d0d5dd;
+  --ln-3: #98a2b3;
+
+  /* ── Ink ──────────────────────────────────────────────────────── */
+  --ink: #101828; /* 16.4:1 on --sf */
+  --ink-2: #475467; /*  8.6:1 */
+  --ink-3: #667085; /*  5.8:1 — smallest body color allowed */
+  --ink-4: #98a2b3; /* disabled only */
+  --ink-on-pri: #ffffff;
+
+  /* ── Brand ────────────────────────────────────────────────────── */
+  --pri: #008751; /* flag green — 4.6:1 on white; NEVER on board surfaces */
+  --pri-6: #006f42; /* hover/press */
+  --pri-7: #005432;
+  --pri-50: #e6f4ee;
+  --pri-100: #c0e3d3;
+  --pri-ring: rgba(0, 135, 81, 0.24);
+  --cor: #ff6b4a; /* coral — fills only, never a text color */
+  --cor-6: #e85632; /* coral for text (4.5:1) */
+  --cor-7: #c43f1e;
+  --cor-50: #ffede8;
+  --gold-v2: #d99a2b; /* winner / host / Odogwu moments ONLY */
+  --gold-50: #fdf4e3;
+
+  /* ── Semantic ─────────────────────────────────────────────────── */
+  --ok: #039855;
+  --ok-bg: #ecfdf3;
+  --warn: #dc6803;
+  --warn-bg: #fffaeb;
+  --bad: #d92d20;
+  --bad-bg: #fef3f2;
+  --inf: #1570ef;
+  --inf-bg: #eff8ff;
+  --money: #027a48; /* cash figures; always tabular-nums w700 */
+
+  /* ── Board zones — bar ≥3:1 on white · tint wash · ink ≥4.5:1 ─── */
+  --zone-borno-bar: #8a5a2b;
+  --zone-borno-tint: #f4ebe1;
+  --zone-borno-ink: #6b4420; /* BO · brown */
+  --zone-kwara-bar: #0e86c4;
+  --zone-kwara-tint: #e3f1fa;
+  --zone-kwara-ink: #0a6a9b; /* KW · lightblue */
+  --zone-enugu-bar: #d6336c;
+  --zone-enugu-tint: #fce8ef;
+  --zone-enugu-ink: #a82552; /* EN · pink */
+  --zone-kaduna-bar: #e8590c;
+  --zone-kaduna-tint: #fdeee2;
+  --zone-kaduna-ink: #b34509; /* KD · orange */
+  --zone-edo-bar: #d92d20;
+  --zone-edo-tint: #fde9e7;
+  --zone-edo-ink: #a81e14; /* ED · red */
+  --zone-rivers-bar: #c08a00;
+  --zone-rivers-tint: #fdf4d9;
+  --zone-rivers-ink: #8a6300; /* RV · yellow */
+  --zone-abuja-bar: #2b8a3e;
+  --zone-abuja-tint: #e8f5eb;
+  --zone-abuja-ink: #1f6b2e; /* AB · green */
+  --zone-lagos-bar: #1d4ed8;
+  --zone-lagos-tint: #e7ecfb;
+  --zone-lagos-ink: #16389f; /* LA · darkblue */
+
+  /* ── Player colors (seat order; role never doubles a zone role) ── */
+  --p1: #e11d48;
+  --p2: #7c3aed;
+  --p3: #0891b2;
+  --p4: #ea580c;
+  --p5: #0f766e;
+  --p6: #475569;
+
+  /* ── Spacing — 4px base ───────────────────────────────────────── */
+  --s-05: 2px;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+
+  /* ── Radii — buttons md · cards lg · sheet-top xl · chips full ── */
+  --r-xs: 4px; /* board tiles only */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-full: 999px;
+
+  /* ── Type scale — root stays 16px at EVERY breakpoint ─────────── */
+  --fs-display: 2rem; /* 32/36 w800, mobile 26/30 */
+  --fs-h1: 1.5rem; /* 24/30 w700 */
+  --fs-h2: 1.25rem; /* 20/26 w700 */
+  --fs-h3: 1.0625rem; /* 17/24 w700 */
+  --fs-body-lg: 1rem; /* 16/24 w500 */
+  --fs-body: 0.9375rem; /* 15/22 w400 */
+  --fs-sm: 0.8125rem; /* 13/18 w500 */
+  --fs-caption: 0.75rem; /* 12/16 w600 */
+  --fs-micro: 0.6875rem; /* 11/14 w700 uppercase +.06em */
+
+  /* ── Shadows — warm, low alpha; elevation discipline:
+       page → card sh-sm → hover sh-md → sheet sh-xl, nothing else ── */
+  --sh-xs: 0 1px 2px rgba(23, 20, 16, 0.05);
+  --sh-sm: 0 1px 3px rgba(23, 20, 16, 0.1), 0 1px 2px rgba(23, 20, 16, 0.06);
+  --sh-md: 0 4px 8px -2px rgba(23, 20, 16, 0.1), 0 2px 4px -2px rgba(23, 20, 16, 0.06);
+  --sh-lg: 0 12px 16px -4px rgba(23, 20, 16, 0.08), 0 4px 6px -2px rgba(23, 20, 16, 0.03);
+  --sh-xl: 0 20px 24px -4px rgba(23, 20, 16, 0.08), 0 8px 8px -4px rgba(23, 20, 16, 0.03);
+  --sh-sheet: 0 -8px 24px -6px rgba(23, 20, 16, 0.12);
+  --sh-focus: 0 0 0 4px var(--pri-ring);
+
+  /* ── Motion ───────────────────────────────────────────────────── */
+  --d-fast: 120ms;
+  --d-base: 180ms;
+  --d-slow: 240ms;
+  --d-sheet: 260ms;
+  --d-step: 200ms; /* token walk, per tile */
+  --e-std: cubic-bezier(0.2, 0, 0, 1);
+  --e-enter: cubic-bezier(0, 0, 0.2, 1);
+  --e-exit: cubic-bezier(0.4, 0, 1, 1);
+}
