@@ -393,57 +393,11 @@ h6 {
    .lobby-logo-*, .lobby-tagline, .lobby-action-card, .how-to-play-*) died
    with Lobby.tsx — the rebuilt landing lives in v2.css. */
 
-/* Legacy lobby classes still referenced from App.tsx room lobby view */
-.lobby-view {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  flex: 1;
-  /* Bounded to the space under the header so the PAGE never scrolls; any
-     overflow is handled inside the cards, not by the window. */
-  min-height: 0;
-  overflow: hidden;
-  padding: 1rem;
-}
-
-.lobby-card {
-  width: 100%;
-  max-width: 480px;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  min-height: 0;
-  overflow-y: auto;
-  border: 1px solid var(--border-glow);
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
-}
-
-.lobby-title {
-  font-family: "Yanone Kaffeesatz", var(--font-display);
-  text-align: center;
-  font-size: 1.7rem;
-  margin: 0;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  background: linear-gradient(135deg, #fff 0%, #9ca3af 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-group label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
+/* (v2 · B3) The dark room-lobby CSS (.lobby-view, .lobby-card, .lobby-title,
+   .form-group, .token-grid/.token-option, .lobby-players-list, .lobby-player-*,
+   .lobby-host-badge, .lobby-columns-container, .lobby-share-row,
+   .cash-preset-grid) died with the rebuilt lobby — it now lives in v2.css.
+   `.lobby-view` survives only as the App.tsx wrapper hook the v2 rules key off. */
 
 .input-field {
   background: rgba(15, 23, 42, 0.6);
@@ -461,73 +415,6 @@ h6 {
 .input-field:focus {
   border-color: var(--color-naira);
   box-shadow: 0 0 0 3px rgba(70, 199, 141, 0.18);
-}
-
-.token-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
-}
-
-.token-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0.75rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  /* Used as a <button>; buttons don't inherit these by default. */
-  font: inherit;
-  color: inherit;
-  min-height: 44px;
-}
-
-.token-option:disabled {
-  cursor: not-allowed;
-}
-
-.token-option:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.token-option.selected {
-  background: rgba(70, 199, 141, 0.15);
-  border-color: var(--color-naira);
-  box-shadow: 0 0 10px rgba(70, 199, 141, 0.25);
-}
-
-.token-option.taken {
-  position: relative;
-  filter: grayscale(0.6);
-}
-
-.token-option.taken:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-.token-taken-tag {
-  font-size: 0.6rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-danger);
-}
-
-.token-emoji {
-  font-size: 1.5rem;
-}
-
-.token-name {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--text-secondary);
 }
 
 .button-primary {
@@ -586,22 +473,6 @@ h6 {
   border-color: rgba(255, 255, 255, 0.3);
 }
 
-.lobby-players-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.lobby-player-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 6px;
-}
-
 .host-tag {
   font-size: 0.7rem;
   background: #e8b64a;
@@ -609,18 +480,6 @@ h6 {
   padding: 0.1rem 0.3rem;
   border-radius: 4px;
   font-weight: bold;
-}
-
-/* HOST pill in the room-lobby player list */
-.lobby-host-badge {
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.15rem 0.45rem;
-  border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-hover) 100%);
-  color: #000;
 }
 
 /* Main Dashboard View */
@@ -2001,7 +1860,6 @@ h6 {
    divs/tiles (they're now role="button" + tabindex, so focus must be shown). */
 .tile:focus-visible,
 .holdings-card-clickable:focus-visible,
-.token-option:focus-visible,
 .settings-row:focus-visible,
 .modal-close-btn:focus-visible,
 .sidebar-action-btn:focus-visible {
@@ -2616,10 +2474,6 @@ html.high-contrast .glass-panel {
     height: 18px;
     font-size: 0.85rem;
   }
-
-  .lobby-card {
-    padding: 1.5rem 1.25rem;
-  }
 }
 
 /* 3D Dice styling */
@@ -3083,88 +2937,8 @@ html.high-contrast .glass-panel {
 }
 
 /* =============================================================================
-   Lobby side-by-side Columns & Chat Pane
+   Shared chat atoms (game-view ChatPanel — the room lobby has its own in v2.css)
    ============================================================================= */
-.lobby-columns-container {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  grid-template-rows: minmax(0, 1fr);
-  gap: 1rem 1.5rem;
-  width: 100%;
-  max-width: 960px;
-  max-height: 100%;
-  min-height: 0;
-  margin: 0 auto;
-}
-
-@media (max-width: 850px) {
-  /* Stacked single column is inherently tall — let it scroll normally here
-     instead of the desktop "fit-to-viewport, cards scroll internally" model. */
-  .lobby-view {
-    overflow-y: auto;
-  }
-
-  .lobby-columns-container {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
-    max-height: none;
-    gap: 1.5rem;
-  }
-
-  .lobby-card {
-    overflow-y: visible;
-  }
-}
-
-/* Social share buttons + starting-cash presets: auto-fit so they reflow to
-   fewer columns (and wrap onto extra rows) on narrow phones instead of
-   squeezing fixed 4/5-column tracks until the labels clip. */
-.lobby-share-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
-  gap: 0.4rem;
-}
-
-.cash-preset-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
-  gap: 0.4rem;
-}
-
-.lobby-chat-panel {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 480px;
-  padding: 1.5rem;
-  box-sizing: border-box;
-}
-
-.lobby-chat-title {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #fff;
-  margin: 0 0 1rem 0;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 0.5rem;
-}
-
-.lobby-chat-history {
-  flex: 1;
-  overflow-y: auto;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 2px;
-  padding: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-height: 400px;
-}
-
 .chat-empty-msg {
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -3191,12 +2965,6 @@ html.high-contrast .glass-panel {
 
 .chat-msg-text {
   color: #f3f4f6;
-}
-
-.lobby-chat-input-row {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
 }
 
 .chat-input-box {

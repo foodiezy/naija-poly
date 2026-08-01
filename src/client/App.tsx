@@ -294,6 +294,7 @@ export default function App() {
               onStartGame={startGame}
               chatMessages={chatMessages}
               onSendChatMessage={sendChatMessage}
+              onLeave={leaveRoom}
             />
           </div>
         ) : engineState ? (

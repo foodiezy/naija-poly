@@ -1,9 +1,8 @@
-import { useEffect, useState, type CSSProperties } from "react";
-import { motion } from "framer-motion";
-import { TOKENS, tokenEmoji } from "../../data/tokens";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Room } from "colyseus.js";
+import { TOKENS, MAX_PLAYERS, tokenEmoji, tokenName } from "../../data/tokens";
 import { ChatMessage } from "../../shared/chat";
-import { RoomState, RoomSettings, LobbyPlayerView } from "../../shared/room";
+import { RoomState, RoomSettings } from "../../shared/room";
 import { countHumans } from "../lib/players";
 
 // Starting cash is a FIXED set of presets — the host picks one of these, not an
@@ -17,51 +16,85 @@ const CASH_PRESETS: { value: number; label: string }[] = [
   { value: 5_000_000, label: "₦5M" },
 ];
 
-function CashPresetRow({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+const DEFAULT_CASH = 1_500_000;
+const DEFAULT_TURN_SECS = 120;
+
+function cashLabel(value: number): string {
+  const preset = CASH_PRESETS.find((p) => p.value === value);
+  if (preset) return preset.label;
+  if (value >= 1_000_000) return `₦${(value / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  return `₦${Math.round(value / 1000)}K`;
+}
+
+/** Bottom sheet (<600px) / centered dialog (≥600px) — same primitive the join
+ *  gate uses, so the lobby's overlays behave exactly like B2's. */
+function Sheet({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
-    <div style={{ marginBottom: "0.55rem" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "0.4rem",
-        }}
-      >
-        <label style={{ margin: 0, fontSize: "0.9rem" }}>Starting Cash</label>
-        <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--color-gold, #e8b64a)" }}>
-          ₦{value.toLocaleString()}
-        </span>
-      </div>
-      <div className="cash-preset-grid">
-        {CASH_PRESETS.map((p) => {
-          const active = value === p.value;
-          return (
-            <button
-              key={p.value}
-              type="button"
-              onClick={() => onChange(p.value)}
-              aria-pressed={active}
-              style={{
-                padding: "0.45rem 0.2rem",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                borderRadius: "6px",
-                cursor: "pointer",
-                border: active
-                  ? "1px solid var(--color-gold, #e8b64a)"
-                  : "1px solid rgba(255,255,255,0.15)",
-                background: active ? "var(--color-gold, #e8b64a)" : "transparent",
-                color: active ? "#1a1a2e" : "var(--text-secondary)",
-                transition: "all 0.15s ease",
-              }}
-            >
-              {p.label}
-            </button>
-          );
-        })}
+    <div
+      className="v2-overlay v2-overlay-bottom"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      onClick={onClose}
+    >
+      <div className="v2-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="v2-sheet-handle" aria-hidden="true" />
+        <header className="v2-sheet-head">
+          <h2>{title}</h2>
+          <button type="button" className="v2-overlay-x" aria-label="Close" onClick={onClose}>
+            ✕
+          </button>
+        </header>
+        {children}
       </div>
     </div>
+  );
+}
+
+/** Settings switch. A real <button> with aria-pressed — not a checkbox — so the
+ *  whole 44px row is the target and the state is announced as on/off. */
+function Toggle({
+  label,
+  desc,
+  checked,
+  onChange,
+}: {
+  label: string;
+  desc?: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="v2-toggle"
+      aria-pressed={checked}
+      onClick={() => onChange(!checked)}
+    >
+      <span>
+        <b>{label}</b>
+        {desc && <small>{desc}</small>}
+      </span>
+      <span className="v2-switch" aria-hidden="true">
+        <i />
+      </span>
+    </button>
   );
 }
 
@@ -75,8 +108,20 @@ interface RoomLobbyViewProps {
   onStartGame: () => void;
   chatMessages: ChatMessage[];
   onSendChatMessage: (text: string) => void;
+  /** Leave the room — App's existing Exit path. Optional so the view still
+   *  renders (minus the back chevron) if a caller doesn't wire it. */
+  onLeave?: () => void;
 }
 
+/**
+ * Room lobby (redesign step B3, spec §2).
+ *
+ * The lobby has ONE job: get more people into the room. So the share card is
+ * the hero, the six host settings collapse to a single summary row, chat
+ * collapses to a badge row, and every other affordance (token, bots, menu)
+ * is a change-affordance rather than a step. Nothing here should ever have to
+ * be opened for a game to start.
+ */
 export default function RoomLobbyView({
   room,
   roomState,
@@ -87,12 +132,23 @@ export default function RoomLobbyView({
   onStartGame,
   chatMessages,
   onSendChatMessage,
+  onLeave,
 }: RoomLobbyViewProps) {
   const isHost = roomState?.hostId === room.sessionId;
-  const playerCount = roomState?.lobbyPlayers?.size ?? 0;
-  const roomFull = playerCount >= 6;
+  const players = useMemo(
+    () => (roomState?.lobbyPlayers ? Array.from(roomState.lobbyPlayers.entries()) : []),
+    [roomState?.lobbyPlayers],
+  );
+  const playerCount = players.length;
+  const roomFull = playerCount >= MAX_PLAYERS;
   const myTokenId = roomState?.lobbyPlayers?.get(room.sessionId)?.tokenId;
-  const humanCount = countHumans(roomState?.lobbyPlayers ? roomState.lobbyPlayers.keys() : []);
+  const humanCount = countHumans(players.map(([id]) => id));
+  const hasBots = playerCount > humanCount;
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   // Waiting timer: while the room can't start yet (fewer than 2 players), count
   // how long we've been waiting so the host knows to nudge friends. Capped at
@@ -122,8 +178,7 @@ export default function RoomLobbyView({
   const tgLink = `https://t.me/share/url?url=${encodeURIComponent(inviteUrl)}&text=${encodeURIComponent(
     shareMsg,
   )}`;
-  const canNativeShare =
-    typeof navigator !== "undefined" && typeof navigator.share === "function";
+  const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
   const handleNativeShare = async () => {
     try {
       await navigator.share({ title: "Odogwu Empire", text: shareMsg, url: inviteUrl });
@@ -131,401 +186,431 @@ export default function RoomLobbyView({
       /* user dismissed the share sheet — nothing to do */
     }
   };
-  const shareBtnStyle: CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "0.35rem",
-    padding: "0.5rem 0.4rem",
-    fontSize: "0.8rem",
-    fontWeight: 700,
-    borderRadius: "8px",
-    border: "1px solid rgba(255,255,255,0.15)",
-    background: "rgba(255,255,255,0.04)",
-    color: "var(--text-secondary)",
-    cursor: "pointer",
-    textDecoration: "none",
+
+  // Lobby chat: general (non-DM) messages only, with an unread count that
+  // clears while the panel is open.
+  const generalMessages = useMemo(() => chatMessages.filter((m) => !m.toId), [chatMessages]);
+  const [seenCount, setSeenCount] = useState(generalMessages.length);
+  useEffect(() => {
+    if (chatOpen) setSeenCount(generalMessages.length);
+  }, [chatOpen, generalMessages.length]);
+  const unread = Math.max(0, generalMessages.length - seenCount);
+
+  const logRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = logRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [generalMessages.length, chatOpen]);
+
+  const [draft, setDraft] = useState("");
+  const sendChat = (e: FormEvent) => {
+    e.preventDefault();
+    const text = draft.trim();
+    if (!text) return;
+    onSendChatMessage(text);
+    setDraft("");
   };
 
+  const startingCash = roomState?.startingCash || DEFAULT_CASH;
+  const turnTimerEnabled = roomState?.turnTimerEnabled ?? false;
+  const turnTimeoutSecs = roomState?.turnTimeoutSecs || DEFAULT_TURN_SECS;
+  const optionsSummary = [
+    cashLabel(startingCash),
+    roomState?.chaosMode ? "Chaos" : "Classic",
+    turnTimerEnabled ? `${turnTimeoutSecs}s timer` : "No timer",
+  ].join(" · ");
+
+  const emptySlots = Math.max(0, MAX_PLAYERS - playerCount);
+
   return (
-    <div className="lobby-columns-container">
-      <div className="lobby-card glass-panel">
-        <h2 className="lobby-title">Room Lobby</h2>
+    <div className="v2-lobby">
+      <header className="v2-lobby-bar">
+        {onLeave && (
+          <button type="button" className="v2-iconbtn" aria-label="Leave room" onClick={onLeave}>
+            ‹
+          </button>
+        )}
+        <h1>Room lobby</h1>
         <button
-          className="button-secondary full-width-btn"
-          style={{ border: "1px solid var(--color-gold, #e8b64a)" }}
-          onClick={onCopyRoomCode}
+          type="button"
+          className="v2-iconbtn v2-iconbtn-end"
+          aria-label="More options"
+          aria-haspopup="dialog"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(true)}
         >
-          🔗 Copy invite link
+          ⋮
         </button>
+      </header>
 
-        {/* Share the invite straight to a social app with a prefilled message. */}
-        <div className="lobby-share-row">
-          <a
-            href={waLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={shareBtnStyle}
-            title="Share on WhatsApp"
+      <div className="v2-lobby-body">
+        {/* ── Share card: the hero. Everything else is secondary to this. ── */}
+        <section className="v2-card v2-share">
+          <button
+            type="button"
+            className="v2-code"
+            onClick={onCopyRoomCode}
+            aria-label={`Room code ${room.roomId} — tap to copy the invite link`}
           >
-            🟢 WhatsApp
+            <span className="v2-code-num">{room.roomId}</span>
+            <span className="v2-code-l">tap to copy</span>
+          </button>
+
+          <a className="v2-btn v2-btn-pri" href={waLink} target="_blank" rel="noopener noreferrer">
+            Invite on WhatsApp
           </a>
-          <a
-            href={xLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={shareBtnStyle}
-            title="Share on X"
-          >
-            ✖️ X
-          </a>
-          <a
-            href={tgLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={shareBtnStyle}
-            title="Share on Telegram"
-          >
-            ✈️ Telegram
-          </a>
-          {canNativeShare && (
-            <button type="button" style={shareBtnStyle} onClick={handleNativeShare} title="Share…">
-              📲 Share
+
+          <div className="v2-two-up">
+            <button type="button" className="v2-btn v2-btn-sec" onClick={onCopyRoomCode}>
+              Copy link
             </button>
-          )}
-        </div>
-
-        <p
-          style={{
-            textAlign: "center",
-            color: "var(--text-secondary)",
-            fontSize: "0.82rem",
-            margin: 0,
-          }}
-        >
-          Share code {room.roomId} — copy the link or send it to a friend.
-        </p>
-
-        {/* Waiting indicator: a room needs at least 2 players to start. */}
-        {playerCount < 2 && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "0.15rem",
-              padding: "0.5rem",
-              borderRadius: "var(--radius-md)",
-              background: "rgba(0,0,0,0.2)",
-            }}
-          >
-            <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-              ⏱ Waiting for players… {waitLabel}
-            </span>
-            {waitSecs >= 60 && (
-              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center" }}>
-                Nobody's joined yet — share the invite{isHost ? " or add a bot 🤖" : ""}.
-              </span>
+            {canNativeShare && (
+              <button type="button" className="v2-btn v2-btn-sec" onClick={handleNativeShare}>
+                Share…
+              </button>
             )}
           </div>
-        )}
-        {isHost && (
-          <p
-            style={{
-              textAlign: "center",
-              color: "var(--color-gold, #e8b64a)",
-              fontSize: "0.8rem",
-              margin: 0,
-            }}
+
+          {isHost && (
+            <p className="v2-share-note">Once the game starts the room locks — invite first.</p>
+          )}
+        </section>
+
+        {/* ── Players: empty slots keep the room from looking broken. ── */}
+        <section className="v2-card v2-players">
+          <div className="v2-card-label">
+            Players · {playerCount}/{MAX_PLAYERS}
+          </div>
+
+          {players.map(([pId, pData]) => (
+            <div className="v2-prow" key={pId}>
+              <span className="v2-av" aria-hidden="true">
+                {tokenEmoji(pData.tokenId)}
+              </span>
+              <b>{pData.name}</b>
+              {pId === room.sessionId && <span className="v2-you">(you)</span>}
+              {pId === roomState?.hostId && <span className="v2-host">HOST</span>}
+            </div>
+          ))}
+
+          {Array.from({ length: emptySlots }).map((_, i) => (
+            <div className="v2-slot" key={`slot-${i}`}>
+              <i aria-hidden="true" />
+              Waiting for player…
+            </div>
+          ))}
+
+          {playerCount < 2 && (
+            <div className="v2-wait">
+              <b>⏱ Waiting for players… {waitLabel}</b>
+              {waitSecs >= 60 && (
+                <span>
+                  Nobody don join yet — share the invite{isHost ? " or add a bot 🤖" : ""}.
+                </span>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* ── Your token: a change-affordance, never a required step (the
+             server auto-assigns one on join). ── */}
+        <section className="v2-card v2-token-row">
+          <span className="v2-av" aria-hidden="true">
+            {tokenEmoji(myTokenId)}
+          </span>
+          <span className="v2-token-me">
+            <b>Your token</b>
+            <span>{tokenName(myTokenId)}</span>
+          </span>
+          <button
+            type="button"
+            className="v2-tlink v2-token-change"
+            aria-haspopup="dialog"
+            aria-expanded={pickerOpen}
+            onClick={() => setPickerOpen(true)}
           >
-            Invite friends before you start — the room locks once the game begins.
-          </p>
+            Change
+          </button>
+        </section>
+
+        {/* ── Game options (host): one row. The defaults are good enough that
+             it never has to be opened. ── */}
+        {isHost && (
+          <section className="v2-card v2-options">
+            <button
+              type="button"
+              className="v2-disclosure"
+              aria-expanded={optionsOpen}
+              aria-controls="lobby-game-options"
+              onClick={() => setOptionsOpen((v) => !v)}
+            >
+              Game options
+              <span>
+                {optionsSummary}
+                <i className="v2-chev" aria-hidden="true">
+                  ›
+                </i>
+              </span>
+            </button>
+
+            {optionsOpen && (
+              <div className="v2-opts" id="lobby-game-options">
+                <div>
+                  <div className="v2-opt-label">
+                    Starting cash
+                    <em>₦{startingCash.toLocaleString()}</em>
+                  </div>
+                  <div className="v2-preset-grid">
+                    {CASH_PRESETS.map((p) => (
+                      <button
+                        key={p.value}
+                        type="button"
+                        className="v2-preset"
+                        aria-pressed={startingCash === p.value}
+                        onClick={() => onUpdateSettings({ startingCash: p.value })}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <label className="v2-field">
+                  <span>Turn limit (0 = ∞)</span>
+                  <input
+                    type="number"
+                    className="v2-num"
+                    value={roomState?.turnLimit || 0}
+                    min={0}
+                    max={500}
+                    onChange={(e) => onUpdateSettings({ turnLimit: Number(e.target.value) })}
+                  />
+                </label>
+
+                <Toggle
+                  label="Mama Put Pot"
+                  desc="Fines and taxes pile up at the Rest Stop — land there, chop the lot."
+                  checked={roomState?.freeParkingJackpot || false}
+                  onChange={(v) => onUpdateSettings({ freeParkingJackpot: v })}
+                />
+
+                <Toggle
+                  label="⚡ Chaos Mode"
+                  desc={
+                    'Adds Naija chaos cards — e.g. "NEPA don take light" freezes all rent for a round.'
+                  }
+                  checked={roomState?.chaosMode || false}
+                  onChange={(v) => onUpdateSettings({ chaosMode: v })}
+                />
+
+                <Toggle
+                  label="Secret objectives"
+                  checked={roomState?.secretObjectives || false}
+                  onChange={(v) => onUpdateSettings({ secretObjectives: v })}
+                />
+
+                <Toggle
+                  label="Turn timer"
+                  checked={turnTimerEnabled}
+                  onChange={(v) => onUpdateSettings({ turnTimerEnabled: v })}
+                />
+
+                {turnTimerEnabled && (
+                  <label className="v2-field v2-field-sub">
+                    <span>Seconds per turn</span>
+                    <input
+                      type="number"
+                      className="v2-num"
+                      value={turnTimeoutSecs}
+                      min={15}
+                      max={600}
+                      step={15}
+                      onChange={(e) =>
+                        onUpdateSettings({ turnTimeoutSecs: Number(e.target.value) })
+                      }
+                    />
+                  </label>
+                )}
+              </div>
+            )}
+          </section>
         )}
 
-        <div className="form-group">
-          <label>Select Your Token Piece:</label>
-          <div className="token-grid">
-            {TOKENS.map((token) => {
-              // Check if token is taken by SOMEONE ELSE
-              let takenBy = null;
-              if (roomState?.lobbyPlayers) {
-                for (const [pId, pData] of roomState.lobbyPlayers.entries()) {
-                  if (pData.tokenId === token.id && pId !== room.sessionId) {
-                    takenBy = pData.name;
-                    break;
-                  }
-                }
-              }
-              const isMine = myTokenId === token.id;
+        {/* ── Chat: one row on mobile, a live panel on desktop. Never half
+             the lobby. ── */}
+        <button
+          type="button"
+          className="v2-card v2-chat-row"
+          aria-haspopup="dialog"
+          aria-expanded={chatOpen}
+          onClick={() => setChatOpen(true)}
+        >
+          💬 Lobby chat
+          {unread > 0 && <span className="v2-badge">{unread}</span>}
+        </button>
 
+        <div
+          className="v2-overlay v2-overlay-bottom v2-chat-wrap"
+          data-open={chatOpen}
+          onClick={() => setChatOpen(false)}
+        >
+          <section className="v2-chat-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="v2-sheet-handle" aria-hidden="true" />
+            <header className="v2-sheet-head">
+              <h2>Lobby chat</h2>
+              <button
+                type="button"
+                className="v2-overlay-x v2-chat-close"
+                aria-label="Close chat"
+                onClick={() => setChatOpen(false)}
+              >
+                ✕
+              </button>
+            </header>
+
+            <div className="v2-chat-log" ref={logRef}>
+              {generalMessages.length === 0 ? (
+                <p className="v2-chat-empty">Nobody don talk yet. Say hello!</p>
+              ) : (
+                generalMessages.map((msg, idx) => (
+                  <p
+                    className={msg.senderId === room.sessionId ? "v2-msg is-me" : "v2-msg"}
+                    key={`${msg.timestamp}-${idx}`}
+                  >
+                    <b>{msg.senderName}:</b> {msg.text}
+                  </p>
+                ))
+              )}
+            </div>
+
+            <form className="v2-chat-form" onSubmit={sendChat}>
+              <input
+                className="v2-input"
+                placeholder="Type a message…"
+                value={draft}
+                maxLength={240}
+                onChange={(e) => setDraft(e.target.value)}
+                aria-label="Chat message"
+              />
+              <button
+                type="submit"
+                className="v2-btn v2-btn-pri v2-chat-send"
+                disabled={!draft.trim()}
+              >
+                Send
+              </button>
+            </form>
+          </section>
+        </div>
+
+        {isHost && (
+          <button
+            type="button"
+            className="v2-btn v2-btn-sec v2-bots"
+            onClick={onAddAI}
+            disabled={roomFull}
+          >
+            {roomFull ? "Room don full" : hasBots ? "➕ Add another bot" : "🤖 Play with bots"}
+          </button>
+        )}
+      </div>
+
+      {/* ── Sticky bottom bar: the one action that matters. ── */}
+      <div className="v2-lobby-foot">
+        <div className="v2-foot-in">
+          {isHost ? (
+            <>
+              <button
+                type="button"
+                className="v2-btn v2-btn-pri"
+                onClick={onStartGame}
+                disabled={playerCount < 2}
+              >
+                {playerCount < 2 ? "Waiting for more players…" : "Start game"}
+              </button>
+              {humanCount === 1 && playerCount >= 2 && (
+                <span className="v2-foot-note">
+                  Playing solo with bots — friends can't join once you start.
+                </span>
+              )}
+            </>
+          ) : (
+            <div className="v2-wait-pill">⏳ Waiting for host…</div>
+          )}
+        </div>
+      </div>
+
+      {menuOpen && (
+        <Sheet title="Room options" onClose={() => setMenuOpen(false)}>
+          <div className="v2-menu">
+            <a
+              className="v2-menu-item"
+              href={xLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setMenuOpen(false)}
+            >
+              ✖️ Share on X
+            </a>
+            <a
+              className="v2-menu-item"
+              href={tgLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setMenuOpen(false)}
+            >
+              ✈️ Share on Telegram
+            </a>
+            <button
+              type="button"
+              className="v2-menu-item"
+              onClick={() => {
+                onCopyRoomCode();
+                setMenuOpen(false);
+              }}
+            >
+              🔗 Copy invite link
+            </button>
+            {onLeave && (
+              <button type="button" className="v2-menu-item is-danger" onClick={onLeave}>
+                🚪 Leave room
+              </button>
+            )}
+          </div>
+        </Sheet>
+      )}
+
+      {pickerOpen && (
+        <Sheet title="Your token" onClose={() => setPickerOpen(false)}>
+          <div className="v2-token-grid">
+            {TOKENS.map((token) => {
+              // Taken = held by SOMEONE ELSE; your own token stays selectable.
+              const takenBy = players.find(
+                ([pId, pData]) => pData.tokenId === token.id && pId !== room.sessionId,
+              )?.[1].name;
+              const isMine = myTokenId === token.id;
               return (
                 <button
                   key={token.id}
-                  className={`token-option ${isMine ? "selected" : ""} ${takenBy ? "taken" : ""}`}
+                  type="button"
+                  className="v2-token-opt"
+                  aria-pressed={isMine}
                   disabled={!!takenBy}
-                  onClick={() => onSelectToken(token.id)}
                   title={takenBy ? `Taken by ${takenBy}` : token.name}
+                  onClick={() => {
+                    onSelectToken(token.id);
+                    setPickerOpen(false);
+                  }}
                 >
-                  <span className="token-emoji">{token.emoji}</span>
-                  <span className="token-name">{token.name}</span>
+                  <em aria-hidden="true">{token.emoji}</em>
+                  <b>{token.name}</b>
+                  {takenBy && <small>Taken</small>}
                 </button>
               );
             })}
           </div>
-        </div>
-
-        {isHost && (
-          <div
-            className="form-group"
-            style={{
-              marginTop: 0,
-              background: "rgba(0,0,0,0.2)",
-              padding: "0.85rem",
-              borderRadius: "var(--radius-md)",
-            }}
-          >
-            <h3
-              style={{ fontSize: "0.95rem", margin: "0 0 0.6rem", color: "var(--text-secondary)" }}
-            >
-              ⚙️ Host Settings
-            </h3>
-
-            <CashPresetRow
-              value={roomState?.startingCash || 1500000}
-              onChange={(v) => onUpdateSettings({ startingCash: v })}
-            />
-
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: "0.55rem",
-              }}
-            >
-              <label style={{ margin: 0, fontSize: "0.9rem" }}>Turn Limit (0 = ∞)</label>
-              <input
-                type="number"
-                className="input-field"
-                style={{ width: "120px", padding: "0.4rem 0.75rem" }}
-                value={roomState?.turnLimit || 0}
-                min={0}
-                max={500}
-                onChange={(e) => onUpdateSettings({ turnLimit: Number(e.target.value) })}
-              />
-            </div>
-
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                fontSize: "0.9rem",
-                cursor: "pointer",
-                marginBottom: "0.55rem",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={roomState?.freeParkingJackpot || false}
-                onChange={(e) => onUpdateSettings({ freeParkingJackpot: e.target.checked })}
-              />
-              Mama Put Rest Stop Jackpot
-            </label>
-
-            <label
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "0.5rem",
-                fontSize: "0.9rem",
-                cursor: "pointer",
-                marginBottom: "0.55rem",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={roomState?.chaosMode || false}
-                onChange={(e) => onUpdateSettings({ chaosMode: e.target.checked })}
-                style={{ marginTop: "0.2rem" }}
-              />
-              <span>
-                ⚡ Chaos Mode
-                <span style={{ display: "block", fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                  Adds Naija chaos cards — e.g. "NEPA don take light" freezes all rent for a round.
-                </span>
-              </span>
-            </label>
-
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                fontSize: "0.9rem",
-                cursor: "pointer",
-                marginBottom: "0.55rem",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={roomState?.secretObjectives || false}
-                onChange={(e) => onUpdateSettings({ secretObjectives: e.target.checked })}
-              />
-              Secret Objectives
-            </label>
-
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                fontSize: "0.9rem",
-                cursor: "pointer",
-                marginBottom: "0.5rem",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={roomState?.turnTimerEnabled ?? false}
-                onChange={(e) => onUpdateSettings({ turnTimerEnabled: e.target.checked })}
-              />
-              Enable Turn Timer
-            </label>
-
-            {(roomState?.turnTimerEnabled ?? false) && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  paddingLeft: "1.5rem",
-                }}
-              >
-                <label style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-muted)" }}>
-                  Seconds per turn
-                </label>
-                <input
-                  type="number"
-                  className="input-field"
-                  style={{ width: "90px", padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
-                  value={roomState?.turnTimeoutSecs || 120}
-                  min={15}
-                  max={600}
-                  step={15}
-                  onChange={(e) => onUpdateSettings({ turnTimeoutSecs: Number(e.target.value) })}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {isHost && (
-          <button
-            className="button-secondary full-width-btn"
-            style={{ padding: "0.6rem", fontSize: "0.95rem" }}
-            onClick={onAddAI}
-            disabled={roomFull}
-            title={roomFull ? "Room is full" : "Add a bot opponent"}
-          >
-            {roomFull ? "Room Full" : "➕ Add Bot Player 🤖"}
-          </button>
-        )}
-
-        {isHost ? (
-          <>
-            <button
-              className="button-primary full-width-btn"
-              style={{ padding: "1rem", fontSize: "1.1rem" }}
-              onClick={onStartGame}
-              disabled={playerCount < 2}
-            >
-              {playerCount < 2 ? "Waiting for more players..." : "Start Game 🎲"}
-            </button>
-            {humanCount === 1 && playerCount >= 2 && (
-              <span
-                style={{
-                  display: "block",
-                  fontSize: "0.75rem",
-                  color: "var(--text-muted)",
-                  textAlign: "center",
-                  marginTop: "0.5rem",
-                }}
-              >
-                Playing solo with bots — friends can't join once you start.
-              </span>
-            )}
-          </>
-        ) : (
-          <div
-            className="status-indicator"
-            style={{
-              padding: "1rem",
-              textAlign: "center",
-              background: "rgba(0,0,0,0.2)",
-              borderRadius: "var(--radius-md)",
-            }}
-          >
-            ⏳ Waiting for host to start the game...
-          </div>
-        )}
-      </div>
-
-      <div className="lobby-card glass-panel" style={{ display: "flex", flexDirection: "column" }}>
-        <h2 className="lobby-title">Players Joined ({roomState?.lobbyPlayers?.size || 0})</h2>
-        <div className="lobby-players-list">
-          {roomState?.lobbyPlayers &&
-            Array.from(
-              roomState.lobbyPlayers.entries() as IterableIterator<[string, LobbyPlayerView]>,
-            ).map(([pId, pData]) => (
-              <motion.div
-                key={pId}
-                className="lobby-player-row"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-              >
-                <span className="lobby-player-token">{tokenEmoji(pData.tokenId)}</span>
-                <span className="lobby-player-name">
-                  {pData.name} {pId === room.sessionId && "(You)"}
-                </span>
-                {pId === roomState.hostId && <span className="lobby-host-badge">HOST</span>}
-              </motion.div>
-            ))}
-        </div>
-
-        <h3 style={{ fontSize: "1rem", margin: "1rem 0 0.5rem", color: "var(--text-secondary)" }}>
-          Lobby Chat
-        </h3>
-        <div
-          id="lobby-chat-box"
-          className="chat-messages-container"
-          style={{ flexGrow: 1, minHeight: "150px" }}
-        >
-          {chatMessages
-            .filter((m) => !m.toId)
-            .map((msg: ChatMessage, idx: number) => (
-              <div
-                key={idx}
-                className={`chat-message ${msg.senderId === room.sessionId ? "my-message" : "other-message"}`}
-              >
-                <span className="chat-sender">{msg.senderName}:</span> {msg.text}
-              </div>
-            ))}
-        </div>
-        <div className="chat-input-row" style={{ marginTop: "0.5rem" }}>
-          <input
-            type="text"
-            className="input-field"
-            placeholder="Type a message..."
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && e.currentTarget.value.trim()) {
-                onSendChatMessage(e.currentTarget.value.trim());
-                e.currentTarget.value = "";
-              }
-            }}
-          />
-        </div>
-      </div>
+        </Sheet>
+      )}
     </div>
   );
 }

@@ -560,10 +560,888 @@
 /* TRANSITIONAL: the page now paints warm sand by default (index.html) because
    the landing is the first thing every visitor sees. The screens still on the
    legacy dark design opt back in here so they don't render light gaps around
-   their dark panels. Delete this block once the lobby and game views are
-   rebuilt on the light system (redesign steps B3 and B5). */
-body:has(.lobby-view),
+   their dark panels. Delete this block once the game view is rebuilt on the
+   light system (redesign step B5). The lobby left this selector in B3. */
 body:has(.game-view) {
   background-color: #0e1320;
   color: #f3f4f6;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Room lobby (step B3 · spec §2 · mockup screen 3)
+
+   One job: get more people into the room. Share card is the hero; the six
+   host settings collapse to a summary row; chat is a badge row on mobile
+   and a live panel on desktop; empty seats render so the room never looks
+   broken. Mobile-first single column; two columns at ≥900px.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* The lobby owns the whole viewport, so the legacy dark app chrome (header +
+   footer) steps aside — the sticky top bar replaces it, back chevron and all.
+   Also repaints the page ground light, since index.css still paints body dark
+   for the not-yet-rebuilt game view. */
+body:has(.lobby-view) {
+  background-color: var(--canvas);
+  background-image: none;
+  color: var(--ink);
+}
+
+body:has(.lobby-view) .app-header,
+body:has(.lobby-view) .app-footer {
+  display: none;
+}
+
+.v2-lobby {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-v2);
+}
+
+/* ── Sticky top bar ────────────────────────────────────────────────── */
+
+.v2-lobby-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  flex-shrink: 0;
+  height: 52px;
+  padding: 0 var(--s-2);
+  background: var(--sf);
+  border-bottom: 1px solid var(--ln);
+}
+
+.v2-lobby-bar h1 {
+  font-family: inherit;
+  font-size: var(--fs-body-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--ink);
+}
+
+.v2-iconbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: none;
+  border-radius: var(--r-md);
+  font-family: inherit;
+  font-size: var(--fs-h2);
+  line-height: 1;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.v2-iconbtn:hover {
+  background: var(--sf-hover);
+  color: var(--ink);
+}
+
+.v2-iconbtn:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+.v2-iconbtn-end {
+  margin-left: auto;
+}
+
+/* ── Body grid ─────────────────────────────────────────────────────── */
+
+.v2-lobby-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  /* The cards below name their grid areas unconditionally, so the mobile
+     single-column map has to exist here too — without it those names resolve
+     to nothing and every card lands in the same cell, stacking the whole
+     lobby on top of itself at any width under the desktop breakpoint. */
+  grid-template-areas:
+    "share"
+    "players"
+    "token"
+    "options"
+    "chatrow"
+    "chat"
+    "bots";
+  align-content: start;
+  gap: var(--s-3);
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: var(--s-4) var(--s-4) var(--s-2);
+}
+
+.v2-card {
+  background: var(--sf);
+  border: 1px solid var(--ln);
+  border-radius: var(--r-lg);
+  padding: var(--s-4);
+  box-shadow: var(--sh-sm);
+}
+
+.v2-card-label {
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--s-1);
+}
+
+/* ── Share card (hero) ─────────────────────────────────────────────── */
+
+.v2-share {
+  grid-area: share;
+  background: var(--sf-tint);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.v2-code {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: var(--r-md);
+  padding: var(--s-1) 0 var(--s-2);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.v2-code:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+.v2-code-num {
+  display: block;
+  text-align: center;
+  font-size: var(--fs-display);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.v2-code-l {
+  display: block;
+  text-align: center;
+  margin-top: var(--s-1);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* Anchors carrying .v2-btn (the WhatsApp deep link, share menu items). */
+a.v2-btn {
+  box-sizing: border-box;
+  text-decoration: none;
+}
+
+.v2-two-up {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+
+.v2-share-note {
+  margin: var(--s-1) 0 0;
+  text-align: center;
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+/* ── Players ───────────────────────────────────────────────────────── */
+
+.v2-players {
+  grid-area: players;
+  align-self: start;
+}
+
+.v2-prow,
+.v2-slot {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 44px;
+  padding: var(--s-1) 0;
+  border-bottom: 1px solid var(--ln);
+  animation: view-fade-in var(--d-fast) var(--e-enter) both;
+}
+
+.v2-prow:last-child,
+.v2-slot:last-child {
+  border-bottom: none;
+}
+
+.v2-prow b {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.v2-you {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+/* Gold is reserved for host / winner / Odogwu moments. Ink on gold rather
+   than white keeps the 11px label readable (≈7.6:1). */
+.v2-host {
+  margin-left: auto;
+  background: var(--gold-v2);
+  color: var(--ink);
+  border-radius: var(--r-full);
+  padding: var(--s-05) var(--s-2);
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.v2-av {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-full);
+  background: var(--pri-50);
+  font-size: var(--fs-h3);
+}
+
+.v2-slot {
+  color: var(--ink-3);
+  font-size: var(--fs-sm);
+}
+
+.v2-slot i {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-full);
+  border: 1.5px dashed var(--ln-2);
+}
+
+.v2-wait {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-1);
+  margin-top: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--canvas);
+  text-align: center;
+}
+
+.v2-wait b {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-wait span {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+/* ── Your token ────────────────────────────────────────────────────── */
+
+.v2-token-row {
+  grid-area: token;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.v2-token-me {
+  min-width: 0;
+}
+
+.v2-token-me b {
+  display: block;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.v2-token-me span {
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+
+.v2-token-change {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  min-height: 44px;
+  padding: 0 var(--s-2);
+}
+
+.v2-token-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+}
+
+.v2-token-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  min-height: 80px;
+  padding: var(--s-2);
+  background: var(--sf);
+  border: 1.5px solid var(--ln);
+  border-radius: var(--r-md);
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background-color var(--d-fast) var(--e-std),
+    border-color var(--d-fast) var(--e-std);
+}
+
+.v2-token-opt em {
+  font-style: normal;
+  font-size: var(--fs-h1);
+  line-height: 1;
+}
+
+.v2-token-opt b {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.v2-token-opt small {
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.v2-token-opt:hover:not(:disabled) {
+  background: var(--sf-hover);
+  border-color: var(--ln-2);
+}
+
+.v2-token-opt[aria-pressed="true"] {
+  background: var(--pri-50);
+  border-color: var(--pri);
+}
+
+.v2-token-opt:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.v2-token-opt:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+/* ── Game options (host) ───────────────────────────────────────────── */
+
+.v2-options {
+  grid-area: options;
+}
+
+.v2-disclosure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.v2-disclosure > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.v2-disclosure:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+.v2-chev {
+  font-style: normal;
+  transition: transform var(--d-fast) var(--e-std);
+}
+
+.v2-disclosure[aria-expanded="true"] .v2-chev {
+  transform: rotate(90deg);
+}
+
+.v2-opts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--ln);
+  animation: view-fade-in var(--d-fast) var(--e-enter) both;
+}
+
+.v2-opt-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.v2-opt-label em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--money);
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+  gap: var(--s-2);
+}
+
+.v2-preset {
+  min-height: 44px;
+  padding: 0 var(--s-1);
+  background: var(--sf);
+  border: 1.5px solid var(--ln-2);
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color var(--d-fast) var(--e-std),
+    border-color var(--d-fast) var(--e-std);
+}
+
+.v2-preset:hover {
+  background: var(--sf-hover);
+}
+
+.v2-preset[aria-pressed="true"] {
+  background: var(--pri-50);
+  border-color: var(--pri);
+  color: var(--pri-7);
+}
+
+.v2-preset:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+.v2-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: 44px;
+  font-size: var(--fs-body);
+  color: var(--ink);
+}
+
+.v2-field-sub {
+  padding-left: var(--s-4);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+
+.v2-num {
+  width: 96px;
+  height: 40px;
+  padding: 0 var(--s-3);
+  background: var(--sf);
+  border: 1.5px solid var(--ln-2);
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: var(--fs-body);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-num:focus {
+  outline: none;
+  border-color: var(--pri);
+  box-shadow: var(--sh-focus);
+}
+
+.v2-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--s-1) 0;
+  background: none;
+  border: none;
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.v2-toggle b {
+  display: block;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.v2-toggle small {
+  display: block;
+  margin-top: var(--s-05);
+  font-size: var(--fs-caption);
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+.v2-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+.v2-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 26px;
+  border-radius: var(--r-full);
+  background: var(--ln-2);
+  transition: background-color var(--d-fast) var(--e-std);
+}
+
+.v2-switch i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-full);
+  background: var(--sf);
+  box-shadow: var(--sh-xs);
+  transition: transform var(--d-fast) var(--e-std);
+}
+
+.v2-toggle[aria-pressed="true"] .v2-switch {
+  background: var(--pri);
+}
+
+.v2-toggle[aria-pressed="true"] .v2-switch i {
+  transform: translateX(18px);
+}
+
+/* ── Chat row + panel ──────────────────────────────────────────────── */
+
+.v2-chat-row {
+  grid-area: chatrow;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: 52px;
+  font-family: inherit;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink-2);
+  text-align: left;
+  cursor: pointer;
+}
+
+.v2-chat-row:hover {
+  background: var(--sf-hover);
+}
+
+.v2-chat-row:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+.v2-badge {
+  background: var(--pri-50);
+  color: var(--pri-7);
+  border-radius: var(--r-full);
+  padding: var(--s-05) var(--s-2);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mobile: the panel rides inside the shared overlay as a bottom sheet.
+   Desktop (≥900px) neutralises the overlay and drops it into the grid. */
+.v2-chat-wrap[data-open="false"] {
+  display: none;
+}
+
+.v2-chat-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  max-height: 80dvh;
+  margin: 0 auto;
+  background: var(--sf);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  box-shadow: var(--sh-sheet);
+  padding: var(--s-3) var(--s-4) calc(var(--s-4) + env(safe-area-inset-bottom));
+}
+
+.v2-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+
+.v2-sheet-head h2 {
+  font-family: inherit;
+  font-size: var(--fs-h3);
+  font-weight: 800;
+  margin: 0;
+  color: var(--ink);
+}
+
+.v2-chat-log {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-height: 160px;
+  overflow-y: auto;
+  padding-bottom: var(--s-3);
+}
+
+.v2-msg {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.v2-msg b {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.v2-msg.is-me b {
+  color: var(--pri-7);
+}
+
+.v2-chat-empty {
+  margin: auto;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  text-align: center;
+}
+
+.v2-chat-form {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.v2-chat-form .v2-input {
+  height: 44px;
+  font-size: var(--fs-body);
+}
+
+.v2-chat-send {
+  width: auto;
+  flex-shrink: 0;
+  height: 44px;
+  padding: 0 var(--s-4);
+  font-size: var(--fs-body);
+}
+
+/* ── Bots + sticky bottom bar ──────────────────────────────────────── */
+
+.v2-bots {
+  grid-area: bots;
+}
+
+.v2-lobby-foot {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: var(--s-3) var(--s-4) calc(var(--s-4) + env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, var(--canvas) 30%);
+}
+
+.v2-foot-note {
+  display: block;
+  margin-top: var(--s-2);
+  text-align: center;
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.v2-wait-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  height: 50px;
+  background: var(--sf);
+  border: 1px solid var(--ln);
+  border-radius: var(--r-md);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+/* ── Sheets: menu + token picker ───────────────────────────────────── */
+
+.v2-overlay-bottom {
+  align-items: flex-end;
+  padding: 0;
+}
+
+.v2-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.v2-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 48px;
+  padding: 0 var(--s-3);
+  background: none;
+  border: none;
+  border-radius: var(--r-md);
+  font-family: inherit;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.v2-menu-item:hover {
+  background: var(--sf-hover);
+}
+
+.v2-menu-item:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+.v2-menu-item.is-danger {
+  color: var(--bad);
+}
+
+@media (min-width: 600px) {
+  .v2-overlay-bottom {
+    align-items: center;
+    padding: var(--s-4);
+  }
+}
+
+/* ── Desktop: two columns, same content ────────────────────────────── */
+
+@media (min-width: 900px) {
+  .v2-lobby-body {
+    grid-template-columns: 420px minmax(0, 1fr);
+    grid-template-areas:
+      "share   players"
+      "token   chat"
+      "options chat"
+      "bots    chat";
+    gap: var(--s-4);
+    padding-bottom: var(--s-4);
+  }
+
+  /* The row collapses away — desktop shows the chat live instead. */
+  .v2-chat-row,
+  .v2-chat-close {
+    display: none;
+  }
+
+  .v2-chat-wrap,
+  .v2-chat-wrap[data-open="false"],
+  .v2-chat-wrap[data-open="true"] {
+    position: static;
+    display: block;
+    grid-area: chat;
+    z-index: auto;
+    padding: 0;
+    background: none;
+  }
+
+  .v2-chat-panel {
+    max-width: none;
+    max-height: none;
+    height: 100%;
+    min-height: 320px;
+    border: 1px solid var(--ln);
+    border-radius: var(--r-lg);
+    box-shadow: var(--sh-sm);
+    padding: var(--s-4);
+  }
+
+  .v2-chat-panel .v2-sheet-handle {
+    display: none;
+  }
+
+  .v2-lobby-foot {
+    position: static;
+    padding: 0 var(--s-4) var(--s-6);
+    background: none;
+  }
+
+  .v2-foot-in {
+    max-width: 420px;
+  }
 }
