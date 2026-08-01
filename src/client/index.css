@@ -2738,6 +2738,30 @@ html.high-contrast .glass-panel {
   }
 }
 
+/* How-to-Play cards stack to a single readable column on phones instead of
+   two ~160px columns, and the landing page reclaims its heavy side padding. */
+@media (max-width: 560px) {
+  .lobby-landing-page {
+    padding: 2rem 1rem 1.5rem;
+  }
+
+  .how-to-play-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lobby-logo-text {
+    font-size: 2.6rem;
+  }
+
+  .lobby-tagline {
+    font-size: 1.1rem;
+  }
+
+  .how-to-play-title {
+    font-size: 1.6rem;
+  }
+}
+
 /* 3D Dice styling */
 .die-3d-wrapper {
   width: 50px;
@@ -3230,6 +3254,21 @@ html.high-contrast .glass-panel {
   .lobby-card {
     overflow-y: visible;
   }
+}
+
+/* Social share buttons + starting-cash presets: auto-fit so they reflow to
+   fewer columns (and wrap onto extra rows) on narrow phones instead of
+   squeezing fixed 4/5-column tracks until the labels clip. */
+.lobby-share-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 0.4rem;
+}
+
+.cash-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+  gap: 0.4rem;
 }
 
 .lobby-chat-panel {

@@ -33,7 +33,7 @@ function CashPresetRow({ value, onChange }: { value: number; onChange: (v: numbe
           ₦{value.toLocaleString()}
         </span>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0.4rem" }}>
+      <div className="cash-preset-grid">
         {CASH_PRESETS.map((p) => {
           const active = value === p.value;
           return (
@@ -160,13 +160,7 @@ export default function RoomLobbyView({
         </button>
 
         {/* Share the invite straight to a social app with a prefilled message. */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: canNativeShare ? "repeat(4, 1fr)" : "repeat(3, 1fr)",
-            gap: "0.4rem",
-          }}
-        >
+        <div className="lobby-share-row">
           <a
             href={waLink}
             target="_blank"
