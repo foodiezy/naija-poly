@@ -1,5 +1,6 @@
 /* src/client/index.css */
 @import "./tokens.css"; /* v2 light-theme tokens — see design/REDESIGN-SPEC.md */
+@import "./v2.css"; /* v2 rebuilt screens (landing + join gate) — tokens only */
 
 :root {
   --font-display: "Yanone Kaffeesatz", "Nunito", system-ui, sans-serif;
@@ -388,68 +389,9 @@ h6 {
   border-color: rgba(255, 255, 255, 0.3);
 }
 
-/* Lobby Landing Page */
-.lobby-landing-page {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-  padding: 3rem 2rem 2rem;
-  max-width: 640px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-/* Hero */
-.lobby-hero {
-  text-align: center;
-  margin-bottom: 2.5rem;
-}
-
-.lobby-logo-block {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.lobby-flag {
-  font-size: 3rem;
-}
-
-.lobby-logo-text {
-  font-family: "Yanone Kaffeesatz", var(--font-display);
-  font-size: 3.5rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  background: linear-gradient(135deg, var(--color-naira) 0%, var(--color-gold) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  line-height: 1;
-}
-
-.lobby-tagline {
-  font-family: "Yanone Kaffeesatz", var(--font-display);
-  font-size: 1.35rem;
-  font-weight: 400;
-  color: var(--text-secondary);
-  letter-spacing: 0.04em;
-  font-style: italic;
-}
-
-/* Action card */
-.lobby-action-card {
-  width: 100%;
-  padding: 2.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  border: 1px solid rgba(102, 71, 224, 0.2);
-  box-shadow: 0 0 30px rgba(102, 71, 224, 0.08);
-}
+/* (v2) The old landing-page CSS (.lobby-landing-page, .lobby-hero,
+   .lobby-logo-*, .lobby-tagline, .lobby-action-card, .how-to-play-*) died
+   with Lobby.tsx — the rebuilt landing lives in v2.css. */
 
 /* Legacy lobby classes still referenced from App.tsx room lobby view */
 .lobby-view {
@@ -489,64 +431,6 @@ h6 {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-}
-
-/* How to Play section */
-.how-to-play-section {
-  width: 100%;
-}
-
-.how-to-play-title {
-  font-family: "Yanone Kaffeesatz", var(--font-display);
-  text-align: center;
-  font-size: 2rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  margin-bottom: 1.5rem;
-}
-
-.how-to-play-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.how-to-play-card {
-  display: flex;
-  gap: 1rem;
-  padding: 1.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition:
-    border-color 0.2s,
-    box-shadow 0.3s,
-    transform 0.2s;
-  cursor: default;
-}
-
-.how-to-play-icon {
-  font-size: 1.75rem;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.how-to-play-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.how-to-play-card-title {
-  font-weight: 700;
-  font-size: 0.9rem;
-  letter-spacing: 0.02em;
-}
-
-.how-to-play-card-desc {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
 }
 
 .form-group {
@@ -2733,33 +2617,8 @@ html.high-contrast .glass-panel {
     font-size: 0.85rem;
   }
 
-  .lobby-action-card,
   .lobby-card {
     padding: 1.5rem 1.25rem;
-  }
-}
-
-/* How-to-Play cards stack to a single readable column on phones instead of
-   two ~160px columns, and the landing page reclaims its heavy side padding. */
-@media (max-width: 560px) {
-  .lobby-landing-page {
-    padding: 2rem 1rem 1.5rem;
-  }
-
-  .how-to-play-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .lobby-logo-text {
-    font-size: 2.6rem;
-  }
-
-  .lobby-tagline {
-    font-size: 1.1rem;
-  }
-
-  .how-to-play-title {
-    font-size: 1.6rem;
   }
 }
 

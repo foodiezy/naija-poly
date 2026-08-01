@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // Components
-import Lobby from "./components/Lobby";
+import LandingView from "./components/LandingView";
+import JoinGate from "./components/JoinGate";
 import RoomLobbyView from "./components/RoomLobbyView";
 import GameBoard from "./components/GameBoard";
 import ChatPanel from "./components/ChatPanel";
@@ -62,12 +63,20 @@ export default function App() {
   // modal — auto end turn must never yank the turn away mid-composition.
   const [composerOpen, setComposerOpen] = useState(false);
 
-  // Room code from an invite link (?room=CODE), read once on load so a friend
-  // who taps a shared link lands on the lobby with the join field prefilled.
-  const [inviteRoomId] = useState(() => {
+  // Room code from an invite link (?room=CODE), read once on load. While set,
+  // the pre-room router shows ONLY the JoinGate sheet; "Start your own game"
+  // clears it (and the URL param) to fall back to the landing screen.
+  const [inviteRoomId, setInviteRoomId] = useState(() => {
     if (typeof window === "undefined") return "";
     return new URLSearchParams(window.location.search).get("room")?.trim() ?? "";
   });
+
+  const dismissInvite = useCallback(() => {
+    setInviteRoomId("");
+    if (typeof window !== "undefined" && window.location.search) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   // Once we're in a room, strip ?room= from the address bar so a refresh
   // reconnects (via the stored token) instead of re-triggering the invite flow.
@@ -89,11 +98,8 @@ export default function App() {
       return shown !== undefined && shown !== me.position;
     })();
 
-  useEffect(() => {
-    if (typeof localStorage !== "undefined" && !localStorage.getItem("odogwu-tutorial-seen")) {
-      setShowOnboarding(true);
-    }
-  }, []);
+  // v2: the tutorial no longer auto-opens on landing — rules are on-demand
+  // ("How to play" on the landing screen, or the footer link once in a room).
 
   // Preload any sample SFX files once (synth fallback covers missing files).
   useEffect(() => {
@@ -177,53 +183,56 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Header — 3-section layout */}
-      <header className="app-header">
-        <div className="header-left">
-          <div className="logo-container">
-            <span className="logo-text">Odogwu Empire</span>
+      {/* Header — 3-section layout. Hidden before a room is joined: the v2
+          landing / join screens carry their own identity (spec §2). */}
+      {room && (
+        <header className="app-header">
+          <div className="header-left">
+            <div className="logo-container">
+              <span className="logo-text">Odogwu Empire</span>
+            </div>
           </div>
-        </div>
 
-        <div className="header-center">
-          <span className="header-tagline">Buy the land. Become the Odogwu.</span>
-          <span className="header-badge">👥 2-6 players · Real-time · Free</span>
-        </div>
+          <div className="header-center">
+            <span className="header-tagline">Buy the land. Become the Odogwu.</span>
+            <span className="header-badge">👥 2-6 players · Real-time · Free</span>
+          </div>
 
-        <div className="header-right">
-          {room && (
-            <>
-              <span
-                className="room-badge"
-                onClick={copyRoomCode}
-                title="Click to copy the invite link"
-              >
-                Room: {room.roomId}
-                <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>🔗</span>
-              </span>
-              <button className="header-btn header-btn-gold" onClick={copyRoomCode}>
-                Invite 🔗
-              </button>
-            </>
-          )}
-          <button
-            className="header-btn header-btn-outline"
-            onClick={() => {
-              const nextMute = !muted;
-              setMuted(nextMute);
-              sound.setMuted(nextMute);
-            }}
-            title={muted ? "Unmute sounds" : "Mute sounds"}
-          >
-            {muted ? "🔇" : "🔊"}
-          </button>
-          {room && (
-            <button className="header-btn header-btn-outline" onClick={leaveRoom}>
-              Exit
+          <div className="header-right">
+            {room && (
+              <>
+                <span
+                  className="room-badge"
+                  onClick={copyRoomCode}
+                  title="Click to copy the invite link"
+                >
+                  Room: {room.roomId}
+                  <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>🔗</span>
+                </span>
+                <button className="header-btn header-btn-gold" onClick={copyRoomCode}>
+                  Invite 🔗
+                </button>
+              </>
+            )}
+            <button
+              className="header-btn header-btn-outline"
+              onClick={() => {
+                const nextMute = !muted;
+                setMuted(nextMute);
+                sound.setMuted(nextMute);
+              }}
+              title={muted ? "Unmute sounds" : "Mute sounds"}
+            >
+              {muted ? "🔇" : "🔊"}
             </button>
-          )}
-        </div>
-      </header>
+            {room && (
+              <button className="header-btn header-btn-outline" onClick={leaveRoom}>
+                Exit
+              </button>
+            )}
+          </div>
+        </header>
+      )}
 
       <ToastContainer
         position="top-right"
@@ -238,16 +247,15 @@ export default function App() {
         style={{ zIndex: 99999, top: "70px" }}
       />
 
-      {/* Content Router */}
-      <AnimatePresence mode="wait">
+      {/* Content Router.
+          Deliberately NOT wrapped in AnimatePresence: a mode="wait" page
+          transition here can strand the app if an exit animation never
+          resolves — the view stays mounted at opacity 0 and the joined room
+          never renders, leaving a blank screen with no way back. View-level
+          fades are CSS (.view-fade); AnimatePresence is for modals only. */}
+      <>
         {!room ? (
-          <motion.div
-            key="landing"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-          >
+          <div className="view-fade">
             {reconnecting ? (
               <div
                 className="reconnect-overlay"
@@ -262,26 +270,20 @@ export default function App() {
                 <h2 style={{ marginTop: "1rem" }}>Welcome Back</h2>
                 <p>Restoring your session...</p>
               </div>
+            ) : inviteRoomId ? (
+              // Invite-link clicker: ONLY the join sheet — no landing hero,
+              // no rules, no create/quick-match (spec §1, "Invite-link → <15s").
+              <JoinGate roomCode={inviteRoomId} onJoin={joinRoom} onStartOwn={dismissInvite} />
             ) : (
-              <>
-                <Lobby
-                  onCreateRoom={createRoom}
-                  onJoinRoom={joinRoom}
-                  onQuickMatch={quickMatch}
-                  initialRoomId={inviteRoomId}
-                />
-              </>
+              <LandingView
+                onCreateRoom={createRoom}
+                onJoinRoom={joinRoom}
+                onQuickMatch={quickMatch}
+              />
             )}
-          </motion.div>
+          </div>
         ) : roomState?.status === "lobby" ? (
-          <motion.div
-            key="lobby"
-            className="lobby-view"
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -40 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-          >
+          <div className="lobby-view view-fade">
             <RoomLobbyView
               room={room}
               roomState={roomState}
@@ -293,16 +295,9 @@ export default function App() {
               chatMessages={chatMessages}
               onSendChatMessage={sendChatMessage}
             />
-          </motion.div>
+          </div>
         ) : engineState ? (
-          <motion.div
-            key="game"
-            className="game-view"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-          >
+          <div className="game-view view-fade">
             {reconnecting && (
               <div className="reconnect-overlay">
                 <div className="reconnect-spinner"></div>
@@ -418,9 +413,9 @@ export default function App() {
                 🏆 Show Results
               </button>
             )}
-          </motion.div>
+          </div>
         ) : null}
-      </AnimatePresence>
+      </>
 
       {/* Footer */}
       {/* Tutorial — top level so the footer "How to Play" works everywhere,
@@ -438,18 +433,25 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <footer className="app-footer">
-        <div className="footer-left">
-          <span className="footer-logo">🏛️ Odogwu Empire</span>
-          <span
-            style={{ cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "2px" }}
-            onClick={() => setShowOnboarding(true)}
-          >
-            How to Play
-          </span>
-        </div>
-        <div className="footer-right">© 2026 Odogwu Games · Made with Lagos vibes.</div>
-      </footer>
+      {/* Footer chrome — hidden pre-room like the header (landing has its own). */}
+      {room && (
+        <footer className="app-footer">
+          <div className="footer-left">
+            <span className="footer-logo">🏛️ Odogwu Empire</span>
+            <span
+              style={{
+                cursor: "pointer",
+                textDecoration: "underline",
+                textUnderlineOffset: "2px",
+              }}
+              onClick={() => setShowOnboarding(true)}
+            >
+              How to Play
+            </span>
+          </div>
+          <div className="footer-right">© 2026 Odogwu Games · Made with Lagos vibes.</div>
+        </footer>
+      )}
 
       {/* DEV-ONLY playtesting controls — tree-shaken out of production builds. */}
       {import.meta.env.DEV && room && (

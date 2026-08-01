@@ -1,0 +1,569 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Odogwu Empire — v2 screens (light theme)
+   Pixel reference: design/mockups-v2.html · tokens: tokens.css
+   Scope: pre-room experience only (landing + join gate). Every color /
+   space / radius / shadow / font value is a v2 token; the only literals
+   are scrims and the mockup's green CTA glow, which have no token.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Shared atoms ──────────────────────────────────────────────────── */
+
+.v2-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  width: 100%;
+  border: none;
+  border-radius: var(--r-md);
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color var(--d-fast) var(--e-std),
+    box-shadow var(--d-fast) var(--e-std);
+}
+
+.v2-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+.v2-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.v2-btn-pri {
+  background: var(--pri);
+  color: var(--ink-on-pri);
+  height: 50px;
+  font-size: var(--fs-body-lg);
+  /* Mockup CTA glow — --pri-6 at .35 alpha; no shadow token carries brand color. */
+  box-shadow: 0 4px 10px -2px rgba(0, 111, 66, 0.35);
+}
+
+.v2-btn-pri:hover:not(:disabled) {
+  background: var(--pri-6);
+}
+
+.v2-btn-pri:active:not(:disabled) {
+  background: var(--pri-7);
+}
+
+.v2-btn-sec {
+  background: var(--sf);
+  color: var(--ink);
+  border: 1.5px solid var(--ln-2);
+  height: 44px;
+  font-size: var(--fs-body);
+}
+
+.v2-btn-sec:hover:not(:disabled) {
+  background: var(--sf-hover);
+}
+
+.v2-tlink {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--pri);
+  cursor: pointer;
+}
+
+.v2-tlink:hover {
+  color: var(--pri-6);
+  text-decoration: underline;
+}
+
+.v2-tlink:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+  border-radius: var(--r-xs);
+}
+
+.v2-input {
+  width: 100%;
+  height: 48px;
+  background: var(--sf);
+  border: 1.5px solid var(--ln-2);
+  border-radius: var(--r-md);
+  padding: 0 var(--s-4);
+  font-family: inherit;
+  font-size: var(--fs-body-lg);
+  color: var(--ink);
+}
+
+.v2-input::placeholder {
+  color: var(--ink-3);
+}
+
+.v2-input:focus {
+  outline: none;
+  border-color: var(--pri);
+  box-shadow: var(--sh-focus);
+}
+
+/* Adire crosshatch watermark — CSS-only, zero images on first paint.
+   Strokes are zone-borno brown + flag green, per the approved mockup. */
+.v2-adire {
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(45deg, var(--zone-borno-bar) 0 2px, transparent 2px 14px),
+    repeating-linear-gradient(-45deg, var(--pri) 0 2px, transparent 2px 14px);
+}
+
+/* ── Name pill (shared: landing sm · join gate lg) ─────────────────── */
+
+.v2-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  background: var(--sf);
+  border: 1px solid var(--ln-2);
+  border-radius: var(--r-full);
+  padding: var(--s-1) var(--s-3);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.v2-pill b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.v2-pill span {
+  color: var(--ink-3);
+}
+
+.v2-pill:hover {
+  background: var(--sf-hover);
+  border-color: var(--ln-3);
+}
+
+.v2-pill:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+.v2-pill-lg {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--canvas);
+  border: 1.5px solid var(--ln-2);
+  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4);
+  font-family: inherit;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  margin-bottom: var(--s-3);
+}
+
+.v2-pill-lg span {
+  color: var(--ink-3);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+}
+
+.v2-pill-lg:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+/* Inline edit state of the pill (both variants) */
+.v2-pill-input {
+  width: 180px;
+  max-width: 100%;
+  height: 34px;
+  background: var(--sf);
+  border: 1.5px solid var(--pri);
+  border-radius: var(--r-full);
+  padding: 0 var(--s-3);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+}
+
+.v2-pill-input:focus {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+.v2-pill-input-lg {
+  width: 100%;
+  height: 48px;
+  border-radius: var(--r-md);
+  font-size: var(--fs-body);
+  text-align: left;
+  padding: 0 var(--s-4);
+  margin-bottom: var(--s-3);
+}
+
+/* ── Landing ───────────────────────────────────────────────────────── */
+
+.v2-landing {
+  position: relative;
+  overflow: hidden;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-v2);
+  padding: var(--s-10) var(--s-5) var(--s-5);
+}
+
+.v2-landing-col {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding-top: clamp(var(--s-4), 8vh, var(--s-16));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.v2-wordmark {
+  font-family: inherit;
+  font-size: var(--fs-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin: 0;
+  color: var(--ink);
+}
+
+.v2-wordmark em {
+  font-style: normal;
+  color: var(--pri);
+}
+
+.v2-tagline {
+  font-size: var(--fs-body-lg);
+  color: var(--ink-2);
+  margin: var(--s-3) 0 var(--s-8);
+}
+
+.v2-pill-row {
+  margin-top: var(--s-3);
+}
+
+.v2-landing-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--s-5);
+  margin-top: var(--s-4);
+}
+
+.v2-link-dot {
+  color: var(--ln-2);
+}
+
+.v2-code-box {
+  width: 100%;
+  margin-top: var(--s-4);
+  background: var(--sf);
+  border: 1px solid var(--ln);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-sm);
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.v2-stats-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-top: var(--s-6);
+  background: var(--sf);
+  border: 1px solid var(--ln);
+  border-radius: var(--r-full);
+  padding: var(--s-1) var(--s-3);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+
+.v2-steps {
+  position: relative;
+  display: flex;
+  gap: var(--s-2);
+  width: 100%;
+  max-width: 400px;
+  margin: auto auto 0;
+  padding-top: var(--s-8);
+}
+
+.v2-step {
+  flex: 1;
+  background: var(--sf);
+  border: 1px solid var(--ln);
+  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-2);
+  text-align: center;
+}
+
+.v2-step svg {
+  display: block;
+  margin: 0 auto var(--s-1);
+  color: var(--pri);
+}
+
+.v2-step b {
+  display: block;
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.v2-step span {
+  font-size: var(--fs-micro);
+  color: var(--ink-3);
+}
+
+.v2-landing-foot {
+  position: relative;
+  text-align: center;
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  margin-top: var(--s-5);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ── Rules overlay (minimal centered card — Sheet primitive lands later) ── */
+
+.v2-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-4);
+  /* Scrim — --ink at low alpha; no token exists for scrims yet. */
+  background: rgba(16, 24, 40, 0.45);
+  font-family: var(--font-v2);
+}
+
+.v2-overlay-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  max-height: min(640px, 85dvh);
+  background: var(--sf);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-xl);
+  color: var(--ink);
+}
+
+.v2-overlay-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--ln);
+}
+
+.v2-overlay-head h2 {
+  font-family: inherit;
+  font-size: var(--fs-h2);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--ink);
+}
+
+.v2-overlay-x {
+  background: none;
+  border: none;
+  padding: var(--s-1);
+  font-size: var(--fs-body-lg);
+  line-height: 1;
+  color: var(--ink-3);
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+
+.v2-overlay-x:hover {
+  color: var(--ink);
+}
+
+.v2-overlay-x:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+.v2-overlay-body {
+  overflow-y: auto;
+  padding: var(--s-4) var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.v2-rule {
+  display: flex;
+  gap: var(--s-3);
+  text-align: left;
+}
+
+.v2-rule-emoji {
+  font-size: var(--fs-h1);
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.v2-rule b {
+  display: block;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.v2-rule p {
+  margin: var(--s-05) 0 0;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.v2-overlay-foot {
+  padding: var(--s-3) var(--s-5) var(--s-5);
+  border-top: 1px solid var(--ln);
+}
+
+/* ── Join gate ─────────────────────────────────────────────────────── */
+
+.v2-joingate {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  font-family: var(--font-v2);
+  color: var(--ink);
+  /* Sand page under a light scrim, per mockup screen 2. */
+  background: linear-gradient(rgba(16, 24, 40, 0.14), rgba(16, 24, 40, 0.14)), var(--canvas);
+}
+
+.v2-sheet {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  background: var(--sf);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  box-shadow: var(--sh-sheet);
+  padding: var(--s-3) var(--s-5) calc(var(--s-6) + env(safe-area-inset-bottom));
+}
+
+.v2-sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: var(--r-full);
+  background: var(--ln-2);
+  margin: 0 auto var(--s-4);
+}
+
+.v2-join-title {
+  font-family: inherit;
+  text-align: center;
+  font-size: var(--fs-h2);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--ink);
+}
+
+.v2-join-sub {
+  text-align: center;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  margin: var(--s-1) 0 var(--s-4);
+}
+
+.v2-join-sub b {
+  color: var(--ink-2);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+
+.v2-join-retry {
+  display: block;
+  margin: var(--s-4) auto 0;
+}
+
+/* Desktop: the sheet becomes a centered card. */
+@media (min-width: 600px) {
+  .v2-joingate {
+    justify-content: center;
+    align-items: center;
+    padding: var(--s-6);
+  }
+
+  .v2-sheet {
+    max-width: 420px;
+    border-radius: var(--r-xl);
+    box-shadow: var(--sh-xl);
+    padding-bottom: var(--s-6);
+  }
+
+  .v2-sheet-handle {
+    display: none;
+  }
+}
+
+/* View-level mount fade. Replaces the old top-level AnimatePresence page
+   transition, which could strand the app on an invisible view when an exit
+   animation failed to resolve (see App.tsx "Content Router"). CSS can't
+   block a mount, so this is fail-safe by construction. */
+.view-fade {
+  animation: view-fade-in var(--d-slow) var(--e-enter) both;
+}
+
+@keyframes view-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view-fade {
+    animation: none;
+  }
+}
+
+/* TRANSITIONAL: the page now paints warm sand by default (index.html) because
+   the landing is the first thing every visitor sees. The screens still on the
+   legacy dark design opt back in here so they don't render light gaps around
+   their dark panels. Delete this block once the lobby and game views are
+   rebuilt on the light system (redesign steps B3 and B5). */
+body:has(.lobby-view),
+body:has(.game-view) {
+  background-color: #0e1320;
+  color: #f3f4f6;
+}
