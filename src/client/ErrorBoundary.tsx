@@ -31,16 +31,16 @@ export default class ErrorBoundary extends React.Component<React.PropsWithChildr
           alignItems: "center",
           justifyContent: "center",
           gap: "1rem",
-          background: "#0e1320",
-          color: "#f3f4f6",
-          fontFamily: "'Nunito', system-ui, sans-serif",
+          background: "var(--canvas, #faf7f2)",
+          color: "var(--ink, #101828)",
+          fontFamily: "var(--font-v2, system-ui, sans-serif)",
           textAlign: "center",
           padding: "2rem",
         }}
       >
         <div style={{ fontSize: "3rem" }}>😵‍💫</div>
         <h1 style={{ margin: 0, fontSize: "1.4rem" }}>Omo, something break!</h1>
-        <p style={{ margin: 0, color: "#9ca3af", maxWidth: "420px" }}>
+        <p style={{ margin: 0, color: "var(--ink-2, #475467)", maxWidth: "420px" }}>
           No wahala — your game is safe on the server. Reload to jump back in.
         </p>
         <button
@@ -49,10 +49,10 @@ export default class ErrorBoundary extends React.Component<React.PropsWithChildr
             padding: "0.7rem 2rem",
             fontSize: "1rem",
             fontWeight: 700,
-            color: "#fff",
-            background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+            color: "var(--ink-on-pri, #ffffff)",
+            background: "var(--pri, #008751)",
             border: "none",
-            borderRadius: "8px",
+            borderRadius: "var(--r-lg, 16px)",
             cursor: "pointer",
           }}
         >

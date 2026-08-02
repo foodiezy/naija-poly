@@ -143,7 +143,7 @@ export default function ActionButtons({
             justifyContent: "center",
             gap: "0.4rem",
             borderRadius: "2px",
-            background: "linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%)",
+            background: "var(--pri)",
             boxShadow: "var(--sh-md)",
           }}
         >
@@ -166,7 +166,7 @@ export default function ActionButtons({
           title={tokenWalking ? "Wait for your piece to land…" : undefined}
           style={{
             borderRadius: "2px",
-            background: "linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%)",
+            background: "var(--pri)",
           }}
         >
           Buy ₦{(price / 1000).toFixed(0)}k

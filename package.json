@@ -18,7 +18,8 @@
     "build:client": "vite build",
     "preview:client": "vite preview",
     "start": "tsx src/server/index.ts",
-    "prepare": "git config core.hooksPath .githooks || exit 0"
+    "prepare": "git config core.hooksPath .githooks || exit 0",
+    "check:colors": "node scripts/check-inline-colors.mjs"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",

@@ -640,16 +640,6 @@ h6 {
     min-height: 56px;
   }
 
-  /* Modals fit screen */
-  .buy-deed-card,
-  .tile-inspector-overlay .deed-card {
-    max-width: calc(100vw - 1.2rem);
-  }
-
-  .buy-deed-overlay {
-    padding: 0.6rem;
-  }
-
   /* Board centerpiece scales down */
   .dice-stage {
     transform: scale(1.15);
@@ -778,24 +768,6 @@ h6 {
 
   .active-player-hero-name {
     font-size: 0.95rem;
-  }
-
-  /* Big modal cards: scale price + names down */
-  .buy-deed-name {
-    font-size: 1.4rem;
-  }
-
-  .buy-deed-price-value {
-    font-size: 1.9rem;
-  }
-
-  .buy-deed-actions {
-    grid-template-columns: 1fr;
-  }
-
-  .buy-deed-btn {
-    padding: 0.95rem 0.5rem;
-    font-size: 0.92rem;
   }
 
   /* Player + holdings cards stay readable */
@@ -1222,12 +1194,26 @@ h6 {
 /* Corners always use the short label. "Mama Put Rest Stop (Free Parking)" does
    not fit a corner cell at any board size — it clipped mid-word on desktop,
    never mind a phone. board.ts already carries a shortName for all four. */
-.tile-corner .tile-name-full {
+.tile-corner .tile-name-full,
+/* Same for the left and right columns: those tiles are tall and narrow, so a
+   name like "Port Harcourt" broke to "Port Harcou / rt". The top and bottom
+   rows are wide enough to keep full names. */
+.edge-left .tile-name-full,
+.edge-right .tile-name-full {
   display: none;
 }
 
-.tile-corner .tile-name-short {
+.tile-corner .tile-name-short,
+.edge-left .tile-name-short,
+.edge-right .tile-name-short {
   display: block;
+}
+
+/* Side columns lose ~11px of width to the zone band, so give the label a
+   little more room to fit before it wraps at all. */
+.edge-left .tile-name,
+.edge-right .tile-name {
+  letter-spacing: -0.01em;
 }
 
 .tile-color-bar {
@@ -1246,7 +1232,9 @@ h6 {
 }
 
 .tile-name {
-  font-size: clamp(0.58rem, 0.9vw, 0.78rem);
+  /* Capped at 0.70rem: a non-corner tile is ~46px wide at a 700px board, and
+     at 0.78rem even a six-letter name like "Ekpoma" broke to "Ekpom / a". */
+  font-size: clamp(0.54rem, 0.9vw, 0.7rem);
   font-weight: 700;
   text-align: center;
   line-height: 1.08;
@@ -2502,7 +2490,7 @@ html.high-contrast .glass-panel {
   perspective: 420px;
   display: inline-block;
   margin: 0 0.4rem;
-  filter: drop-shadow(3px 5px 5px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(2px 4px 4px rgba(23, 20, 16, 0.22));
 }
 
 .die-3d {
@@ -2577,7 +2565,7 @@ html.high-contrast .glass-panel {
   height: 6px;
   background: #111827;
   border-radius: 50%;
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 1px 1px rgba(23, 20, 16, 0.18);
 }
 
 .front {
@@ -2709,9 +2697,7 @@ html.high-contrast .glass-panel {
   width: 280px;
   background: var(--sf);
   border: 1px solid var(--ln);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.6),
-    0 0 20px rgba(59, 130, 246, 0.05);
+  box-shadow: var(--sh-lg);
   border-radius: 2px;
   padding: 0.8rem 1rem;
   z-index: 500;
@@ -3055,9 +3041,7 @@ html.high-contrast .glass-panel {
   max-width: 330px;
   background: var(--sf) !important;
   border: 1px solid var(--ln) !important;
-  box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.5),
-    0 0 25px rgba(232, 182, 74, 0.05);
+  box-shadow: var(--sh-xl);
   border-radius: 10px;
   overflow: hidden;
   padding: 0 !important;
@@ -3261,261 +3245,6 @@ html.high-contrast .glass-panel {
 }
 
 /* ──────────────────────────────────────────────────────────────────────
-   Premium Buy-Deed Modal — appears when local player lands on an
-   unowned buyable tile. Replaces the silent inline buy button.
-   ────────────────────────────────────────────────────────────────────── */
-.buy-deed-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9000;
-  background: rgba(2, 6, 16, 0.72);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1.5rem;
-  perspective: 1400px;
-  /* Scroll on short/landscape phones so the mandatory Buy/Auction buttons
-     at the bottom of the card are always reachable (they used to clip). */
-  overflow-y: auto;
-}
-
-.buy-deed-card {
-  width: 100%;
-  max-width: 380px;
-  /* margin:auto centers the card when there's room but, unlike align-items,
-     keeps the top reachable when the card is taller than the viewport. */
-  margin: auto;
-  background: #0b1020;
-  border: 2px solid var(--ln);
-  border-radius: 14px;
-  box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 0 60px rgba(232, 182, 74, 0.12);
-  overflow: hidden;
-  position: relative;
-  transform-style: preserve-3d;
-}
-
-.buy-deed-landed-pill {
-  position: absolute;
-  top: -14px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--gold-v2);
-  color: #1a0d00;
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  padding: 0.3rem 1rem;
-  border-radius: 999px;
-  box-shadow: 0 6px 18px rgba(232, 182, 74, 0.45);
-  z-index: 2;
-  white-space: nowrap;
-}
-
-.buy-deed-header {
-  padding: 1.7rem 1rem 1rem;
-  text-align: center;
-  border-bottom: 4px solid var(--ln-2);
-  position: relative;
-  overflow: hidden;
-}
-
-.buy-deed-header::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--sunken);
-  pointer-events: none;
-}
-
-.buy-deed-title {
-  font-family: var(--font-display);
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: rgba(0, 0, 0, 0.7);
-  position: relative;
-  z-index: 1;
-}
-
-.buy-deed-name {
-  font-family: var(--font-display);
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: var(--ink);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
-  margin-top: 4px;
-  letter-spacing: 0.02em;
-  position: relative;
-  z-index: 1;
-}
-
-.buy-deed-body {
-  padding: 1.1rem 1.25rem 1.25rem;
-}
-
-.buy-deed-rent-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  background: var(--sf-hover);
-  border-radius: 8px;
-  padding: 0.4rem 0.5rem;
-  border: 1px solid var(--ln);
-}
-
-.buy-deed-rent-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.28rem 0.4rem;
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  border-radius: 4px;
-}
-
-.buy-deed-rent-row.base {
-  color: var(--ink);
-  font-weight: 700;
-  background: rgba(232, 182, 74, 0.08);
-}
-
-.buy-deed-rent-row span:last-child {
-  font-variant-numeric: tabular-nums;
-  color: var(--color-gold);
-  font-weight: 600;
-}
-
-.buy-deed-rent-row.base span:last-child {
-  color: var(--color-gold);
-  font-size: 0.95rem;
-}
-
-.buy-deed-bonus-row {
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--color-naira);
-  background: rgba(70, 199, 141, 0.1);
-  border: 1px solid rgba(70, 199, 141, 0.3);
-  padding: 0.3rem 0.5rem;
-  border-radius: 6px;
-  margin: 0.4rem 0;
-  text-align: center;
-  text-transform: capitalize;
-}
-
-.buy-deed-meta {
-  margin-top: 0.55rem;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  text-align: center;
-}
-
-.buy-deed-price-block {
-  margin-top: 1rem;
-  padding: 0.85rem 0.75rem;
-  background: linear-gradient(135deg, rgba(232, 182, 74, 0.1) 0%, rgba(232, 182, 74, 0.02) 100%);
-  border: 1px solid rgba(232, 182, 74, 0.28);
-  border-radius: 10px;
-  text-align: center;
-}
-
-.buy-deed-price-label {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--text-muted);
-}
-
-.buy-deed-price-value {
-  font-family: var(--font-display);
-  font-size: 2.4rem;
-  font-weight: 800;
-  color: var(--color-gold);
-  letter-spacing: 0.02em;
-  line-height: 1.1;
-  text-shadow: 0 0 22px rgba(232, 182, 74, 0.35);
-  margin: 4px 0 6px;
-}
-
-.buy-deed-cash-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  padding-top: 0.45rem;
-  border-top: 1px dashed var(--ln-2);
-}
-
-.buy-deed-cash-row strong.ok {
-  color: var(--color-naira);
-  font-variant-numeric: tabular-nums;
-}
-
-.buy-deed-cash-row strong.short {
-  color: var(--color-danger);
-  font-variant-numeric: tabular-nums;
-}
-
-.buy-deed-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
-  margin-top: 1rem;
-}
-
-.buy-deed-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.85rem 0.5rem;
-  font-size: 0.88rem;
-  font-weight: 700;
-  border-radius: 10px;
-  cursor: pointer;
-  border: none;
-  font-family: var(--font-sans);
-  transition: filter 0.15s ease;
-  letter-spacing: 0.01em;
-}
-
-.buy-deed-btn.buy {
-  background: var(--pri);
-  color: #fff;
-  box-shadow: 0 6px 22px rgba(70, 199, 141, 0.35);
-}
-
-.buy-deed-btn.buy:hover {
-  filter: brightness(1.08);
-}
-
-.buy-deed-btn.buy:disabled {
-  background: var(--sf-hover);
-  color: var(--text-muted);
-  box-shadow: none;
-  cursor: not-allowed;
-}
-
-.buy-deed-btn.auction {
-  background: var(--sf-hover);
-  color: var(--ink);
-  border: 1px solid var(--ln);
-}
-
-.buy-deed-btn.auction:hover {
-  background: var(--sf-hover);
-}
-
-/* ──────────────────────────────────────────────────────────────────────
    Board-center upgrades — premium centerpiece
    ────────────────────────────────────────────────────────────────────── */
 
@@ -3529,7 +3258,7 @@ html.high-contrast .glass-panel {
   transform: scale(1.55);
   transform-origin: center;
   margin: 0.5rem 0 1.6rem;
-  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 10px 14px rgba(23, 20, 16, 0.18));
 }
 
 @keyframes diceShake {
@@ -4227,10 +3956,7 @@ html.high-contrast .glass-panel {
   background: var(--sf);
   border: 1px solid var(--ln);
   border-radius: 16px;
-  box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.7),
-    0 0 60px rgba(232, 182, 74, 0.1),
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  box-shadow: var(--sh-xl);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -4238,9 +3964,8 @@ html.high-contrast .glass-panel {
 
 .trade-card-premium.incoming {
   box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.7),
-    0 0 60px rgba(55, 214, 194, 0.18),
-    0 0 0 1px rgba(55, 214, 194, 0.12) inset;
+    var(--sh-xl),
+    0 0 0 2px var(--cor-50);
 }
 
 .trade-card-header {
@@ -4845,27 +4570,8 @@ html.high-contrast .glass-panel {
 
 .tile-image-fallback-emoji {
   font-size: 2.4rem;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 2px 5px rgba(23, 20, 16, 0.2));
   opacity: 0.92;
-}
-
-/* --- Buy-decision modal banner --- */
-.buy-deed-photo-wrap {
-  position: relative;
-  width: 100%;
-  height: 140px;
-  overflow: hidden;
-}
-
-.buy-deed-photo-wrap .tile-image-fallback-emoji {
-  font-size: 3rem;
-}
-
-.buy-deed-photo-scrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(2, 6, 16, 0.12) 0%, rgba(2, 6, 16, 0.6) 100%);
-  pointer-events: none;
 }
 
 /* --- Deed inspector banner --- */

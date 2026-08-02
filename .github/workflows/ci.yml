@@ -27,5 +27,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Design tokens (no raw colours in components)
+        run: npm run check:colors
+
       - name: Test
         run: npm test
