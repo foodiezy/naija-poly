@@ -15,13 +15,16 @@
   gap: var(--s-2);
   width: 100%;
   border: none;
-  border-radius: var(--r-md);
+  /* Chunkier than the fintech default: a game CTA should look pressable. */
+  border-radius: var(--r-lg);
   font-family: inherit;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: 0.01em;
   cursor: pointer;
   transition:
     background-color var(--d-fast) var(--e-std),
-    box-shadow var(--d-fast) var(--e-std);
+    box-shadow var(--d-fast) var(--e-std),
+    translate var(--d-fast) var(--e-std);
 }
 
 .v2-btn:focus-visible {
@@ -37,18 +40,28 @@
 .v2-btn-pri {
   background: var(--pri);
   color: var(--ink-on-pri);
-  height: 50px;
+  height: 54px;
   font-size: var(--fs-body-lg);
-  /* Mockup CTA glow — --pri-6 at .35 alpha; no shadow token carries brand color. */
-  box-shadow: 0 4px 10px -2px rgba(0, 111, 66, 0.35);
+  /* A solid "lip" under the button plus the brand glow — the press then has
+     something to travel into, which is what makes it feel physical.
+     --pri-7 / --pri-6 at .35 alpha; no shadow token carries brand colour. */
+  box-shadow:
+    0 3px 0 0 var(--pri-7),
+    0 6px 14px -3px rgba(0, 111, 66, 0.35);
 }
 
 .v2-btn-pri:hover:not(:disabled) {
   background: var(--pri-6);
+  translate: 0 -1px;
+  box-shadow:
+    0 4px 0 0 var(--pri-7),
+    0 10px 18px -4px rgba(0, 111, 66, 0.4);
 }
 
 .v2-btn-pri:active:not(:disabled) {
   background: var(--pri-7);
+  translate: 0 3px;
+  box-shadow: 0 0 0 0 var(--pri-7);
 }
 
 .v2-btn-sec {
@@ -2516,23 +2529,43 @@ body.v2-sh-locked {
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
-  transition: background var(--d-fast) var(--e-std);
+  transition:
+    background var(--d-fast) var(--e-std),
+    box-shadow var(--d-fast) var(--e-std),
+    translate var(--d-fast) var(--e-std);
 }
 
 .v2-act-primary {
   background: var(--pri);
   color: var(--ink-on-pri);
-  box-shadow: var(--sh-md);
+  box-shadow:
+    0 3px 0 0 var(--pri-7),
+    0 6px 14px -3px rgba(0, 111, 66, 0.35);
 }
 
-.v2-act-primary:hover {
+.v2-act-primary:hover:not(:disabled) {
   background: var(--pri-6);
+}
+
+/* The action bar primary is the one control under the thumb — give the press
+   the same physical travel as the landing CTA. */
+.v2-act-primary:active:not(:disabled) {
+  background: var(--pri-7);
+  translate: 0 3px;
+  box-shadow: 0 0 0 0 var(--pri-7);
+}
+
+.v2-act-danger:active:not(:disabled) {
+  translate: 0 3px;
+  box-shadow: none;
 }
 
 .v2-act-danger {
   background: var(--bad);
   color: var(--ink-on-pri);
-  box-shadow: var(--sh-md);
+  box-shadow:
+    0 3px 0 0 #a81e14,
+    0 6px 14px -3px rgba(168, 30, 20, 0.35);
 }
 
 .v2-act-quiet {
@@ -2630,6 +2663,66 @@ body.v2-sh-locked {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+/* ── Decorative game objects ───────────────────────────────────────── */
+
+.v2-scatter {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  color: var(--ink);
+  /* Faint enough to never compete with content, present enough to read as
+     objects rather than smudges. Tuned against warm sand, not white. */
+  opacity: 0.13;
+}
+
+.v2-scatter-item {
+  position: absolute;
+  display: block;
+}
+
+.v2-scatter-item svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Zone colour instead of flat ink where there is room for it to read —
+   every other object, so it stays a texture rather than a pattern. */
+.v2-scatter-item:nth-child(2n) {
+  color: var(--pri);
+}
+
+.v2-scatter-item:nth-child(3n) {
+  color: var(--zone-kaduna-bar);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .v2-scatter-item {
+    animation: scatter-drift 18s ease-in-out infinite alternate;
+  }
+
+  .v2-scatter-item:nth-child(2n) {
+    animation-duration: 24s;
+    animation-delay: -6s;
+  }
+
+  .v2-scatter-item:nth-child(3n) {
+    animation-duration: 30s;
+    animation-delay: -12s;
+  }
+}
+
+@keyframes scatter-drift {
+  from {
+    translate: 0 0;
+  }
+
+  to {
+    translate: 0 -10px;
+  }
 }
 
 /* ── Game feed (desktop left rail · step B6) ───────────────────────── */

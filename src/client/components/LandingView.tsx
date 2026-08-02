@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import NamePill from "./NamePill";
+import { ScatterDecor } from "./decor";
 import { getStats } from "../utils/stats";
 import { loadPlayerName, savePlayerName } from "../utils/playerName";
 
@@ -158,6 +159,7 @@ export default function LandingView({ onCreateRoom, onJoinRoom, onQuickMatch }: 
   return (
     <div className="v2-landing">
       <div className="v2-adire" aria-hidden="true" />
+      <ScatterDecor />
 
       <main className="v2-landing-col">
         <h1 className="v2-wordmark">

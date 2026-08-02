@@ -3,6 +3,7 @@ import type { Action, GameState } from "../../engine/types";
 import type { RoomState } from "../../shared/room";
 import { DESKTOP_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
 import Sheet from "./Sheet";
+import { ScatterDecor } from "./decor";
 import ShellTopBar from "./ShellTopBar";
 import TurnStrip from "./TurnStrip";
 import ContextTicker from "./ContextTicker";
@@ -122,9 +123,11 @@ export default function GameShell({
 
       <main className="v2-shell-board">
         {/* The band is taller than the board on most phones. Sand with nothing
-            on it reads as a loading state, so the adire crosshatch from the
-            landing fills it — CSS gradients, no bytes. */}
+            on it reads as a loading state, so it gets the adire crosshatch plus
+            the game's own objects drifting behind the board — all inline SVG
+            and CSS gradients, no bytes. */}
         <div className="v2-adire" aria-hidden="true" />
+        <ScatterDecor />
         {board}
       </main>
 
