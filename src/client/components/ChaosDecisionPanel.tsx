@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { BOARD, GENERATOR_COST, STOCKPILE_MULTIPLIER, type PropertyTile } from "../../data/board";
+import type { ReactNode } from "react";
+import { BOARD, STOCKPILE_MULTIPLIER, type PropertyTile } from "../../data/board";
 import { GameState, Action } from "../../engine/types";
+import { useDecisionSlot } from "../lib/decisionQueue";
+import { zoneOfGroup } from "../lib/zones";
+import Sheet from "./Sheet";
 
 interface Props {
   engineState: GameState;
@@ -11,245 +13,168 @@ interface Props {
 
 const naira = (n: number) => `₦${n.toLocaleString()}`;
 
-// Renders whichever Chaos-mode interactive decision is currently live (C1–C5)
-// for the player who must choose, plus the standing "fuel a generator" option
-// available to any owner in a blacked-out zone. The client only renders the
-// choice and dispatches intent — every outcome is computed by the pure engine.
+/**
+ * Chaos-mode interactive decisions C1/C3/C4/C5 (spec §2 L2).
+ *
+ * Promoted out of ControlPanel alongside the auction, and for the same reason:
+ * these run on a server deadline and were rendering below the fold on phones.
+ *
+ * This sheet now covers ONLY the decision that belongs to *you*. The standing
+ * generator offer and the "someone else is deciding" notice moved to
+ * ChaosStandingPanel — neither is a forced choice, and neither belongs behind a
+ * scrim that cannot be dismissed.
+ *
+ * Every dispatched action is unchanged: CHOOSE_BLACKOUT_ZONE, CHOOSE_STOCKPILE,
+ * CHOOSE_FIRESALE_TILE, DECLINE_FIRESALE, EFCC_PAY_CASH, EFCC_SURRENDER.
+ */
 export default function ChaosDecisionPanel({ engineState, mySessionId, onSendAction }: Props) {
-  const [now, setNow] = useState(Date.now());
-  const { phase, players, tiles, blackout } = engineState;
-
-  const pending =
-    engineState.pendingBlackout ??
-    engineState.pendingStockpile ??
-    engineState.pendingFireSale ??
-    engineState.pendingEfcc ??
-    null;
-  const deadline = pending?.deadline ?? null;
-
-  useEffect(() => {
-    if (!deadline) return;
-    const t = setInterval(() => setNow(Date.now()), 200);
-    return () => clearInterval(t);
-  }, [deadline]);
-
+  const { phase, players } = engineState;
   const myCash = players.find((p) => p.id === mySessionId)?.cash ?? 0;
 
-  // The standing generator option (C2): any owner of an un-mortgaged property in
-  // the darkened zone may pay to keep collecting, whether or not it's their turn.
-  const zone = blackout?.zone;
-  const iOwnLitTileInZone =
-    zone !== undefined &&
-    BOARD.some(
-      (t) =>
-        t.type === "property" &&
-        t.group === zone &&
-        tiles[t.pos]?.ownerId === mySessionId &&
-        !tiles[t.pos]?.mortgaged,
-    );
-  const iHaveGenerator = !!blackout?.generatorOwners?.includes(mySessionId);
-  const showGenerator = iOwnLitTileInZone && !iHaveGenerator && phase !== "game-over";
+  const blackout = phase === "awaiting-blackout-target" ? engineState.pendingBlackout : null;
+  const stockpile = phase === "awaiting-stockpile-choice" ? engineState.pendingStockpile : null;
+  const fireSale = phase === "awaiting-firesale-pick" ? engineState.pendingFireSale : null;
+  const efcc = phase === "awaiting-efcc-choice" ? engineState.pendingEfcc : null;
 
-  const nothingToShow =
-    !showGenerator &&
-    phase !== "awaiting-blackout-target" &&
-    phase !== "awaiting-stockpile-choice" &&
-    phase !== "awaiting-firesale-pick" &&
-    phase !== "awaiting-efcc-choice";
-  if (nothingToShow) return null;
+  const mine =
+    (blackout && blackout.drawerId === mySessionId) ||
+    (stockpile && stockpile.playerId === mySessionId) ||
+    (fireSale && fireSale.drawerId === mySessionId) ||
+    (efcc && efcc.targetId === mySessionId);
 
-  const secsLeft = deadline ? Math.max(0, Math.ceil((deadline - now) / 1000)) : null;
-  const spectating = (
-    <div className="action-status-indicator" style={{ fontSize: "0.75rem" }}>
-      Waiting for the chaos decision…
-    </div>
-  );
+  const { visible, waiting } = useDecisionSlot("chaos", !!mine);
 
-  let body: React.ReactNode = null;
-  let title = "CHAOS EVENT";
+  if (!mine) return null;
+
+  let title = "Chaos";
+  let lede: ReactNode = null;
+  let body: ReactNode = null;
+  let footer: ReactNode = null;
+  const deadline =
+    blackout?.deadline ?? stockpile?.deadline ?? fireSale?.deadline ?? efcc?.deadline ?? null;
 
   // ---- C1: aim the blackout ------------------------------------------------
-  if (phase === "awaiting-blackout-target" && engineState.pendingBlackout) {
-    const p = engineState.pendingBlackout;
-    title = "⚡ NEPA LOAD-SHEDDING";
-    body =
-      mySessionId === p.drawerId ? (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", justifyContent: "center" }}>
-          {p.selectableZones.map((z) => (
-            <button
-              key={z}
-              className="button-primary"
-              onClick={() => onSendAction({ type: "CHOOSE_BLACKOUT_ZONE", zone: z })}
-              style={{ fontSize: "0.7rem", padding: "0.4rem 0.6rem", borderRadius: "2px" }}
-            >
-              Darken {z}
-            </button>
-          ))}
-        </div>
-      ) : (
-        spectating
-      );
+  if (blackout) {
+    title = "NEPA don take light";
+    lede = <>Pick one zone to plunge into darkness. Landlords there stop collecting rent.</>;
+    body = (
+      <div className="v2-stack">
+        {blackout.selectableZones.map((z) => (
+          <button
+            key={z}
+            className="v2-btn v2-btn-pri v2-btn-sm"
+            onClick={() => onSendAction({ type: "CHOOSE_BLACKOUT_ZONE", zone: z })}
+          >
+            Darken {zoneOfGroup(z).label}
+          </button>
+        ))}
+      </div>
+    );
   }
 
   // ---- C3: stockpile fork --------------------------------------------------
-  if (phase === "awaiting-stockpile-choice" && engineState.pendingStockpile) {
-    const p = engineState.pendingStockpile;
-    title = "⛽ FUEL QUEUE";
-    body =
-      mySessionId === p.playerId ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-          <button
-            className="button-primary"
-            onClick={() => onSendAction({ type: "CHOOSE_STOCKPILE", mode: "now" })}
-            style={{ fontSize: "0.72rem", padding: "0.4rem", borderRadius: "2px" }}
-          >
-            Collect {naira(p.amount)} now
-          </button>
-          <button
-            className="button-secondary"
-            onClick={() => onSendAction({ type: "CHOOSE_STOCKPILE", mode: "double" })}
-            style={{ fontSize: "0.72rem", padding: "0.4rem", borderRadius: "2px" }}
-          >
-            Stockpile for {naira(p.amount * STOCKPILE_MULTIPLIER)} next round
-          </button>
-        </div>
-      ) : (
-        spectating
-      );
+  if (stockpile) {
+    title = "Fuel queue";
+    lede = <>Take the money now, or hold am make e double next round.</>;
+    footer = (
+      <>
+        <button
+          className="v2-btn v2-btn-pri"
+          onClick={() => onSendAction({ type: "CHOOSE_STOCKPILE", mode: "now" })}
+        >
+          Collect {naira(stockpile.amount)} now
+        </button>
+        <button
+          className="v2-btn v2-btn-sec"
+          onClick={() => onSendAction({ type: "CHOOSE_STOCKPILE", mode: "double" })}
+        >
+          Stockpile for {naira(stockpile.amount * STOCKPILE_MULTIPLIER)} next round
+        </button>
+      </>
+    );
   }
 
-  // ---- C4: fire sale -------------------------------------------------------
-  if (phase === "awaiting-firesale-pick" && engineState.pendingFireSale) {
-    const p = engineState.pendingFireSale;
-    title = "🏷️ GOVERNMENT FIRE SALE";
+  // ---- C4: government fire sale --------------------------------------------
+  if (fireSale) {
     const priceOf = (pos: number) => {
       const t = BOARD[pos];
       const list = "price" in t ? (t as PropertyTile).price : 0;
-      return Math.floor((list * (100 - p.discountPct)) / 100);
+      return Math.floor((list * (100 - fireSale.discountPct)) / 100);
     };
-    body =
-      mySessionId === p.drawerId ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-          <div style={{ maxHeight: "9rem", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-            {p.eligibleTiles.map((pos) => {
-              const cost = priceOf(pos);
-              const tooRich = myCash < cost;
-              return (
-                <button
-                  key={pos}
-                  className="button-primary"
-                  disabled={tooRich}
-                  title={tooRich ? "Not enough cash" : undefined}
-                  onClick={() => onSendAction({ type: "CHOOSE_FIRESALE_TILE", pos })}
-                  style={{ fontSize: "0.68rem", padding: "0.35rem", borderRadius: "2px" }}
-                >
-                  {BOARD[pos].name} — {naira(cost)}
-                </button>
-              );
-            })}
-          </div>
-          <button
-            className="button-secondary"
-            onClick={() => onSendAction({ type: "DECLINE_FIRESALE" })}
-            style={{ fontSize: "0.72rem", padding: "0.35rem", borderRadius: "2px" }}
-          >
-            Pass
-          </button>
-        </div>
-      ) : (
-        spectating
-      );
+    title = "Government fire sale";
+    lede = (
+      <>
+        Everything na <b>{fireSale.discountPct}% off</b> — grab one before the window close.
+      </>
+    );
+    body = (
+      <div className="v2-stack v2-scroll-stack">
+        {fireSale.eligibleTiles.map((pos) => {
+          const cost = priceOf(pos);
+          const tooRich = myCash < cost;
+          return (
+            <button
+              key={pos}
+              className="v2-btn v2-btn-pri v2-btn-sm v2-btn-wide"
+              disabled={tooRich}
+              title={tooRich ? "Not enough cash" : undefined}
+              onClick={() => onSendAction({ type: "CHOOSE_FIRESALE_TILE", pos })}
+            >
+              <span>{BOARD[pos].name}</span>
+              <span className="v2-tnum">{naira(cost)}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+    footer = (
+      <button
+        className="v2-btn v2-btn-sec"
+        onClick={() => onSendAction({ type: "DECLINE_FIRESALE" })}
+      >
+        Pass, I no want
+      </button>
+    );
   }
 
   // ---- C5: EFCC settlement -------------------------------------------------
-  if (phase === "awaiting-efcc-choice" && engineState.pendingEfcc) {
-    const p = engineState.pendingEfcc;
-    const targetName = players.find((pl) => pl.id === p.targetId)?.name ?? "the richest player";
-    title = "🕵🏾 EFCC SETTLEMENT";
+  if (efcc) {
+    title = "EFCC dey your side";
+    lede = <>Settle with cash, or forfeit one property. No third option.</>;
     body =
-      mySessionId === p.targetId ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-          <button
-            className="button-primary"
-            onClick={() => onSendAction({ type: "EFCC_PAY_CASH" })}
-            style={{ fontSize: "0.72rem", padding: "0.4rem", borderRadius: "2px" }}
-          >
-            Settle {naira(p.cashAmount)} cash
-          </button>
-          {p.surrenderableTiles.length > 0 && (
-            <div style={{ maxHeight: "8rem", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-              {p.surrenderableTiles.map((pos) => (
-                <button
-                  key={pos}
-                  className="button-secondary"
-                  onClick={() => onSendAction({ type: "EFCC_SURRENDER", pos })}
-                  style={{ fontSize: "0.68rem", padding: "0.35rem", borderRadius: "2px" }}
-                >
-                  Forfeit {BOARD[pos].name}
-                </button>
-              ))}
-            </div>
-          )}
+      efcc.surrenderableTiles.length > 0 ? (
+        <div className="v2-stack v2-scroll-stack">
+          <p className="v2-sh-meta">Or hand over one:</p>
+          {efcc.surrenderableTiles.map((pos) => (
+            <button
+              key={pos}
+              className="v2-btn v2-btn-sec v2-btn-sm v2-btn-wide"
+              onClick={() => onSendAction({ type: "EFCC_SURRENDER", pos })}
+            >
+              <span>Forfeit {BOARD[pos].name}</span>
+            </button>
+          ))}
         </div>
-      ) : (
-        <div className="action-status-indicator" style={{ fontSize: "0.75rem" }}>
-          EFCC dey investigate <strong>{targetName}</strong>…
-        </div>
-      );
+      ) : null;
+    footer = (
+      <button className="v2-btn v2-btn-pri" onClick={() => onSendAction({ type: "EFCC_PAY_CASH" })}>
+        Settle {naira(efcc.cashAmount)} cash
+      </button>
+    );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
-      exit={{ opacity: 0, height: 0 }}
-      style={{ overflow: "hidden" }}
+    <Sheet
+      level="decision"
+      open={visible}
+      title={title}
+      maxWidth={420}
+      deadline={deadline}
+      waiting={waiting}
+      footer={footer}
     >
-      <div className="auction-panel" style={{ margin: "0.75rem", borderRadius: "2px" }}>
-        {body && (
-          <>
-            <div
-              className="auction-title"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
-            >
-              {title}
-            </div>
-            {secsLeft !== null && (
-              <div
-                className="auction-timer-secs"
-                style={{ textAlign: "center", fontSize: "0.7rem" }}
-              >
-                {secsLeft > 0 ? `${secsLeft}s to decide` : "resolving…"}
-              </div>
-            )}
-            <div style={{ marginTop: "0.5rem" }}>{body}</div>
-          </>
-        )}
-
-        {showGenerator && (
-          <div style={{ marginTop: body ? "0.6rem" : 0 }}>
-            <div
-              style={{
-                textAlign: "center",
-                fontSize: "0.7rem",
-                color: "var(--text-secondary)",
-                marginBottom: "0.3rem",
-              }}
-            >
-              Your {zone} zone dey dark — fuel a generator to keep collecting rent.
-            </div>
-            <button
-              className="button-primary"
-              disabled={myCash < GENERATOR_COST}
-              title={myCash < GENERATOR_COST ? "Not enough cash" : undefined}
-              onClick={() => onSendAction({ type: "BUY_GENERATOR" })}
-              style={{ width: "100%", fontSize: "0.72rem", padding: "0.4rem", borderRadius: "2px" }}
-            >
-              🔌 Fuel Generator ({naira(GENERATOR_COST)})
-            </button>
-          </div>
-        )}
-      </div>
-    </motion.div>
+      {lede && <p className="v2-sh-lede">{lede}</p>}
+      {body}
+    </Sheet>
   );
 }

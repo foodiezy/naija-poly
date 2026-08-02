@@ -2253,6 +2253,34 @@ html.high-contrast .glass-panel {
   text-align: center;
 }
 
+/* Chaos standing offers (step B4a). The timed chaos DECISIONS became light v2
+   sheets; what stays inline here is the un-timed generator offer and the
+   spectator notice, so these keep the legacy dark styling of the game shell
+   they sit in. They die with the shell in step B5. */
+.chaos-standing-panel {
+  margin: 0.75rem;
+  border-radius: 2px;
+}
+
+.chaos-standing-note {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.chaos-standing-gen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.chaos-standing-btn {
+  width: 100%;
+  font-size: 0.72rem;
+  padding: 0.4rem;
+  border-radius: 2px;
+}
+
 .auction-bid-hud {
   display: flex;
   justify-content: space-between;

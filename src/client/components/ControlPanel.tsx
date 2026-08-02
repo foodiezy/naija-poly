@@ -8,8 +8,7 @@ import { RoomState } from "../../shared/room";
 import { netWorth } from "../lib/holdings";
 import { IconTimer, IconBankrupt, IconWarning } from "./icons";
 import PlayerList from "./PlayerList";
-import AuctionPanel from "./AuctionPanel";
-import ChaosDecisionPanel from "./ChaosDecisionPanel";
+import ChaosStandingPanel from "./ChaosStandingPanel";
 import ActionButtons from "./ActionButtons";
 import PropertyList from "./PropertyList";
 import TradeOverlay from "./TradeOverlay";
@@ -113,26 +112,39 @@ export default function ControlPanel({
 
   return (
     <div className="console-panel glass-panel" style={{ padding: 0, overflow: "hidden" }}>
-      {/* Trade overlays (animated modals) */}
+      {/* Decision sheets. These portal to <body> and queue against the auction
+          / chaos / buy sheets rendered up in App, so only one is ever on
+          screen; the rest wait behind a "N waiting" chip. */}
+      {activeTrade && !showTradeBuilder && (
+        <TradeOverlay
+          activeTrade={activeTrade}
+          players={players}
+          tiles={engineState.tiles}
+          mySessionId={mySessionId}
+          onSendAction={onSendAction}
+          liveState={liveState}
+          onCounterOffer={(reversedTrade) => {
+            // The original offer stays on the table while the counter is
+            // composed; sending the counter answers it in one engine action.
+            setInitialTradeOffer(reversedTrade);
+            setCounterMode(true);
+            setShowTradeBuilder(true);
+          }}
+        />
+      )}
+      {showDebtRescue && me && (
+        <DebtRescueModal
+          engineState={engineState}
+          me={me}
+          ledgerDebt={myLedgerDebt}
+          onSendAction={onSendAction}
+          onClose={() => setShowDebtRescue(false)}
+          onOpenTrade={() => setShowTradeBuilder(true)}
+        />
+      )}
+
+      {/* The trade builder is still a legacy framer-motion modal (step B4b). */}
       <AnimatePresence>
-        {activeTrade && !showTradeBuilder && (
-          <TradeOverlay
-            key="trade-response"
-            activeTrade={activeTrade}
-            players={players}
-            tiles={engineState.tiles}
-            mySessionId={mySessionId}
-            onSendAction={onSendAction}
-            liveState={liveState}
-            onCounterOffer={(reversedTrade) => {
-              // The original offer stays on the table while the counter is
-              // composed; sending the counter answers it in one engine action.
-              setInitialTradeOffer(reversedTrade);
-              setCounterMode(true);
-              setShowTradeBuilder(true);
-            }}
-          />
-        )}
         {showTradeBuilder && (
           <TradeBuilder
             key="trade-builder"
@@ -147,17 +159,6 @@ export default function ControlPanel({
             liveState={liveState}
             initialOffer={initialTradeOffer}
             counterMode={counterMode}
-          />
-        )}
-        {showDebtRescue && me && (
-          <DebtRescueModal
-            key="debt-rescue"
-            engineState={engineState}
-            me={me}
-            ledgerDebt={myLedgerDebt}
-            onSendAction={onSendAction}
-            onClose={() => setShowDebtRescue(false)}
-            onOpenTrade={() => setShowTradeBuilder(true)}
           />
         )}
       </AnimatePresence>
@@ -320,30 +321,19 @@ export default function ControlPanel({
         )}
       </div>
 
-      {/* 3. Auction panel */}
-      <AnimatePresence>
-        {isAuctionActive && auctionState && (
-          <AuctionPanel
-            auction={auctionState}
-            players={players}
-            mySessionId={mySessionId}
-            myCash={me?.cash ?? 0}
-            onSendAction={onSendAction}
-          />
-        )}
-      </AnimatePresence>
+      {/* 3. The live auction and the timed chaos decisions used to render HERE,
+          inline. Under 980px this sidebar is grid row 2 — below the board — so
+          both scrolled off-screen exactly when a server clock was running.
+          Step B4a promoted them to decision sheets at the App level.
 
-      {/* 3b. Chaos-mode interactive decisions (aim blackout / stockpile / fire
-          sale / EFCC) and the standing generator option. */}
-      <AnimatePresence>
-        {mySessionId && (
-          <ChaosDecisionPanel
-            engineState={engineState}
-            mySessionId={mySessionId}
-            onSendAction={onSendAction}
-          />
-        )}
-      </AnimatePresence>
+          What stays inline is what is NOT a forced choice: the standing
+          generator offer (no deadline, can last rounds) and the "someone else
+          is deciding" notice. */}
+      <ChaosStandingPanel
+        engineState={engineState}
+        mySessionId={mySessionId}
+        onSendAction={onSendAction}
+      />
 
       {/* Bankruptcy warning — covers negative cash AND ledger debts (rent owed
           while short on cash), which used to be invisible here. */}

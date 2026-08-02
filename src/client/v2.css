@@ -1445,3 +1445,745 @@ a.v2-btn {
     max-width: 420px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Sheet primitive + decision surfaces (step B4a · spec §2 · mockup 5)
+
+   One container for every modal in the game. Bottom sheet under 600px,
+   centered dialog above it. `level="decision"` sheets have no scrim
+   dismiss, no Esc and no drag — an auction on a server clock must not be
+   closeable by a stray backdrop tap.
+
+   NOTE these sheets currently sit over the still-dark legacy game view.
+   That contrast is expected until step B5 rebuilds the shell.
+   ═══════════════════════════════════════════════════════════════════ */
+
+body.v2-sh-locked {
+  overflow: hidden;
+}
+
+.v2-sh-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  /* Scrim — --ink at .5; no token exists for scrims. */
+  background: rgba(16, 24, 40, 0.5);
+  font-family: var(--font-v2);
+  color: var(--ink);
+  animation: v2-sh-fade var(--d-base) var(--e-enter) both;
+}
+
+.v2-sh {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  max-height: 88vh;
+  max-height: 88svh;
+  background: var(--sf);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  box-shadow: var(--sh-sheet);
+  outline: none;
+  animation: v2-sh-rise var(--d-sheet) var(--e-std) both;
+}
+
+.v2-sh-grip {
+  display: block;
+  flex-shrink: 0;
+  width: 36px;
+  height: 4px;
+  margin: var(--s-3) auto var(--s-1);
+  border-radius: var(--r-full);
+  background: var(--ln-2);
+}
+
+/* ── Header: countdown, title, queue chip ──────────────────────────── */
+
+.v2-sh-head {
+  flex-shrink: 0;
+  padding: var(--s-2) var(--s-5) var(--s-3);
+}
+
+.v2-sh-cd {
+  height: 4px;
+  margin-bottom: var(--s-3);
+  border-radius: var(--r-full);
+  background: var(--ln);
+  overflow: hidden;
+}
+
+/* Depleting bar. React writes --sh-cd-from (0–1) and --sh-cd-dur once per
+   deadline; the browser owns every frame after that. */
+.v2-sh-cd-bar {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: var(--r-full);
+  background: var(--cor);
+  transform-origin: left center;
+  transform: scaleX(var(--sh-cd-from, 1));
+  animation: v2-sh-drain var(--sh-cd-dur, 0ms) linear both;
+}
+
+.v2-sh-headrow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.v2-sh-title {
+  font-family: inherit;
+  font-size: var(--fs-h2);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin: 0;
+  color: var(--ink);
+  /* Long tile names must yield to the zone chip, not shove it off the row. */
+  min-width: 0;
+}
+
+.v2-sh-headend {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-left: auto;
+}
+
+.v2-sh-secs {
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+  min-width: 3ch;
+  text-align: right;
+}
+
+.v2-sh-secs[data-urgent="true"] {
+  color: var(--cor-6);
+}
+
+.v2-sh-waiting {
+  flex-shrink: 0;
+  padding: var(--s-05) var(--s-2);
+  border-radius: var(--r-full);
+  background: var(--sunken);
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.v2-sh-x {
+  background: none;
+  border: none;
+  padding: var(--s-1);
+  font-size: var(--fs-body);
+  line-height: 1;
+  color: var(--ink-3);
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+
+.v2-sh-x:hover {
+  color: var(--ink);
+}
+
+.v2-sh-x:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+/* ── Body scrolls, footer never does ───────────────────────────────── */
+
+.v2-sh-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 var(--s-5) var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.v2-sh-foot {
+  flex-shrink: 0;
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-5) calc(var(--s-5) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--ln);
+  background: var(--sf);
+  border-radius: 0 0 var(--r-xl) var(--r-xl);
+}
+
+.v2-sh-foot-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Three actions: the safe/primary one spans the top row, the two
+   irreversible ones share the row below it. */
+.v2-sh-foot-3 > :first-child {
+  grid-column: 1 / -1;
+}
+
+@keyframes v2-sh-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes v2-sh-rise {
+  from {
+    transform: translateY(12%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes v2-sh-drain {
+  from {
+    transform: scaleX(var(--sh-cd-from, 1));
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* Reduced motion: the sheet appears rather than travelling. The countdown
+   bar keeps draining — it carries information, not decoration. */
+@media (prefers-reduced-motion: reduce) {
+  .v2-sh-scrim,
+  .v2-sh {
+    animation: none;
+  }
+}
+
+/* ── ≥600px: the same sheet becomes a centered dialog ───────────────── */
+
+@media (min-width: 600px) {
+  .v2-sh-scrim {
+    justify-content: center;
+    align-items: center;
+    padding: var(--s-6);
+  }
+
+  .v2-sh {
+    max-height: min(84vh, 760px);
+    max-height: min(84svh, 760px);
+    border-radius: var(--r-lg);
+    box-shadow: var(--sh-xl);
+    animation-name: v2-sh-pop;
+  }
+
+  .v2-sh[data-w="420"] {
+    max-width: 420px;
+  }
+
+  .v2-sh[data-w="560"] {
+    max-width: 560px;
+  }
+
+  .v2-sh[data-w="720"] {
+    max-width: 720px;
+  }
+
+  .v2-sh-grip {
+    display: none;
+  }
+
+  .v2-sh-head {
+    padding-top: var(--s-5);
+  }
+
+  .v2-sh-foot {
+    border-radius: 0 0 var(--r-lg) var(--r-lg);
+    padding-bottom: var(--s-5);
+  }
+}
+
+@keyframes v2-sh-pop {
+  from {
+    transform: scale(0.97);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* ── Shared decision-sheet content atoms ───────────────────────────── */
+
+.v2-money {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--money);
+}
+
+.v2-tnum {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.v2-sh-lede {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.v2-sh-lede b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* Zone chip — deed sheet header. Colour comes from the zone token set; the
+   neutral default covers airports and utilities, which have no zone. */
+.v2-zchip {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 3px var(--s-2);
+  border-radius: var(--r-full);
+  background: var(--ink-3);
+  color: var(--ink-on-pri);
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.v2-zchip[data-zone="borno"] {
+  background: var(--zone-borno-bar);
+}
+
+.v2-zchip[data-zone="kwara"] {
+  background: var(--zone-kwara-bar);
+}
+
+.v2-zchip[data-zone="enugu"] {
+  background: var(--zone-enugu-bar);
+}
+
+.v2-zchip[data-zone="kaduna"] {
+  background: var(--zone-kaduna-bar);
+}
+
+.v2-zchip[data-zone="edo"] {
+  background: var(--zone-edo-bar);
+}
+
+.v2-zchip[data-zone="rivers"] {
+  background: var(--zone-rivers-bar);
+}
+
+.v2-zchip[data-zone="abuja"] {
+  background: var(--zone-abuja-bar);
+}
+
+.v2-zchip[data-zone="lagos"] {
+  background: var(--zone-lagos-bar);
+}
+
+/* Price line: big money left, your balance right (mockup 5). */
+.v2-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.v2-price-row b {
+  font-size: var(--fs-h1);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--money);
+}
+
+.v2-price-row span {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.v2-price-row span.is-short {
+  color: var(--bad);
+  font-weight: 700;
+}
+
+/* Rent ladder. The tier in force right now gets .is-hot. */
+.v2-rents {
+  border: 1px solid var(--ln);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  font-size: var(--fs-sm);
+}
+
+.v2-rent-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--ln);
+}
+
+.v2-rent-row:last-child {
+  border-bottom: none;
+}
+
+.v2-rent-row span {
+  color: var(--ink-2);
+}
+
+.v2-rent-row b {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.v2-rent-row.is-hot {
+  background: var(--pri-50);
+}
+
+.v2-rent-row.is-hot span,
+.v2-rent-row.is-hot b {
+  color: var(--pri-6);
+  font-weight: 700;
+}
+
+.v2-sh-meta {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  text-align: center;
+}
+
+/* Callouts */
+.v2-note {
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  background: var(--sunken);
+  color: var(--ink-2);
+}
+
+.v2-note b {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-note-ok {
+  background: var(--ok-bg);
+  color: var(--pri-7);
+}
+
+.v2-note-warn {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.v2-note-bad {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+/* Stacked choice buttons — chaos options, debt raise moves, fire-sale list. */
+.v2-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.v2-scroll-stack {
+  max-height: 40vh;
+  overflow-y: auto;
+  padding-right: var(--s-1);
+}
+
+.v2-btn-sm {
+  height: 40px;
+  font-size: var(--fs-sm);
+}
+
+.v2-btn-wide {
+  justify-content: space-between;
+  padding: 0 var(--s-3);
+  text-align: left;
+}
+
+.v2-btn-danger {
+  background: var(--bad);
+  border-color: var(--bad);
+  color: var(--ink-on-pri);
+}
+
+.v2-btn-danger:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+/* ── Auction sheet ─────────────────────────────────────────────────── */
+
+.v2-auc-hud {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--sf-tint);
+  border: 1px solid var(--ln);
+}
+
+.v2-auc-label {
+  display: block;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.v2-auc-top {
+  font-size: var(--fs-h2);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--money);
+}
+
+.v2-auc-holder {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
+}
+
+.v2-bid-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: var(--s-2);
+}
+
+.v2-bid {
+  flex-direction: column;
+  gap: 0;
+  height: 52px;
+}
+
+.v2-bid em {
+  font-style: normal;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.v2-bid b {
+  font-size: var(--fs-body);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-status {
+  text-align: center;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink-2);
+  padding: var(--s-2) 0;
+}
+
+.v2-status-win {
+  color: var(--pri-6);
+  font-weight: 700;
+}
+
+/* ── Debt rescue ───────────────────────────────────────────────────── */
+
+.v2-group {
+  border: 1px solid var(--ln);
+  border-radius: var(--r-md);
+  padding: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.v2-group-h {
+  margin: 0;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.v2-raise-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-size: var(--fs-sm);
+}
+
+.v2-raise-row > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.v2-raise-btn {
+  width: auto;
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 var(--s-3);
+  font-size: var(--fs-caption);
+}
+
+/* ── Incoming trade ────────────────────────────────────────────────── */
+
+.v2-trade-from {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.v2-trade-av {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--r-full);
+  background: var(--pri-50);
+  font-size: var(--fs-h2);
+}
+
+.v2-trade-from b {
+  display: block;
+  font-size: var(--fs-body-lg);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.v2-trade-from span {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.v2-trade-ledger {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+}
+
+.v2-trade-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border: 1px solid var(--ln);
+  border-radius: var(--r-md);
+  min-width: 0;
+}
+
+.v2-trade-col-in {
+  background: var(--pri-50);
+  border-color: var(--pri-100);
+}
+
+.v2-trade-h {
+  margin: 0;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.v2-trade-cash {
+  font-size: var(--fs-h3);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--money);
+}
+
+.v2-trade-cash.is-short {
+  color: var(--bad);
+}
+
+.v2-trade-tiles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.v2-trade-tile {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  min-width: 0;
+}
+
+.v2-trade-tile i {
+  flex-shrink: 0;
+  width: 4px;
+  height: 16px;
+  border-radius: var(--r-xs);
+  background: var(--ink-4);
+}
+
+.v2-trade-tile span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-trade-tile[data-zone="borno"] i {
+  background: var(--zone-borno-bar);
+}
+
+.v2-trade-tile[data-zone="kwara"] i {
+  background: var(--zone-kwara-bar);
+}
+
+.v2-trade-tile[data-zone="enugu"] i {
+  background: var(--zone-enugu-bar);
+}
+
+.v2-trade-tile[data-zone="kaduna"] i {
+  background: var(--zone-kaduna-bar);
+}
+
+.v2-trade-tile[data-zone="edo"] i {
+  background: var(--zone-edo-bar);
+}
+
+.v2-trade-tile[data-zone="rivers"] i {
+  background: var(--zone-rivers-bar);
+}
+
+.v2-trade-tile[data-zone="abuja"] i {
+  background: var(--zone-abuja-bar);
+}
+
+.v2-trade-tile[data-zone="lagos"] i {
+  background: var(--zone-lagos-bar);
+}
+
+.v2-trade-empty {
+  font-size: var(--fs-caption);
+  color: var(--ink-4);
+}

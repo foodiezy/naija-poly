@@ -1,13 +1,13 @@
-import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
 import { BOARD, PropertyTile } from "../../data/board";
 import type { Tile } from "../../data/board";
 import { TradeOffer, Player, Action, TileState } from "../../engine/types";
-import { IconTrade } from "./icons";
 import { tokenEmoji } from "../../data/tokens";
 import { tileValue } from "../lib/holdings";
 import { mortgageTransferFee } from "../../engine/queries";
 import { RoomState } from "../../shared/room";
+import { useDecisionSlot } from "../lib/decisionQueue";
+import { zoneOfGroup } from "../lib/zones";
+import Sheet from "./Sheet";
 
 interface Props {
   activeTrade: TradeOffer;
@@ -19,21 +19,19 @@ interface Props {
   onCounterOffer?: (reversedTrade: TradeOffer) => void;
 }
 
-function groupColorVar(tile: Tile): string {
-  if (tile.type === "property") return `var(--color-${(tile as PropertyTile).group})`;
-  if (tile.type === "airport") return "#9ca3af";
-  if (tile.type === "utility") return "#64748b";
-  return "var(--text-muted)";
+const naira = (n: number) => `₦${n.toLocaleString()}`;
+
+function zoneSlug(tile: Tile): string | undefined {
+  return tile.type === "property" ? zoneOfGroup((tile as PropertyTile).group).slug : undefined;
 }
 
-function tileSubLabel(tile: Tile): string {
-  if (tile.type === "property")
-    return (tile as PropertyTile).group.replace(/^\w/, (c) => c.toUpperCase());
-  if (tile.type === "airport") return "Airport";
-  if (tile.type === "utility") return "Utility";
-  return "";
-}
-
+/**
+ * Incoming trade offer (spec §2 L2).
+ *
+ * Another human is sitting there waiting on you, so this is a decision sheet:
+ * answer with Accept, Counter or Decline. Every RESPOND_TRADE / counter payload
+ * is byte-for-byte what it was — only the container and the layout changed.
+ */
 export default function TradeOverlay({
   activeTrade,
   players,
@@ -43,7 +41,10 @@ export default function TradeOverlay({
   liveState,
   onCounterOffer,
 }: Props) {
-  if (activeTrade.toId !== mySessionId) return null;
+  const forMe = activeTrade.toId === mySessionId;
+  const { visible, waiting } = useDecisionSlot("trade-incoming", forMe);
+
+  if (!forMe) return null;
 
   const proposer = players.find((p) => p.id === activeTrade.fromId);
   const me = players.find((p) => p.id === mySessionId);
@@ -69,155 +70,38 @@ export default function TradeOverlay({
   const myCash = me?.cash ?? 0;
   const canAfford = myCash >= outgoingCash && myCash - outgoingCash + incomingCash >= interestDue;
 
-  const renderTile = (pos: number) => {
-    const t = BOARD[pos];
-    return (
-      <div key={pos} className="trade-tile-pick selected static">
-        <span className="trade-tile-band" style={{ background: groupColorVar(t) }} />
-        <span className="trade-tile-info">
-          <span className="trade-tile-name">{t.name}</span>
-          <span className="trade-tile-sub">{tileSubLabel(t)}</span>
-        </span>
-        <span className="trade-tile-value">₦{tileValue(pos, tiles).toLocaleString()}</span>
-      </div>
+  const tileList = (positions: number[]) =>
+    positions.length === 0 ? (
+      <li className="v2-trade-empty">No property</li>
+    ) : (
+      positions.map((pos) => (
+        <li className="v2-trade-tile" key={pos} data-zone={zoneSlug(BOARD[pos])}>
+          <i />
+          <span>{BOARD[pos].name}</span>
+        </li>
+      ))
     );
-  };
 
-  // Portal to <body>: the sidebar ancestor has backdrop-filter + overflow:hidden,
-  // which creates a new containing block for position:fixed descendants and
-  // clips this "full-screen" overlay to the sidebar's small box instead of the
-  // viewport. Rendering at the body root sidesteps that entirely.
-  return createPortal(
-    <motion.div
-      className="trade-overlay"
-      initial={{ opacity: 0, y: 60 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 40 }}
-      transition={{ type: "spring", stiffness: 280, damping: 24 }}
-    >
-      <motion.div
-        className="trade-card-premium incoming"
-        initial={{ scale: 0.94 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 300, damping: 26 }}
-      >
-        <div className="trade-card-header">
-          <div className="trade-card-title">
-            <span className="trade-card-title-icon">
-              <IconTrade size={20} />
-            </span>
-            <span>Incoming Trade</span>
-          </div>
-        </div>
-
-        <div className="trade-card-body">
-          <div className="trade-incoming-from">
-            <span className="trade-incoming-from-avatar">{getToken(activeTrade.fromId)}</span>
-            <div className="trade-incoming-from-meta">
-              <span className="trade-incoming-from-name">{proposer?.name}</span>
-              <span className="trade-incoming-from-sub">sent you a deal</span>
-            </div>
-          </div>
-
-          <div className="trade-ledger">
-            <div className="trade-column">
-              <div className="trade-column-head you">
-                <span className="trade-column-head-avatar">📥</span>
-                <span className="trade-column-head-meta">
-                  <span className="trade-column-head-name">You receive</span>
-                </span>
-              </div>
-              <div className="trade-cash-display">
-                <span>Cash</span>
-                <strong>₦{incomingCash.toLocaleString()}</strong>
-              </div>
-              <label className="trade-cash-label">Properties</label>
-              <div className="trade-tile-list">
-                {incomingTilesPositions.length === 0 ? (
-                  <div className="trade-empty-row">No properties.</div>
-                ) : (
-                  incomingTilesPositions.map(renderTile)
-                )}
-              </div>
-              {incomingJailCards > 0 && (
-                <div className="trade-cash-display">
-                  <span>Jail cards</span>
-                  <strong>🎟️ ×{incomingJailCards}</strong>
-                </div>
-              )}
-            </div>
-
-            <div className="trade-column">
-              <div className="trade-column-head them">
-                <span className="trade-column-head-avatar">📤</span>
-                <span className="trade-column-head-meta">
-                  <span className="trade-column-head-name">You give</span>
-                </span>
-              </div>
-              <div className="trade-cash-display">
-                <span>Cash</span>
-                <strong className={canAfford ? "" : "short"}>
-                  ₦{outgoingCash.toLocaleString()}
-                </strong>
-              </div>
-              <label className="trade-cash-label">Properties</label>
-              <div className="trade-tile-list">
-                {outgoingTilesPositions.length === 0 ? (
-                  <div className="trade-empty-row">No properties.</div>
-                ) : (
-                  outgoingTilesPositions.map(renderTile)
-                )}
-              </div>
-              {outgoingJailCards > 0 && (
-                <div className="trade-cash-display">
-                  <span>Jail cards</span>
-                  <strong>🎟️ ×{outgoingJailCards}</strong>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {interestDue > 0 && (
-            <div
-              className="trade-cant-afford"
-              style={{ background: "rgba(232,182,74,0.08)", color: "var(--color-gold)" }}
-            >
-              Accepting costs an extra ₦{interestDue.toLocaleString()} bank interest (10%) on the
-              mortgaged properties you receive.
-            </div>
-          )}
-
-          <div className="trade-balance-row">
-            <div className="trade-balance-side">
-              <span className="trade-balance-label">Incoming value</span>
-              <span className="trade-balance-value">₦{incomingValue.toLocaleString()}</span>
-            </div>
-            <div className="trade-balance-side right">
-              <span className="trade-balance-label">Outgoing value</span>
-              <span className="trade-balance-value">₦{outgoingValue.toLocaleString()}</span>
-            </div>
-          </div>
-
-          {!canAfford && (
-            <div className="trade-cant-afford">
-              You can't cover the ₦{outgoingCash.toLocaleString()} cash
-              {interestDue > 0 ? ` plus ₦${interestDue.toLocaleString()} interest` : ""} — current
-              balance ₦{myCash.toLocaleString()}.
-            </div>
-          )}
-        </div>
-
-        <div className="trade-card-actions">
+  return (
+    <Sheet
+      level="decision"
+      open={visible}
+      title="Incoming deal"
+      maxWidth={560}
+      waiting={waiting}
+      footerLayout={onCounterOffer ? "lead" : "split"}
+      footer={
+        <>
           <button
-            className="trade-action-btn cancel danger"
-            onClick={() => onSendAction({ type: "RESPOND_TRADE", accept: false })}
+            className="v2-btn v2-btn-pri"
+            disabled={!canAfford}
+            onClick={() => onSendAction({ type: "RESPOND_TRADE", accept: true })}
           >
-            Decline
+            Accept deal
           </button>
           {onCounterOffer && (
             <button
-              className="trade-action-btn cancel"
-              style={{ background: "var(--color-gold)", color: "#000", border: "none" }}
+              className="v2-btn v2-btn-sec"
               onClick={() => {
                 onSendAction({ type: "RESPOND_TRADE", accept: false });
                 onCounterOffer({
@@ -230,19 +114,73 @@ export default function TradeOverlay({
                 });
               }}
             >
-              Counter Offer
+              Counter
             </button>
           )}
           <button
-            className="trade-action-btn propose"
-            disabled={!canAfford}
-            onClick={() => onSendAction({ type: "RESPOND_TRADE", accept: true })}
+            className="v2-btn v2-btn-sec"
+            onClick={() => onSendAction({ type: "RESPOND_TRADE", accept: false })}
           >
-            Accept Deal
+            Decline
           </button>
+        </>
+      }
+    >
+      <div className="v2-trade-from">
+        <span className="v2-trade-av">{getToken(activeTrade.fromId)}</span>
+        <span>
+          <b>{proposer?.name ?? "Somebody"}</b>
+          <span>sent you a deal</span>
+        </span>
+      </div>
+
+      <div className="v2-trade-ledger">
+        <div className="v2-trade-col v2-trade-col-in">
+          <h3 className="v2-trade-h">You collect</h3>
+          <span className="v2-trade-cash">{naira(incomingCash)}</span>
+          <ul className="v2-trade-tiles">{tileList(incomingTilesPositions)}</ul>
+          {incomingJailCards > 0 && (
+            <span className="v2-trade-empty">🎟️ ×{incomingJailCards} jail card</span>
+          )}
         </div>
-      </motion.div>
-    </motion.div>,
-    document.body,
+
+        <div className="v2-trade-col">
+          <h3 className="v2-trade-h">You give</h3>
+          <span className={`v2-trade-cash${canAfford ? "" : " is-short"}`}>
+            {naira(outgoingCash)}
+          </span>
+          <ul className="v2-trade-tiles">{tileList(outgoingTilesPositions)}</ul>
+          {outgoingJailCards > 0 && (
+            <span className="v2-trade-empty">🎟️ ×{outgoingJailCards} jail card</span>
+          )}
+        </div>
+      </div>
+
+      <div className="v2-rents">
+        <div className="v2-rent-row">
+          <span>Value coming in</span>
+          <b>{naira(incomingValue)}</b>
+        </div>
+        <div className="v2-rent-row">
+          <span>Value going out</span>
+          <b>{naira(outgoingValue)}</b>
+        </div>
+      </div>
+
+      {interestDue > 0 && (
+        <div className="v2-note v2-note-warn">
+          Accepting costs an extra <b>{naira(interestDue)}</b> bank interest (10%) on the mortgaged
+          property you dey collect.
+        </div>
+      )}
+
+      {!canAfford && (
+        <div className="v2-note v2-note-bad">
+          You no fit cover the {naira(outgoingCash)} cash
+          {interestDue > 0 ? ` plus ${naira(interestDue)} interest` : ""} — you get{" "}
+          <b>{naira(myCash)}</b>.
+        </div>
+      )}
+    </Sheet>
   );
 }

@@ -16,8 +16,11 @@ import ControlPanel from "./components/ControlPanel";
 import TileInspector from "./components/TileInspector";
 import GameOverModal from "./components/GameOverModal";
 import BuyDeedModal from "./components/BuyDeedModal";
+import AuctionPanel from "./components/AuctionPanel";
+import ChaosDecisionPanel from "./components/ChaosDecisionPanel";
 import OnboardingModal from "./components/OnboardingModal";
 import DevPanel from "./components/DevPanel";
+import { DecisionQueueProvider } from "./lib/decisionQueue";
 
 // Hooks & Utilities
 import { useGameRoom } from "./hooks/useGameRoom";
@@ -298,81 +301,89 @@ export default function App() {
             />
           </div>
         ) : engineState ? (
-          <div className="game-view view-fade">
-            {reconnecting && (
-              <div className="reconnect-overlay">
-                <div className="reconnect-spinner"></div>
-                <h2>Connection Lost</h2>
-                <p>Attempting to reconnect...</p>
+          // The queue spans the whole game view because its five members do
+          // not share a parent: buy/auction/chaos render here, incoming trade
+          // and debt rescue render inside ControlPanel. Only one gets the
+          // screen (spec §2).
+          <DecisionQueueProvider>
+            <div className="game-view view-fade">
+              {reconnecting && (
+                <div className="reconnect-overlay">
+                  <div className="reconnect-spinner"></div>
+                  <h2>Connection Lost</h2>
+                  <p>Attempting to reconnect...</p>
+                </div>
+              )}
+
+              {/* Left column: room chat + settings */}
+              <div className="game-col game-col-left">
+                <ChatPanel
+                  room={room}
+                  engineState={engineState}
+                  chatMessages={chatMessages}
+                  onSendChatMessage={sendChatMessage}
+                />
+                <SettingsPanel
+                  muted={muted}
+                  onToggleMute={() => {
+                    const nextMute = !muted;
+                    setMuted(nextMute);
+                    sound.setMuted(nextMute);
+                  }}
+                />
               </div>
-            )}
 
-            {/* Left column: room chat + settings */}
-            <div className="game-col game-col-left">
-              <ChatPanel
-                room={room}
-                engineState={engineState}
-                chatMessages={chatMessages}
-                onSendChatMessage={sendChatMessage}
-              />
-              <SettingsPanel
-                muted={muted}
-                onToggleMute={() => {
-                  const nextMute = !muted;
-                  setMuted(nextMute);
-                  sound.setMuted(nextMute);
-                }}
-              />
-            </div>
-
-            {/* Center: the board */}
-            <div className="board-panel">
-              <GameBoard
-                engineState={engineState}
-                roomState={roomState}
-                mySessionId={mySessionId || undefined}
-                onTileClick={(pos) => setSelectedTilePos(pos)}
-                onEndTurn={() => sendAction({ type: "END_TURN" })}
-                onRoll={() => sendAction({ type: "ROLL" })}
-                displayedPositions={displayedPositions}
-              />
-            </div>
-
-            {/* Right column: redesigned sidebar */}
-            <div className="game-col game-col-right">
-              <ControlPanel
-                room={room}
-                engineState={engineState}
-                onSendAction={sendAction}
-                autoEndTurn={autoEndTurn}
-                onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
-                turnDeadline={roomState?.turnDeadline}
-                turnTimeoutSecs={roomState?.turnTimeoutSecs}
-                onOpenTile={(pos) => setSelectedTilePos(pos)}
-                onComposerOpenChange={setComposerOpen}
-                myTokenWalking={myTokenWalking}
-              />
-            </div>
-
-            <AnimatePresence>
-              {selectedTilePos !== null && (
-                <TileInspector
-                  tilePos={selectedTilePos}
+              {/* Center: the board */}
+              <div className="board-panel">
+                <GameBoard
                   engineState={engineState}
                   roomState={roomState}
-                  onClose={() => setSelectedTilePos(null)}
-                  mySessionId={mySessionId}
-                  canManage={
-                    engineState.players?.[engineState.currentPlayerIndex]?.id === mySessionId &&
-                    (engineState.phase === "awaiting-roll" ||
-                      engineState.phase === "awaiting-end-turn")
-                  }
-                  onSendAction={sendAction}
+                  mySessionId={mySessionId || undefined}
+                  onTileClick={(pos) => setSelectedTilePos(pos)}
+                  onEndTurn={() => sendAction({ type: "END_TURN" })}
+                  onRoll={() => sendAction({ type: "ROLL" })}
+                  displayedPositions={displayedPositions}
                 />
-              )}
-            </AnimatePresence>
+              </div>
 
-            <AnimatePresence>
+              {/* Right column: redesigned sidebar */}
+              <div className="game-col game-col-right">
+                <ControlPanel
+                  room={room}
+                  engineState={engineState}
+                  onSendAction={sendAction}
+                  autoEndTurn={autoEndTurn}
+                  onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
+                  turnDeadline={roomState?.turnDeadline}
+                  turnTimeoutSecs={roomState?.turnTimeoutSecs}
+                  onOpenTile={(pos) => setSelectedTilePos(pos)}
+                  onComposerOpenChange={setComposerOpen}
+                  myTokenWalking={myTokenWalking}
+                />
+              </div>
+
+              <AnimatePresence>
+                {selectedTilePos !== null && (
+                  <TileInspector
+                    tilePos={selectedTilePos}
+                    engineState={engineState}
+                    roomState={roomState}
+                    onClose={() => setSelectedTilePos(null)}
+                    mySessionId={mySessionId}
+                    canManage={
+                      engineState.players?.[engineState.currentPlayerIndex]?.id === mySessionId &&
+                      (engineState.phase === "awaiting-roll" ||
+                        engineState.phase === "awaiting-end-turn")
+                    }
+                    onSendAction={sendAction}
+                  />
+                )}
+              </AnimatePresence>
+
+              {/* Decision sheets (spec §2 L2). The auction and the chaos
+                decisions were promoted out of ControlPanel in step B4a: that
+                sidebar drops below the board under 980px, so these two timed
+                decisions were rendering off-screen on phones. */}
               {mySessionId && !myTokenWalking && (
                 <BuyDeedModal
                   engineState={engineState}
@@ -380,41 +391,59 @@ export default function App() {
                   onSendAction={sendAction}
                 />
               )}
-            </AnimatePresence>
 
-            <AnimatePresence>
-              {engineState.phase === "game-over" && showGameOverModal && (
-                <GameOverModal
-                  engineState={engineState}
-                  roomState={roomState}
+              {mySessionId && engineState.phase === "auction" && engineState.auctionState && (
+                <AuctionPanel
+                  auction={engineState.auctionState}
+                  players={engineState.players}
                   mySessionId={mySessionId}
-                  onResetGame={() => {
-                    setShowGameOverModal(false);
-                    resetGame();
-                  }}
-                  onClose={() => setShowGameOverModal(false)}
+                  myCash={engineState.players?.find((p: Player) => p.id === mySessionId)?.cash ?? 0}
+                  onSendAction={sendAction}
                 />
               )}
-            </AnimatePresence>
 
-            {/* Reopen the results after dismissing them to inspect the board */}
-            {engineState.phase === "game-over" && !showGameOverModal && (
-              <button
-                className="button-primary"
-                style={{
-                  position: "fixed",
-                  bottom: "4.5rem",
-                  right: "1rem",
-                  zIndex: 90,
-                  padding: "0.6rem 1rem",
-                  borderRadius: "4px",
-                }}
-                onClick={() => setShowGameOverModal(true)}
-              >
-                🏆 Show Results
-              </button>
-            )}
-          </div>
+              {mySessionId && (
+                <ChaosDecisionPanel
+                  engineState={engineState}
+                  mySessionId={mySessionId}
+                  onSendAction={sendAction}
+                />
+              )}
+
+              <AnimatePresence>
+                {engineState.phase === "game-over" && showGameOverModal && (
+                  <GameOverModal
+                    engineState={engineState}
+                    roomState={roomState}
+                    mySessionId={mySessionId}
+                    onResetGame={() => {
+                      setShowGameOverModal(false);
+                      resetGame();
+                    }}
+                    onClose={() => setShowGameOverModal(false)}
+                  />
+                )}
+              </AnimatePresence>
+
+              {/* Reopen the results after dismissing them to inspect the board */}
+              {engineState.phase === "game-over" && !showGameOverModal && (
+                <button
+                  className="button-primary"
+                  style={{
+                    position: "fixed",
+                    bottom: "4.5rem",
+                    right: "1rem",
+                    zIndex: 90,
+                    padding: "0.6rem 1rem",
+                    borderRadius: "4px",
+                  }}
+                  onClick={() => setShowGameOverModal(true)}
+                >
+                  🏆 Show Results
+                </button>
+              )}
+            </div>
+          </DecisionQueueProvider>
         ) : null}
       </>
 

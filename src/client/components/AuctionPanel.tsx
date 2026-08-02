@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { BOARD } from "../../data/board";
 import { AuctionState, Player, Action } from "../../engine/types";
-import { IconAuction, IconTrophy } from "./icons";
+import { useDecisionSlot } from "../lib/decisionQueue";
+import { tileChip } from "../lib/zones";
+import Sheet from "./Sheet";
 
 interface Props {
   auction: AuctionState;
@@ -12,6 +12,20 @@ interface Props {
   onSendAction: (action: Action) => void;
 }
 
+const naira = (n: number) => `₦${n.toLocaleString()}`;
+
+/**
+ * Live auction (spec §2 L2).
+ *
+ * Promoted out of ControlPanel in step B4a. It used to render inline in the
+ * sidebar, which under 980px sits in grid row 2 *below the board* — so on a
+ * phone the one timed decision in the game scrolled off-screen and players
+ * lost properties to a clock they could not see.
+ *
+ * Every bid/pass message is unchanged: BID carries highestBid + increment,
+ * passing sends PASS_BID. The countdown is now the sheet's coral header bar,
+ * driven by CSS off auction.deadline, so nothing re-renders per tick.
+ */
 export default function AuctionPanel({
   auction,
   players,
@@ -19,127 +33,84 @@ export default function AuctionPanel({
   myCash,
   onSendAction,
 }: Props) {
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    if (!auction.deadline) return;
-    const t = setInterval(() => setNow(Date.now()), 100);
-    return () => clearInterval(t);
-  }, [auction.deadline]);
+  const { visible, waiting } = useDecisionSlot("auction", true);
 
   const iPassed = auction.passedIds.includes(mySessionId);
   const iAmHighest = auction.highestBidderId === mySessionId;
   const iAmParticipant = auction.participantIds.includes(mySessionId);
   const canBid = iAmParticipant && !iPassed && !iAmHighest;
 
-  const msLeft = auction.deadline ? Math.max(0, auction.deadline - now) : 0;
-  const secsLeft = Math.ceil(msLeft / 1000);
-  const timerPct = auction.deadline
-    ? Math.max(0, Math.min(100, (msLeft / (auction.bidDurationMs || 12000)) * 100))
-    : 0;
+  const tile = BOARD[auction.tilePos];
+  const chip = tileChip(tile);
+  const holder = auction.highestBidderId
+    ? (players.find((p) => p.id === auction.highestBidderId)?.name ?? "—")
+    : "No bids yet";
 
   return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
-      exit={{ opacity: 0, height: 0 }}
-      style={{ overflow: "hidden" }}
-    >
-      <div
-        className={`auction-panel ${secsLeft <= 3 && auction.deadline ? "auction-urgent" : ""}`}
-        style={{ margin: "0.75rem", borderRadius: "2px" }}
-      >
-        <div
-          className="auction-title"
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
-        >
-          <IconAuction size={20} /> LIVE AUCTION
-        </div>
-        <div style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-          <strong>{BOARD[auction.tilePos].name}</strong>
-        </div>
-
-        {auction.deadline && (
-          <div className="auction-timer">
-            <div className="auction-timer-bar">
-              <div
-                className={`auction-timer-fill ${secsLeft <= 3 ? "urgent" : ""}`}
-                style={{ width: `${timerPct}%` }}
-              />
-            </div>
-            <div className={`auction-timer-secs ${secsLeft <= 3 ? "urgent" : ""}`}>
-              {secsLeft > 0 ? `${secsLeft}s` : "GONE!"}
-            </div>
-          </div>
-        )}
-
-        <div className="auction-bid-hud">
-          <span>
-            Top:{" "}
-            <strong style={{ color: "var(--color-naira)" }}>
-              ₦{auction.highestBid.toLocaleString()}
-            </strong>
+    <Sheet
+      level="decision"
+      open={visible}
+      title={tile.name}
+      titleAdornment={
+        chip.label ? (
+          <span className="v2-zchip" data-zone={chip.slug ?? undefined}>
+            {chip.label}
           </span>
-          <span>
-            {auction.highestBidderId
-              ? players.find((p) => p.id === auction.highestBidderId)?.name
-              : "No bids"}
-          </span>
-        </div>
-
-        {canBid ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-            <div className="auction-increment-buttons">
+        ) : null
+      }
+      maxWidth={420}
+      deadline={auction.deadline}
+      countdownMs={auction.bidDurationMs}
+      waiting={waiting}
+      footer={
+        canBid ? (
+          <>
+            <div className="v2-bid-grid">
               {auction.bidIncrements.map((inc: number) => {
                 const total = auction.highestBid + inc;
                 const tooRich = myCash < total;
                 return (
                   <button
                     key={inc}
-                    className="button-primary bid-increment-btn"
+                    className="v2-btn v2-btn-pri v2-bid"
                     disabled={tooRich}
-                    title={tooRich ? "Not enough cash" : `Bid ₦${total.toLocaleString()}`}
+                    title={tooRich ? "Not enough cash" : `Bid ${naira(total)}`}
                     onClick={() => onSendAction({ type: "BID", amount: total })}
-                    style={{ fontSize: "0.7rem", padding: "0.4rem 0.2rem", borderRadius: "2px" }}
                   >
-                    ▲ ₦{inc.toLocaleString()}
+                    <em>+{naira(inc)}</em>
+                    <b>{naira(total)}</b>
                   </button>
                 );
               })}
             </div>
             <button
-              className="button-secondary"
+              className="v2-btn v2-btn-sec"
               onClick={() => onSendAction({ type: "PASS_BID" })}
-              style={{ fontSize: "0.75rem", padding: "0.35rem", borderRadius: "2px" }}
             >
-              Pass
+              I pass
             </button>
-          </div>
-        ) : iAmHighest ? (
-          <div
-            className="action-status-indicator"
-            style={{
-              color: "var(--color-naira)",
-              fontWeight: "bold",
-              fontSize: "0.75rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "0.3rem",
-            }}
-          >
-            <IconTrophy size={16} /> You hold the top bid!
-          </div>
-        ) : iPassed ? (
-          <div className="action-status-indicator" style={{ fontSize: "0.75rem" }}>
-            You folded.
-          </div>
-        ) : (
-          <div className="action-status-indicator" style={{ fontSize: "0.75rem" }}>
-            Spectating…
-          </div>
-        )}
+          </>
+        ) : null
+      }
+    >
+      <p className="v2-sh-lede">Auction dey live — highest bidder pay the bank.</p>
+
+      <div className="v2-auc-hud">
+        <span>
+          <span className="v2-auc-label">Top bid</span>
+          <span className="v2-auc-top">{naira(auction.highestBid)}</span>
+        </span>
+        <span>
+          <span className="v2-auc-label">Leading</span>
+          <span className="v2-auc-holder">{holder}</span>
+        </span>
       </div>
-    </motion.div>
+
+      {iAmHighest && <div className="v2-status v2-status-win">You hold the top bid.</div>}
+      {!iAmHighest && iPassed && <div className="v2-status">You don fold — just dey watch.</div>}
+      {!iAmHighest && !iPassed && !iAmParticipant && (
+        <div className="v2-status">You no dey this auction — just dey watch.</div>
+      )}
+    </Sheet>
   );
 }

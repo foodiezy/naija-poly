@@ -1,10 +1,8 @@
-import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
 import { GameState, Player, Action } from "../../engine/types";
 import { BOARD } from "../../data/board";
 import { canSellHouseOn, canMortgageAt } from "../../engine/queries";
-import { IconBankrupt, IconTrade, IconWarning } from "./icons";
-import { useDialog } from "../hooks/useDialog";
+import { useDecisionSlot } from "../lib/decisionQueue";
+import Sheet from "./Sheet";
 
 interface Props {
   engineState: GameState;
@@ -16,6 +14,21 @@ interface Props {
   onOpenTrade: () => void;
 }
 
+const naira = (n: number) => `₦${n.toLocaleString()}`;
+
+/**
+ * Debt rescue (spec §2 L2 · top of the queue).
+ *
+ * Highest priority in the decision queue: while you are insolvent nothing else
+ * you could be shown matters. Not scrim-dismissible — leaving is an explicit
+ * "Later" button, so the sheet can never be tapped away by accident while the
+ * turn clock runs.
+ *
+ * Only moves the engine will actually accept are listed: canSellHouseOn
+ * enforces even-selling AND the hotel-downgrade house-supply rule;
+ * canMortgageAt enforces the no-buildings-in-group rule. Listing illegal moves
+ * here just produced error toasts on click.
+ */
 export default function DebtRescueModal({
   engineState,
   me,
@@ -24,10 +37,8 @@ export default function DebtRescueModal({
   onClose,
   onOpenTrade,
 }: Props) {
-  // Only offer moves the engine will actually accept: canSellHouseOn enforces
-  // even-selling AND the hotel-downgrade house-supply rule; canMortgageAt
-  // enforces the no-buildings-in-group rule. Listing illegal moves here just
-  // produced error toasts on click.
+  const { visible, waiting } = useDecisionSlot("debt-rescue", true);
+
   const sellableHouses: { pos: number; name: string; value: number }[] = [];
   const mortgageableProperties: { pos: number; name: string; value: number }[] = [];
 
@@ -47,186 +58,84 @@ export default function DebtRescueModal({
   // Total shortfall shown at the top: overdrawn cash + any ledgered rent debt.
   const totalOwed = Math.max(0, -me.cash) + ledgerDebt;
 
-  const dialogRef = useDialog<HTMLDivElement>(onClose);
-
-  return createPortal(
-    <div className="modal-overlay" style={{ zIndex: 100 }}>
-      <motion.div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Debt rescue — raise cash or declare bankruptcy"
-        className="modal-content"
-        style={{
-          maxWidth: "500px",
-          padding: "1.5rem",
-          border: "1px solid var(--color-danger)",
-        }}
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-      >
-        <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-          <h2
-            style={{
-              color: "var(--color-danger)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "0.5rem",
-              margin: "0 0 0.5rem 0",
-            }}
-          >
-            <IconWarning size={24} /> Debt Rescue
-          </h2>
-          <p style={{ color: "var(--text-secondary)", margin: 0 }}>
-            You owe{" "}
-            <strong style={{ color: "var(--color-danger)" }}>₦{totalOwed.toLocaleString()}</strong>.
-            Raise the cash (sell, mortgage, or trade) and it will be settled automatically —
-            otherwise you must declare bankruptcy.
-          </p>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "1rem",
-            maxHeight: "60vh",
-            overflowY: "auto",
-          }}
-        >
-          {sellableHouses.length > 0 && (
-            <div
-              style={{
-                background: "rgba(0,0,0,0.2)",
-                padding: "1rem",
-                borderRadius: "var(--radius-md)",
-              }}
-            >
-              <h4 style={{ margin: "0 0 0.5rem 0", color: "var(--color-naira)" }}>
-                Sell Buildings (50% value)
-              </h4>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {sellableHouses.map((h) => (
-                  <div
-                    key={`house-${h.pos}`}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <span>{h.name}</span>
-                    <button
-                      className="button-primary"
-                      style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
-                      onClick={() => onSendAction({ type: "SELL_HOUSE", pos: h.pos })}
-                    >
-                      Sell +₦{h.value.toLocaleString()}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {mortgageableProperties.length > 0 && (
-            <div
-              style={{
-                background: "rgba(0,0,0,0.2)",
-                padding: "1rem",
-                borderRadius: "var(--radius-md)",
-              }}
-            >
-              <h4 style={{ margin: "0 0 0.5rem 0", color: "var(--color-gold)" }}>
-                Mortgage Properties
-              </h4>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {mortgageableProperties.map((p) => (
-                  <div
-                    key={`mort-${p.pos}`}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <span>{p.name}</span>
-                    <button
-                      className="button-primary"
-                      style={{
-                        padding: "0.25rem 0.5rem",
-                        fontSize: "0.75rem",
-                        background: "var(--color-gold)",
-                        color: "#000",
-                      }}
-                      onClick={() => onSendAction({ type: "MORTGAGE", pos: p.pos })}
-                    >
-                      Mortgage +₦{p.value.toLocaleString()}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div
-            style={{
-              background: "rgba(0,0,0,0.2)",
-              padding: "1rem",
-              borderRadius: "var(--radius-md)",
-            }}
-          >
-            <h4 style={{ margin: "0 0 0.5rem 0", color: "var(--color-blue)" }}>Propose Trade</h4>
-            <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: "0 0 0.5rem 0" }}>
-              Trade properties with other players for cash.
-            </p>
-            <button
-              className="button-primary"
-              style={{
-                width: "100%",
-                background: "var(--color-blue)",
-                display: "flex",
-                justifyContent: "center",
-                gap: "0.5rem",
-              }}
-              onClick={() => {
-                onClose();
-                onOpenTrade();
-              }}
-            >
-              <IconTrade size={16} /> Open Trade Builder
-            </button>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: "1rem", marginTop: "1.5rem" }}>
+  return (
+    <Sheet
+      level="decision"
+      open={visible}
+      title="You dey owe"
+      maxWidth={560}
+      waiting={waiting}
+      footerLayout="lead"
+      footer={
+        <>
           <button
-            className="button-primary"
-            style={{ flex: 1, background: "var(--surface-3)", color: "var(--text-primary)" }}
-            onClick={onClose}
+            className="v2-btn v2-btn-pri"
+            onClick={() => {
+              onClose();
+              onOpenTrade();
+            }}
           >
-            Close
+            Open trade
+          </button>
+          <button className="v2-btn v2-btn-sec" onClick={onClose}>
+            Later
           </button>
           <button
-            className="button-primary"
-            style={{
-              flex: 1,
-              background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
-              display: "flex",
-              justifyContent: "center",
-              gap: "0.5rem",
-            }}
+            className="v2-btn v2-btn-sec v2-btn-danger"
             onClick={() => {
               if (window.confirm("Declare bankruptcy? You will lose everything."))
                 onSendAction({ type: "DECLARE_BANKRUPT" });
             }}
           >
-            Declare Bankruptcy <IconBankrupt size={16} />
+            Declare bankruptcy
           </button>
+        </>
+      }
+    >
+      <div className="v2-note v2-note-bad">
+        You owe <b>{naira(totalOwed)}</b>. Raise the cash — sell, mortgage or trade — and e go
+        settle by itself. If you no fit, na bankruptcy.
+      </div>
+
+      {sellableHouses.length > 0 && (
+        <div className="v2-group">
+          <h3 className="v2-group-h">Sell buildings — half price back</h3>
+          {sellableHouses.map((h) => (
+            <div className="v2-raise-row" key={`house-${h.pos}`}>
+              <span>{h.name}</span>
+              <button
+                className="v2-btn v2-btn-pri v2-raise-btn"
+                onClick={() => onSendAction({ type: "SELL_HOUSE", pos: h.pos })}
+              >
+                +{naira(h.value)}
+              </button>
+            </div>
+          ))}
         </div>
-      </motion.div>
-    </div>,
-    document.body,
+      )}
+
+      {mortgageableProperties.length > 0 && (
+        <div className="v2-group">
+          <h3 className="v2-group-h">Mortgage property</h3>
+          {mortgageableProperties.map((p) => (
+            <div className="v2-raise-row" key={`mort-${p.pos}`}>
+              <span>{p.name}</span>
+              <button
+                className="v2-btn v2-btn-pri v2-raise-btn"
+                onClick={() => onSendAction({ type: "MORTGAGE", pos: p.pos })}
+              >
+                +{naira(p.value)}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {sellableHouses.length === 0 && mortgageableProperties.length === 0 && (
+        <p className="v2-sh-lede">
+          Nothing left to sell or mortgage. Try a trade — otherwise na bankruptcy.
+        </p>
+      )}
+    </Sheet>
   );
 }
