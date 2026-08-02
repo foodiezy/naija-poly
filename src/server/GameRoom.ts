@@ -26,6 +26,32 @@ import type { ChatMessage } from "../shared/chat";
 // In local dev, the dev:server script sets this automatically via cross-env.
 const DEV_TOOLS_ENABLED = process.env.ENABLE_DEV_TOOLS === "true";
 
+/**
+ * Every room currently alive in this process.
+ *
+ * Colyseus's matchMaker can list room *metadata*, not the instances, so there
+ * is no built-in way to say something to everyone playing right now. Shutdown
+ * needs exactly that, and it needs it before the rooms are disposed.
+ */
+const liveRooms = new Set<GameRoom>();
+
+/**
+ * Tell every player in every room the same thing. Used by the shutdown drain
+ * in index.ts; rides the existing "ERROR" channel because that is the one the
+ * client already surfaces as a toast (useGameRoom.ts).
+ */
+export function notifyAllRooms(message: string): void {
+  for (const room of liveRooms) {
+    try {
+      room.broadcast("ERROR", { message });
+    } catch (err) {
+      // A room mid-disposal is expected here; one bad room must not stop the
+      // rest of the announcement.
+      console.error(`[notifyAllRooms] room ${room.roomId} broadcast failed:`, err);
+    }
+  }
+}
+
 // AI (computer) players use reserved session ids that no real client can have.
 function isAIPlayer(id: string): boolean {
   return id.startsWith("ai_");
@@ -429,6 +455,7 @@ export class GameRoom extends Room<GameRoomState> {
   }
 
   onCreate(_options: Record<string, unknown>) {
+    liveRooms.add(this);
     this.setState(new GameRoomState());
 
     // Message handler to select token
@@ -701,6 +728,9 @@ export class GameRoom extends Room<GameRoomState> {
       this.clearAuctionTimer();
       this.clearTurnTimer();
       this.clearAITimer();
+      // Same omission as onDispose had: resetting to the lobby while a Chaos
+      // decision was pending left its timer armed into the next game.
+      this.clearDecisionTimer();
       this.state.turnDeadline = 0;
       this.state.status = "lobby";
       this.state.gameStateJson = "";
@@ -846,9 +876,15 @@ export class GameRoom extends Room<GameRoomState> {
   }
 
   onDispose() {
+    liveRooms.delete(this);
     this.clearAuctionTimer();
     this.clearAITimer();
     this.clearTurnTimer();
+    // Was missing: a room disposed while a Chaos decision was pending left
+    // onDecisionTimeout armed. Its own guards made that a no-op rather than a
+    // crash, but the guards were the only thing standing between it and
+    // runEngineAction on a torn-down room.
+    this.clearDecisionTimer();
     console.log(`Room ${this.roomId} disposed.`);
   }
 }

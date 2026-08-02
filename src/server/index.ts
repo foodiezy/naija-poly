@@ -3,10 +3,18 @@ import cors from "cors";
 import path from "path";
 import { createServer } from "http";
 import { fileURLToPath } from "url";
-import { Server } from "colyseus";
-import { GameRoom } from "./GameRoom";
+import { Server, matchMaker } from "colyseus";
+import { GameRoom, notifyAllRooms } from "./GameRoom";
 
 const port = Number(process.env.PORT || 2567);
+
+// How long players get to see the restart notice before rooms are disposed.
+// Render's SIGTERM grace window is ~30s, so this is deliberately well inside it.
+const SHUTDOWN_DRAIN_MS = Number(process.env.SHUTDOWN_DRAIN_MS || 3000);
+
+// Set as soon as a shutdown starts, so /health reports 503 and the load
+// balancer stops sending new players to a process that is going away.
+let shuttingDown = false;
 
 // Resolve __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -56,9 +64,23 @@ app.use(
 
 app.use(express.json());
 
-// Health check endpoint
-app.get("/health", (_req: express.Request, res: express.Response) => {
-  res.send("Odogwu Empire Server is running!");
+// Health check. This used to return a static string, which meant Render's
+// health check stayed green even when matchmaking was dead — the one failure
+// that actually makes the game unplayable. Now it does a real round-trip
+// through the matchmaker's driver and answers 503 when that fails, so a broken
+// deploy is rolled back instead of served.
+app.get("/health", async (_req: express.Request, res: express.Response) => {
+  if (shuttingDown) {
+    res.status(503).json({ status: "shutting-down" });
+    return;
+  }
+  try {
+    const rooms = await matchMaker.query({});
+    res.status(200).json({ status: "ok", rooms: rooms.length });
+  } catch (err) {
+    console.error("[health] matchmaker query failed:", err);
+    res.status(503).json({ status: "degraded", error: (err as Error).message });
+  }
 });
 
 // Serve the built Vite client as static files
@@ -75,15 +97,78 @@ app.get("/{*path}", (_req: express.Request, res: express.Response) => {
 // can bind a second copy of @colyseus/core, giving the transport a different
 // matchMaker than the Server's (rooms register in one, the WS upgrade looks them
 // up in the other → "seat reservation expired"). Sharing one instance fixes it.
+// Bound to a variable rather than constructed inline: shutdown needs to be
+// able to close it.
+const httpServer = createServer(app);
+
 const gameServer = new Server({
-  server: createServer(app),
+  server: httpServer,
+  // We register the signal handlers ourselves (below). Colyseus's built-in
+  // handler disposes every room BEFORE running its onShutdown callback, so
+  // there is no point at which a "we're restarting" notice could reach a
+  // player — by the time the callback runs, their room is already gone.
+  gracefullyShutdown: false,
 });
 
 // Register the game room
 gameServer.define("odogwu", GameRoom);
 
 // Start listening
-gameServer.listen(port).then(() => {
-  console.log(`Odogwu Empire Server is listening on http://localhost:${port}`);
-  console.log(`Serving client from ${clientBuildPath}`);
+gameServer
+  .listen(port)
+  .then(() => {
+    console.log(`Odogwu Empire Server is listening on http://localhost:${port}`);
+    console.log(`Serving client from ${clientBuildPath}`);
+  })
+  .catch((err) => {
+    // Previously unhandled: a port bind failure surfaced only as an unhandled
+    // rejection, so the process lingered looking healthy but serving nothing.
+    console.error(`[startup] failed to listen on ${port}:`, err);
+    process.exit(1);
+  });
+
+/**
+ * Drain, then stop. Every push to main used to kill live games mid-turn with
+ * no warning; players just saw the connection drop. Now they get told, the
+ * process stops accepting new players, and rooms are disposed cleanly.
+ */
+async function shutdown(reason: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[shutdown] ${reason} — draining for ${SHUTDOWN_DRAIN_MS}ms`);
+
+  notifyAllRooms("Server dey restart — hold on small, the game go come back.");
+  await new Promise((resolve) => setTimeout(resolve, SHUTDOWN_DRAIN_MS));
+
+  try {
+    // false: don't let Colyseus call process.exit, so we can close the HTTP
+    // server ourselves afterwards.
+    await gameServer.gracefullyShutdown(false);
+  } catch (err) {
+    console.error("[shutdown] gracefullyShutdown failed:", err);
+  }
+
+  httpServer.close(() => {
+    console.log("[shutdown] closed cleanly");
+    process.exit(0);
+  });
+  // Belt and braces: a hung keep-alive socket must not out-wait Render's
+  // grace window and turn a clean stop into a SIGKILL.
+  setTimeout(() => process.exit(0), 5000).unref();
+}
+
+process.once("SIGTERM", () => void shutdown("SIGTERM"));
+process.once("SIGINT", () => void shutdown("SIGINT"));
+
+// Turning off Colyseus's built-in shutdown also removed its uncaughtException
+// handler, so these replace it rather than add to it. An uncaught throw is not
+// survivable state — log it and go down cleanly instead of serving a process
+// in unknown condition.
+process.on("uncaughtException", (err) => {
+  console.error("[fatal] uncaughtException:", err);
+  void shutdown("uncaughtException");
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[fatal] unhandledRejection:", reason);
 });
