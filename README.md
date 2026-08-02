@@ -135,10 +135,13 @@ run. CI (`.github/workflows/ci.yml`) typechecks and runs the suite on every push
 
 ## Deploy
 
-One Render web service (`render.yaml`): the same Node process serves the built Vite client
-as static files **and** hosts the Colyseus WebSocket server, so client and server share an
-origin. `NODE_ENV=production` disables all dev tooling; set `ALLOWED_ORIGINS` if the client
-is ever served from a different origin.
+One Render web service: the same Node process serves the built Vite client as static files
+**and** hosts the Colyseus WebSocket server, so client and server share an origin.
+`NODE_ENV=production` disables all dev tooling; set `ALLOWED_ORIGINS` if the client is ever
+served from a different origin.
+
+Full settings, the SIGTERM drain, and the reason the build tools live in `dependencies`:
+**[DEPLOY.md](DEPLOY.md)**.
 
 ## Working with Claude Code
 

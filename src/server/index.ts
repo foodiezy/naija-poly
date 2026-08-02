@@ -83,6 +83,24 @@ app.get("/health", async (_req: express.Request, res: express.Response) => {
   }
 });
 
+// Client crash sink. There is no Sentry here on purpose — a portfolio demo
+// does not need a SaaS account and the bundle just fought for every KB — but
+// "the app went white and nobody knows why" is the one thing worth catching.
+// ErrorBoundary posts here; the line lands in Render's log stream.
+app.post("/api/error", (req: express.Request, res: express.Response) => {
+  const { message, stack, url } = (req.body ?? {}) as Record<string, unknown>;
+  console.error(
+    "[client-error]",
+    JSON.stringify({
+      message: String(message ?? "").slice(0, 500),
+      url: String(url ?? "").slice(0, 300),
+      stack: String(stack ?? "").slice(0, 2000),
+      at: new Date().toISOString(),
+    }),
+  );
+  res.status(204).end();
+});
+
 // Serve the built Vite client as static files
 app.use(express.static(clientBuildPath));
 

@@ -18,6 +18,26 @@ export default class ErrorBoundary extends React.Component<React.PropsWithChildr
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error("Render crash:", error, info.componentStack);
+
+    // Report it so the crash exists somewhere other than one player's console.
+    // keepalive lets the request survive the reload they are about to do, and
+    // the whole thing is best-effort: a failed report must never replace the
+    // recovery screen with a second error.
+    try {
+      const body = JSON.stringify({
+        message: error.message,
+        stack: `${error.stack ?? ""}\n--- component stack ---${info.componentStack ?? ""}`,
+        url: window.location.href,
+      });
+      void fetch("/api/error", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: true,
+      }).catch(() => {});
+    } catch {
+      /* reporting must never throw */
+    }
   }
 
   render() {

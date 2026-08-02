@@ -315,10 +315,6 @@ h6 {
   gap: 0.5rem;
 }
 
-.logo-emoji {
-  font-size: 2rem;
-}
-
 .logo-text {
   font-family: var(--font-display);
   font-size: 1.75rem;
@@ -448,44 +444,6 @@ h6 {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
-}
-
-.button-secondary {
-  background: var(--sf-hover);
-  color: var(--ink);
-  border: 1px solid var(--ln);
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: center;
-}
-
-.button-secondary:hover {
-  background: var(--sf-hover);
-  border-color: var(--ln-2);
-}
-
-.host-tag {
-  font-size: 0.7rem;
-  background: var(--gold-v2);
-  color: #000;
-  padding: 0.1rem 0.3rem;
-  border-radius: 4px;
-  font-weight: bold;
-}
-
-/* Main Dashboard View */
-.dashboard-view {
-  display: flex;
-  flex: 1;
-  padding: 1.5rem;
-  gap: 1.5rem;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
 }
 
 /* In-game layout: chat (left) · board (center) · controls + trade (right).
@@ -796,11 +754,6 @@ h6 {
   .holdings-rent-value {
     font-size: 0.85rem;
   }
-
-  /* Touch-friendly checkbox row */
-  .footer-toggle-item input[type="checkbox"] {
-    transform: scale(1.2);
-  }
 }
 
 /* The italic tagline is the first thing to crowd the header controls in the
@@ -917,134 +870,11 @@ h6 {
   font-size: var(--fs-sm);
 }
 
-.board-center-top-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  gap: 0.75rem;
-  z-index: 5;
-}
-
-/* Center board game feed — blends with board center, no card border */
-.board-center-feed {
-  width: 100%;
-  max-width: 480px;
-  background: transparent;
-  padding: var(--space-2) var(--space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  z-index: 5;
-}
-
-.board-center-feed-logs {
-  flex: 1 1 0;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  padding-right: 4px;
-}
-
 /* Keep the feed anchored to its newest line: free space collects above the
    first entry (pushing the log to the bottom of the tall feed area), and
    collapses to zero once the log overflows so scrolling still reaches the top. */
 .board-center-feed-logs > .log-entry:first-child {
   margin-top: auto;
-}
-
-.board-center-bottom-row {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  z-index: 5;
-  gap: 0.5rem;
-}
-
-/* Notification bar at bottom of board center */
-.board-notification-bar {
-  background: var(--sf);
-  border: 1px solid var(--ln);
-  border-radius: var(--radius-md);
-  padding: 0.4rem 1rem;
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-  text-align: center;
-  max-width: 90%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-}
-
-/* End Turn button in board center */
-.board-end-turn-btn {
-  padding: 0.5rem 1.5rem;
-  font-size: 0.85rem;
-  font-weight: 700;
-  background: var(--sf-hover);
-  color: var(--ink);
-  border: 1px solid var(--ln);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all 0.2s;
-  z-index: 5;
-}
-
-.board-end-turn-btn:hover {
-  background: var(--sf-hover);
-  border-color: var(--ln-2);
-}
-
-.board-end-turn-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-/* Board-centre Roll Dice button — the primary call-to-action on your turn. */
-.board-roll-btn {
-  transition: all 0.2s;
-  z-index: 5;
-}
-
-.board-roll-btn:focus-visible,
-.board-end-turn-btn:focus-visible {
-  outline: 2px solid var(--color-gold);
-  outline-offset: 2px;
-}
-
-.board-center-logo {
-  font-family: var(--font-display);
-  font-size: 3.8rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  background: var(--pri);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  opacity: 0.07;
-  user-select: none;
-  pointer-events: none;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(-30deg);
-  white-space: nowrap;
-  text-transform: uppercase;
-  z-index: 0;
-}
-
-/* Dice Container in Center */
-.dice-container-center {
-  display: flex;
-  gap: 1rem;
-  z-index: 10;
-  margin-bottom: 0.25rem;
 }
 
 .die {
@@ -1555,46 +1385,6 @@ h6 {
   }
 }
 
-/* Right Control & HUD Panel */
-.side-panel {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  gap: 1rem;
-}
-
-/* ──────────────────────────────────────────────
-   Right Sidebar — redesigned per mockup
-   ────────────────────────────────────────────── */
-
-/* Turn / Round indicator at top of sidebar */
-.sidebar-turn-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.sidebar-turn-label {
-  font-family: var(--font-display);
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  letter-spacing: 0.08em;
-}
-
-.sidebar-round-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-family: var(--font-display);
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
 .sidebar-round-badge .round-label {
   font-size: 0.7rem;
   font-weight: 600;
@@ -1657,56 +1447,6 @@ h6 {
   border-bottom: 1px solid var(--border-subtle);
   max-height: 180px;
   overflow-y: auto;
-}
-
-.sidebar-properties-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.sidebar-prop-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.25rem 0.35rem;
-  border-radius: var(--radius-sm);
-  transition: background 0.15s;
-}
-
-.sidebar-prop-row:hover {
-  background: var(--sf-hover);
-}
-
-.sidebar-prop-left {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  overflow: hidden;
-}
-
-.sidebar-prop-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.sidebar-prop-name {
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100px;
-}
-
-.sidebar-prop-status {
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  white-space: nowrap;
 }
 
 .sidebar-prop-status.status-house {
@@ -1921,86 +1661,6 @@ html.high-contrast .glass-panel {
   cursor: not-allowed;
 }
 
-/* Players list section at bottom of sidebar */
-.sidebar-players {
-  padding: 0.6rem 0.75rem;
-}
-
-.sidebar-players-title {
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  letter-spacing: 0.06em;
-  margin-bottom: 0.5rem;
-}
-
-.sidebar-players-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.sidebar-player-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.4rem 0.5rem;
-  border-radius: var(--radius-sm);
-  transition: background 0.15s;
-}
-
-.sidebar-player-row:hover {
-  background: var(--sf-hover);
-}
-
-.sidebar-player-row-left {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.sidebar-player-row-avatar {
-  font-size: 1.2rem;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--sf-hover);
-  border: 1.5px solid var(--ln);
-  flex-shrink: 0;
-}
-
-.sidebar-player-row-avatar.active-turn {
-  border-color: var(--color-gold);
-  box-shadow: 0 0 8px rgba(232, 182, 74, 0.3);
-}
-
-.sidebar-player-row-name {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.sidebar-player-row-status {
-  font-size: 0.65rem;
-  color: var(--text-muted);
-}
-
-.sidebar-player-row-status.is-waiting {
-  color: var(--text-muted);
-}
-
-.sidebar-player-row-cash {
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--color-naira);
-}
-
 .sidebar-player-row.bankrupt .sidebar-player-row-name {
   text-decoration: line-through;
   opacity: 0.5;
@@ -2009,33 +1669,6 @@ html.high-contrast .glass-panel {
 .sidebar-player-row.bankrupt .sidebar-player-row-cash {
   color: var(--color-danger);
   opacity: 0.5;
-}
-
-/* Legacy HUD classes still referenced — keep for compatibility */
-.players-hud {
-  padding: 1.25rem;
-}
-
-.players-hud-title {
-  font-size: 1rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--ln);
-  padding-bottom: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.hud-player-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.6rem 0.8rem;
-  border-radius: 8px;
-  background: var(--sf-hover);
-  border: 1px solid var(--ln);
-  margin-bottom: 0.5rem;
-  transition: all 0.2s;
 }
 
 .hud-player-card.active {
@@ -2048,24 +1681,6 @@ html.high-contrast .glass-panel {
   opacity: 0.4;
   text-decoration: line-through;
   background: rgba(239, 68, 68, 0.04);
-}
-
-.hud-player-name-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.hud-player-name {
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.hud-player-cash {
-  font-family: var(--font-display);
-  font-weight: 700;
-  color: var(--color-naira);
-  font-size: 0.95rem;
 }
 
 /* ──────────────────────────────────────────────
@@ -2110,27 +1725,6 @@ html.high-contrast .glass-panel {
 
 .footer-right {
   font-style: italic;
-}
-
-/* Toggle row for settings */
-.footer-toggles {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.footer-toggle-item {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: color 0.15s;
-}
-
-.footer-toggle-item:hover {
-  color: var(--text-secondary);
 }
 
 /* Console logs & Action controls */
@@ -2184,14 +1778,6 @@ html.high-contrast .glass-panel {
   background: var(--bad-bg);
 }
 
-/* Action Controls Panel */
-.action-controls {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
 .action-status-indicator {
   font-size: 0.85rem;
   text-align: center;
@@ -2199,12 +1785,6 @@ html.high-contrast .glass-panel {
   padding: 0.4rem;
   background: var(--sf-hover);
   border-radius: 4px;
-}
-
-.action-buttons-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
 }
 
 .action-buttons-grid .button-primary,
@@ -2227,14 +1807,6 @@ html.high-contrast .glass-panel {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-}
-
-.auction-title {
-  font-size: 0.9rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--color-gold);
-  text-align: center;
 }
 
 /* Chaos standing offers (step B4a). The timed chaos DECISIONS became light v2
@@ -2265,28 +1837,6 @@ html.high-contrast .glass-panel {
   border-radius: 2px;
 }
 
-.auction-bid-hud {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.85rem;
-}
-
-.bid-input-wrapper {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.bid-input {
-  width: 80px;
-  background: var(--sunken);
-  border: 1px solid var(--ln);
-  color: var(--ink);
-  padding: 0.4rem;
-  border-radius: 4px;
-  outline: none;
-}
-
 /* Timed auction: countdown bar + intensity cues */
 .auction-panel.auction-urgent {
   border-color: var(--color-danger);
@@ -2304,68 +1854,12 @@ html.high-contrast .glass-panel {
   }
 }
 
-.auction-timer {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.auction-timer-bar {
-  flex: 1;
-  height: 8px;
-  background: var(--sf-hover);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.auction-timer-fill {
-  height: 100%;
-  background: var(--pri);
-  border-radius: 999px;
-  transition: width 0.12s linear;
-}
-
 .auction-timer-fill.urgent {
   background: var(--color-danger);
 }
 
-.auction-timer-secs {
-  font-size: 0.85rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  min-width: 3.5rem;
-  text-align: right;
-  color: var(--text-secondary);
-}
-
 .auction-timer-secs.urgent {
   color: var(--color-danger);
-}
-
-.auction-increment-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.bid-increment-btn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 0.5rem 0.25rem;
-  font-weight: 700;
-}
-
-.bid-increment-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.bid-increment-total {
-  font-size: 0.65rem;
-  font-weight: 500;
-  opacity: 0.8;
 }
 
 /* Chat channels: General + per-player private (direct) channels */
@@ -2413,21 +1907,6 @@ html.high-contrast .glass-panel {
   text-align: center;
 }
 
-/* Error message notification */
-.error-popup {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  background: var(--color-danger);
-  color: #fff;
-  padding: 1rem 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
-  font-weight: 600;
-  z-index: 1000;
-  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
 @keyframes slideInRight {
   from {
     transform: translateX(100%);
@@ -2442,10 +1921,6 @@ html.high-contrast .glass-panel {
 
 /* Supplemental Tiny Viewport Adjustments */
 @media (max-width: 760px) {
-  .dashboard-view {
-    padding: 0.5rem;
-  }
-
   .app-header {
     padding: 0.6rem 0.8rem;
     flex-wrap: wrap;
@@ -2463,16 +1938,6 @@ html.high-contrast .glass-panel {
   .players-hud,
   .console-panel {
     padding: 0.85rem;
-  }
-
-  .board-center-logo {
-    font-size: 2.4rem;
-  }
-
-  .board-center-feed-logs {
-    /* Fill the board-centre on mobile too (flex-driven, no fixed cap). */
-    flex: 1 1 0;
-    min-height: 0;
   }
 
   .tile-tooltip {
@@ -2688,85 +2153,6 @@ html.high-contrast .glass-panel {
   }
 }
 
-/* Players HUD Hover Asset Popover */
-.hud-player-card {
-  position: relative;
-}
-
-.hud-player-popover {
-  display: block;
-  position: absolute;
-  right: calc(100% + 12px);
-  top: 50%;
-  transform: translateY(-50%) translateX(-15px);
-  width: 280px;
-  background: var(--sf);
-  border: 1px solid var(--ln);
-  box-shadow: var(--sh-lg);
-  border-radius: 2px;
-  padding: 0.8rem 1rem;
-  z-index: 500;
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.hud-player-card:hover .hud-player-popover {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(-50%) translateX(0);
-}
-
-.popover-title {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--ln);
-  padding-bottom: 0.4rem;
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.popover-tiles-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  max-height: 220px;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-.popover-tile-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--sf-hover);
-  padding: 0.25rem 0.4rem;
-  border-radius: 4px;
-  border-bottom: 1px solid var(--ln);
-}
-
-.popover-tile-name {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 140px;
-}
-
-.popover-no-assets {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-style: italic;
-  text-align: center;
-  padding: 0.4rem;
-}
-
 /* =============================================================================
    Game Over & Leaderboard Styles
    ============================================================================= */
@@ -2862,28 +2248,6 @@ html.high-contrast .glass-panel {
   padding-right: 0.25rem;
 }
 
-.game-over-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 0.5rem;
-  width: 100%;
-  justify-content: center;
-}
-
-.game-over-actions button {
-  min-width: 160px;
-}
-
-.show-leaderboard-btn {
-  animation: pulseGlow 2s infinite ease-in-out;
-}
-
-.mute-toggle-btn:hover {
-  background: var(--sf-hover) !important;
-  border-color: var(--ln-2) !important;
-  transform: scale(1.05);
-}
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -2965,28 +2329,6 @@ html.high-contrast .glass-panel {
   border-radius: 4px;
   background: var(--sf-hover);
   word-break: break-word;
-}
-
-.chat-msg-sender {
-  font-weight: 700;
-  color: var(--color-gold);
-  margin-right: 0.4rem;
-}
-
-.chat-msg-text {
-  color: var(--ink);
-}
-
-.chat-input-box {
-  flex: 1;
-  font-size: 0.85rem;
-  padding: 0.5rem 0.75rem !important;
-}
-
-.chat-send-btn {
-  width: auto !important;
-  padding: 0.5rem 1rem !important;
-  font-size: 0.85rem !important;
 }
 
 /* =============================================================================
@@ -3236,15 +2578,6 @@ html.high-contrast .glass-panel {
   cursor: not-allowed;
 }
 
-.panel-tab-btn {
-  transition: all 0.2s ease-in-out;
-}
-
-.panel-tab-btn:hover {
-  background: var(--sf-hover) !important;
-  color: var(--ink) !important;
-}
-
 .panel-tab-btn.active:hover {
   background: var(--sf-hover) !important;
 }
@@ -3313,24 +2646,6 @@ html.high-contrast .glass-panel {
     0 0 0 3px var(--cor-50);
 }
 
-/* ── Lobby trivia ticker ── */
-
-.trivia-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--pri);
-}
-
-.trivia-text {
-  font-size: 0.82rem;
-  line-height: 1.5;
-  color: var(--text-secondary);
-  margin: 0;
-  max-width: 420px;
-}
-
 .active-player-hero-avatar {
   width: 44px;
   height: 44px;
@@ -3372,32 +2687,6 @@ html.high-contrast .glass-panel {
 
 .active-player-hero.is-me .active-player-hero-sub {
   color: var(--cor-7);
-}
-
-/* ── In-game board trivia (during other players' turns) ── */
-.board-trivia-box {
-  margin-top: 0.6rem;
-  padding: 0.5rem 0.8rem;
-  text-align: center;
-  background: var(--sf-hover);
-  border: 1px solid var(--ln);
-  border-radius: 6px;
-  max-width: 380px;
-  min-height: 3rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-}
-
-.board-trivia-box .trivia-label {
-  font-size: 0.6rem;
-}
-
-.board-trivia-box .trivia-text {
-  font-size: 0.72rem;
-  max-width: 340px;
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -4271,25 +3560,6 @@ html.high-contrast .glass-panel {
   border-color: rgba(232, 182, 74, 0.3);
 }
 
-.trade-cash-display {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 0.65rem;
-  background: var(--sunken);
-  border: 1px solid var(--ln);
-  border-radius: 8px;
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-}
-
-.trade-cash-display strong {
-  font-family: var(--font-display);
-  font-size: 1rem;
-  color: var(--color-gold);
-  font-variant-numeric: tabular-nums;
-}
-
 .trade-cash-display strong.short {
   color: var(--color-danger);
 }
@@ -4416,60 +3686,6 @@ html.high-contrast .glass-panel {
   color: var(--ink);
   font-variant-numeric: tabular-nums;
   margin-top: 1px;
-}
-
-.trade-incoming-from {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 0.7rem 0.85rem;
-  background: var(--cor-50);
-  border: 1px solid rgba(55, 214, 194, 0.3);
-  border-radius: 10px;
-  margin-bottom: 0.9rem;
-}
-
-.trade-incoming-from-avatar {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--sunken);
-  border: 2px solid rgba(55, 214, 194, 0.5);
-  font-size: 1.5rem;
-}
-
-.trade-incoming-from-meta {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-}
-
-.trade-incoming-from-name {
-  font-family: var(--font-display);
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: var(--ink);
-}
-
-.trade-incoming-from-sub {
-  font-size: 0.7rem;
-  color: var(--cor-7);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.trade-cant-afford {
-  margin-top: 0.65rem;
-  padding: 0.55rem 0.75rem;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  border-radius: 8px;
-  font-size: 0.75rem;
-  color: var(--bad);
-  text-align: center;
 }
 
 /* Footer actions */
