@@ -28,13 +28,10 @@
       name="twitter:description"
       content="Nigerian multiplayer property game. Free in your browser, 2–6 players."
     />
-    <!-- Premium Google Fonts: Nunito + Yanone Kaffeesatz -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&family=Yanone+Kaffeesatz:wght@200;300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- No web-font request. Figtree is self-hosted (@font-face in
+         tokens.css); preloaded here so it is already in flight when the
+         stylesheet asks for it. -->
+    <link rel="preload" href="/fonts/figtree-latin.woff2" as="font" type="font/woff2" crossorigin />
     <style>
       /* First paint is the v2 landing (warm sand), so paint that immediately
          to avoid a dark flash before React mounts. Legacy dark screens
@@ -46,11 +43,7 @@
         padding: 0;
         background-color: #faf7f2;
         color: #101828;
-        font-family:
-          "Nunito",
-          system-ui,
-          -apple-system,
-          sans-serif;
+        font-family: "Figtree", "Segoe UI", Roboto, system-ui, sans-serif;
       }
     </style>
   </head>

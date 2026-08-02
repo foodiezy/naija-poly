@@ -7,7 +7,6 @@ import { GameState, Player, Action } from "../../engine/types";
 import { RoomState } from "../../shared/room";
 import { getFactForTile } from "../../data/facts";
 import { zoneOfGroup } from "../lib/zones";
-import TileImage from "./TileImage";
 import { IconArrowUp, IconArrowDown, IconMortgage, IconUnmortgage } from "./icons";
 
 interface TileInspectorProps {
@@ -523,14 +522,6 @@ export default function TileInspector({
         <button className="tile-inspector-close" onClick={onClose} title="Close">
           ✕
         </button>
-
-        {(tile.type === "property" || tile.type === "airport" || tile.type === "utility") && (
-          <div className="deed-photo-wrap">
-            <TileImage pos={tilePos} className="deed-photo" />
-            <div className="deed-photo-scrim" />
-            {/* No caption — the deed band right below already names the tile. */}
-          </div>
-        )}
 
         {tile.type === "property" && renderPropertyDeed(tile as PropertyTile)}
         {tile.type === "airport" && renderAirportDeed(tile as AirportTile)}
