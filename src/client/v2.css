@@ -2217,6 +2217,30 @@ body.v2-sh-locked {
   --tile-size: calc(var(--board-size) / 11);
 }
 
+/* The bands are placed explicitly rather than auto-flowed. Auto-placement
+   makes the layout depend on how many children the shell happens to have, so
+   one overlay that renders a real node instead of a portal would push every
+   band down a row and collapse the board. */
+.v2-gtop {
+  grid-row: 1;
+}
+
+.v2-turnstrip {
+  grid-row: 2;
+}
+
+.v2-shell-board {
+  grid-row: 3;
+}
+
+.v2-ticker {
+  grid-row: 4;
+}
+
+.v2-actbar {
+  grid-row: 5;
+}
+
 /* ── Band 1 · top bar (56px) ───────────────────────────────────────── */
 
 .v2-gtop {
@@ -2373,6 +2397,7 @@ body.v2-sh-locked {
 /* ── Band 3 · the board ────────────────────────────────────────────── */
 
 .v2-shell-board {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2380,6 +2405,11 @@ body.v2-sh-locked {
   min-height: 0;
   padding: var(--s-2);
   overflow: hidden;
+}
+
+/* The board must sit above the watermark. */
+.v2-shell-board > *:not(.v2-adire) {
+  position: relative;
 }
 
 /* ── Band 4 · context ticker (36px) ────────────────────────────────── */
@@ -2608,6 +2638,55 @@ body.v2-sh-locked {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+/* ── Game feed (desktop left rail · step B6) ───────────────────────── */
+
+.v2-feed {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 0;
+  background: var(--sf);
+  border: 1px solid var(--ln);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-xs);
+  overflow: hidden;
+}
+
+.v2-feed-title {
+  margin: 0;
+  padding: var(--s-3) var(--s-3) var(--s-2);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--ln);
+}
+
+.v2-feed-logs {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--s-2) var(--s-3) var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: 1.45;
+}
+
+/* Few lines? Pin them to the bottom so the newest always sits on the edge
+   the eye is already watching. */
+.v2-feed-logs > .log-entry:first-child {
+  margin-top: auto;
+}
+
+.v2-feed-empty {
+  margin: auto 0 0;
+  color: var(--ink-4);
 }
 
 /* ── Desktop: three columns around the board, same five bands ──────── */

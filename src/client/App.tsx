@@ -9,6 +9,7 @@ import JoinGate from "./components/JoinGate";
 import RoomLobbyView from "./components/RoomLobbyView";
 import GameBoard from "./components/GameBoard";
 import GameShell from "./components/GameShell";
+import GameFeed from "./components/GameFeed";
 import ChatPanel from "./components/ChatPanel";
 // (SettingsPanel removed in B5 — mute moved to the shell top bar and its
 // overflow menu, where it is reachable without scrolling a sidebar.)
@@ -337,8 +338,6 @@ export default function App() {
                   roomState={roomState}
                   mySessionId={mySessionId || undefined}
                   onTileClick={(pos) => setSelectedTilePos(pos)}
-                  onEndTurn={() => sendAction({ type: "END_TURN" })}
-                  onRoll={() => sendAction({ type: "ROLL" })}
                   displayedPositions={displayedPositions}
                 />
               }
@@ -364,6 +363,7 @@ export default function App() {
                   onSendChatMessage={sendChatMessage}
                 />
               }
+              feed={<GameFeed engineState={engineState} />}
               overlays={
                 <>
                   {reconnecting && (

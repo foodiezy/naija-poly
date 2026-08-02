@@ -5,10 +5,8 @@ import { getDevelopmentName, getRent } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
-import TileImage from "./TileImage";
-import { tileImageUrl } from "../tileImages";
+import { zoneOfGroup } from "../lib/zones";
 import { IconHouse, IconHotel } from "./icons";
-import { useTriviaRotation } from "../hooks/useTriviaRotation";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
 // type, so drop the redundant "Airport"/"Corporation" suffix; the full name
@@ -24,8 +22,6 @@ interface GameBoardProps {
   roomState: RoomState | null;
   mySessionId?: string;
   onTileClick?: (pos: number) => void;
-  onEndTurn?: () => void;
-  onRoll?: () => void;
   // Animated token positions from the shared walker (owned by App so the buy
   // card can wait for the token to arrive). Falls back to static positions.
   displayedPositions?: Map<string, number>;
@@ -145,8 +141,6 @@ export default function GameBoard({
   roomState,
   mySessionId,
   onTileClick,
-  onEndTurn,
-  onRoll,
   displayedPositions: displayedPositionsProp,
 }: GameBoardProps) {
   if (!engineState) {
@@ -175,12 +169,10 @@ export default function GameBoard({
   const activePlayerIndex = engineState.currentPlayerIndex ?? -1;
   const activePlayer = activePlayerIndex >= 0 ? players[activePlayerIndex] : undefined;
   const activePlayerId = activePlayer ? activePlayer.id : null;
-  const isMyTurn = activePlayerId === mySessionId;
   // True once the active player's piece has finished walking — used to hold the
   // drawn-card banner until arrival so the token walk isn't spoiled.
   const activeArrived = !activePlayer || getDisplayedPos(activePlayer) === activePlayer.position;
 
-  const logsEndRef = useRef<HTMLDivElement>(null);
   // Whether the drawn-card banner is currently shown (auto-dismisses).
   const [cardVisible, setCardVisible] = useState(false);
   // Shake the dice briefly when a new roll comes in, then settle.
@@ -191,22 +183,6 @@ export default function GameBoard({
   // is always visible — even when the same value is rolled twice.
   const diceSpins = useRef(0);
   const lastDiceSig = useRef<string>("");
-  // Latch the board Roll button on click so a double-tap can't fire two ROLLs
-  // before the phase flips; released whenever the phase or turn changes.
-  const [rollBusy, setRollBusy] = useState(false);
-
-  // In-game trivia rotation — shown during other players' turns
-  const boardTrivia = useTriviaRotation(14000, isMyTurn);
-
-  // Keep the game feed pinned to the newest line WITHOUT scrolling the page.
-  // scrollIntoView() walks every scrollable ancestor (including the window),
-  // so on shorter viewports each new log line yanked the whole page downward.
-  // Scroll only the feed's own container instead.
-  useEffect(() => {
-    const container = logsEndRef.current?.parentElement;
-    if (container) container.scrollTop = container.scrollHeight;
-  }, [engineState.log?.length]);
-
   // Trigger dice shake when the dice values change
   useEffect(() => {
     const key = engineState.dice
@@ -220,24 +196,6 @@ export default function GameBoard({
     }
     return undefined;
   }, [engineState.dice, engineState.currentTurn]);
-
-  const getLogClass = (logLine: string) => {
-    if (
-      logLine.includes("rolled") ||
-      logLine.includes("START") ||
-      logLine.includes("Prison") ||
-      logLine.includes("escaped")
-    ) {
-      return "log-entry log-entry-system";
-    }
-    if (logLine.includes("bought")) {
-      return "log-entry log-entry-buy";
-    }
-    if (logLine.includes("paid rent") || logLine.includes("paid ₦") || logLine.includes("tax")) {
-      return "log-entry log-entry-rent";
-    }
-    return "log-entry";
-  };
 
   const getTokenEmoji = (playerId: string) => tokenEmoji(lobbyPlayers.get(playerId)?.tokenId);
 
@@ -345,22 +303,8 @@ export default function GameBoard({
     return () => clearTimeout(t);
   }, [lastLog, activeArrived]);
 
-  // Release the roll latch once the turn advances or the phase changes.
-  useEffect(() => {
-    setRollBusy(false);
-  }, [engineState.phase, engineState.currentPlayerIndex]);
-
-  // Can the local player end their turn right now?
-  const canEndTurn =
-    isMyTurn && engineState.phase === "awaiting-end-turn" && (myPlayer?.cash ?? 0) >= 0;
-
-  // Can the local player roll right now? (Board-centre Roll button.)
-  const canRoll = isMyTurn && engineState.phase === "awaiting-roll";
-  const handleRoll = () => {
-    if (rollBusy) return;
-    setRollBusy(true);
-    onRoll?.();
-  };
+  // Rolling and ending a turn are the action bar's job now (B5 · spec §2):
+  // one primary under the thumb, never two copies of it competing.
 
   // Dice stay on the board at all times: before the first roll (or at the top
   // of a turn) they rest showing a neutral pair rather than vanishing.
@@ -383,178 +327,25 @@ export default function GameBoard({
 
   return (
     <div className="monopoly-board">
-      {/* Board Center (Richup.io Style) */}
-      <div
-        className="board-center"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "flex-start",
-          gap: "0.75rem",
-          background: "linear-gradient(135deg, #120e24 0%, #0a0814 100%)",
-          padding: "1.5rem",
-          borderRadius: "2px",
-        }}
-      >
-        {/* Top Row: Logo, Mama Put Pot and Game Phase/Turn HUD */}
-        <div
-          className="board-center-top-row"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            zIndex: 5,
-            width: "100%",
-          }}
-        >
-          <div
-            className="board-center-logo"
-            style={{
-              margin: 0,
-              fontSize: "1.2rem",
-              letterSpacing: "0.2em",
-              background: "linear-gradient(135deg, var(--color-gold) 0%, #f97316 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            ODOGWU EMPIRE
-          </div>
+      {/* Board centre — dice, whose turn, and nothing else (spec §2).
+          B6 emptied it. The wordmark, the Mama Put pot, the NEPA banner and
+          the phase/round HUD were status, not board: pot and NEPA are chips
+          in the shell top bar now. Roll and End Turn were duplicates of the
+          action bar's single primary. The trivia box filled space the centre
+          no longer has to fill, and the feed moved to the desktop left rail
+          (mobile reads it in the ticker and the history sheet). */}
+      <div className="board-center">
+        {/* Adire crosshatch, the same motif the landing and the shell use. */}
+        <div className="board-center-adire" aria-hidden="true" />
 
-          {/* Mama Put Pot Display */}
-          {engineState.settings?.freeParkingJackpot && (
-            <motion.div
-              className="mama-put-pot-display"
-              style={{
-                margin: 0,
-                padding: "0.35rem 0.75rem",
-                background: "rgba(70, 199, 141, 0.1)",
-                border: "1px solid rgba(70, 199, 141, 0.25)",
-                borderRadius: "2px",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                fontSize: "0.75rem",
-                fontWeight: "bold",
-                color: "var(--color-naira)",
-                boxShadow: "0 0 10px rgba(70, 199, 141, 0.15)",
-                zIndex: 5,
-              }}
-              key={engineState.freeParkingPot}
-              animate={
-                engineState.freeParkingPot > 0
-                  ? {
-                      boxShadow: [
-                        "0 0 10px rgba(70,199,141,0.15)",
-                        "0 0 22px rgba(70,199,141,0.45)",
-                        "0 0 10px rgba(70,199,141,0.15)",
-                      ],
-                    }
-                  : {}
-              }
-              transition={{ duration: 1.5, repeat: Infinity }}
-            >
-              <span>🍲 Mama Put Pot:</span>
-              <motion.span
-                key={engineState.freeParkingPot}
-                initial={{ scale: 1.3, color: "#46c78d" }}
-                animate={{ scale: 1, color: "var(--color-naira)" }}
-                transition={{ duration: 0.4 }}
-              >
-                ₦{(engineState.freeParkingPot ?? 0).toLocaleString()}
-              </motion.span>
-            </motion.div>
-          )}
-
-          {/* NEPA blackout indicator (chaos mode) */}
-          {engineState.blackout && (
-            <motion.div
-              className="blackout-display"
-              style={{
-                margin: 0,
-                padding: "0.35rem 0.75rem",
-                background: "rgba(232, 182, 74, 0.12)",
-                border: "1px solid rgba(232, 182, 74, 0.4)",
-                borderRadius: "2px",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                fontSize: "0.75rem",
-                fontWeight: "bold",
-                color: "var(--color-gold, #e8b64a)",
-                zIndex: 5,
-              }}
-              initial={{ opacity: 0, y: -6 }}
-              animate={{
-                opacity: 1,
-                y: 0,
-                boxShadow: [
-                  "0 0 8px rgba(232,182,74,0.15)",
-                  "0 0 20px rgba(232,182,74,0.5)",
-                  "0 0 8px rgba(232,182,74,0.15)",
-                ],
-              }}
-              transition={{ boxShadow: { duration: 1.4, repeat: Infinity } }}
-              title="NEPA don take light — rent is frozen until the round comes back around."
-            >
-              ⚡ NEPA don take light — rent frozen!
-            </motion.div>
-          )}
-
-          {/* Game Phase / Turn Indicator */}
-          <motion.div
-            key={engineState.phase}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-end",
-              gap: "2px",
-              zIndex: 5,
-            }}
-          >
-            <div
-              style={{
-                color: "var(--text-secondary)",
-                fontSize: "0.75rem",
-                textTransform: "uppercase",
-                letterSpacing: "0.03em",
-              }}
-            >
-              Phase:{" "}
-              <span style={{ color: "var(--color-gold)", fontWeight: "bold" }}>
-                {engineState.phase.replace("-", " ")}
-              </span>
-            </div>
-            <div style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>
-              Round:{" "}
-              <span style={{ color: "#3b82f6", fontWeight: "bold" }}>
-                {engineState.currentTurn ?? 1}
-              </span>
-              {engineState.settings?.turnLimit > 0 && ` / ${engineState.settings.turnLimit}`}
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Central Display: Dice + Active Player Status (Richup.io centerpiece) */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: "0 0 auto",
-            marginTop: "1.5rem",
-            zIndex: 10,
-          }}
-        >
+        <div className="board-center-stage">
           {/* Dice — permanently on the stage. Stable keys mean the dice never
               unmount: on each roll the cubes spin to their new value in place
               (a brief shake adds tumble). They rest on a neutral pair before
               the first roll of a turn. */}
-          <div className={`dice-stage${diceShaking ? " shaking" : ""}${hasRolled ? "" : " dice-idle"}`}>
+          <div
+            className={`dice-stage${diceShaking ? " shaking" : ""}${hasRolled ? "" : " dice-idle"}`}
+          >
             {renderDie3D(displayDice[0], "die0", diceSpin)}
             {renderDie3D(displayDice[1], "die1", diceSpin)}
           </div>
@@ -577,158 +368,29 @@ export default function GameBoard({
               </div>
             </motion.div>
           ) : (
-            <div style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-              Waiting for players...
-            </div>
-          )}
-
-          {/* Roll Dice — right on the board when it's your turn, so you never
-              have to hunt for it in the side panel. */}
-          {canRoll && onRoll && (
-            <motion.button
-              className="board-roll-btn"
-              onClick={handleRoll}
-              disabled={rollBusy}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              whileHover={{ scale: rollBusy ? 1 : 1.05 }}
-              whileTap={{ scale: rollBusy ? 1 : 0.95 }}
-              style={{
-                marginTop: "1rem",
-                padding: "0.6rem 2rem",
-                fontSize: "1rem",
-                fontWeight: 700,
-                borderRadius: "2px",
-                background: "linear-gradient(135deg, var(--color-gold) 0%, #f97316 100%)",
-                boxShadow: "0 4px 15px rgba(232, 182, 74, 0.4)",
-                border: "none",
-                color: "#1a1205",
-                cursor: rollBusy ? "default" : "pointer",
-                opacity: rollBusy ? 0.6 : 1,
-              }}
-            >
-              🎲 {myPlayer?.inJail ? "Roll (Jail)" : "Roll Dice"}
-            </motion.button>
-          )}
-
-          {/* End Turn button — prominently centered */}
-          {canEndTurn && onEndTurn && (
-            <motion.button
-              className="board-end-turn-btn"
-              onClick={onEndTurn}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              style={{
-                padding: "0.6rem 2rem",
-                fontSize: "1rem",
-                fontWeight: 700,
-                borderRadius: "2px",
-                background: "linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%)",
-                boxShadow: "0 4px 15px rgba(70, 199, 141, 0.4)",
-                border: "none",
-                color: "#fff",
-                cursor: "pointer",
-              }}
-            >
-              End Turn
-            </motion.button>
-          )}
-
-          {/* In-game trivia — shown during OTHER players' turns */}
-          {!isMyTurn && activePlayerId && (
-            <div className="board-trivia-box">
-              <span className="trivia-label">🇳🇬 Did you know?</span>
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={boardTrivia}
-                  className="trivia-text"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.35 }}
-                >
-                  {boardTrivia}
-                </motion.p>
-              </AnimatePresence>
-            </div>
+            <div className="board-center-waiting">Waiting for players…</div>
           )}
         </div>
 
-        {/* Bottom Section: Game Feed & Card draws — grows to fill the space
-            below the dice, then scrolls internally. */}
-        <div
-          style={{
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            flex: "1 1 0",
-            minHeight: 0,
-            zIndex: 5,
-          }}
-        >
-          {/* Drawn Card Overlay */}
-          <AnimatePresence>
-            {activeCardDraw && cardVisible && (
-              <motion.div
-                className={`card-draw-overlay ${activeCardDraw.type}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.25 }}
-                style={{
-                  width: "100%",
-                  maxWidth: "450px",
-                  marginBottom: "0.5rem",
-                  borderRadius: "2px",
-                }}
-              >
-                <div className="card-deck-title">
-                  {activeCardDraw.type} DRAWN BY {activeCardDraw.player.toUpperCase()}
-                </div>
-                <div className="card-text">"{activeCardDraw.text}"</div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Center: Game Feed — blends into the board-center background (no boxed panel) */}
-          <div
-            className="board-center-feed"
-            style={{
-              width: "100%",
-              maxWidth: "550px",
-              margin: 0,
-              background: "transparent",
-              border: "none",
-              flex: "1 1 0",
-              minHeight: 0,
-            }}
-          >
-            <div
-              className="board-center-feed-logs"
-              style={{ padding: "0.5rem 1rem" }}
-              role="log"
-              aria-live="polite"
-              aria-label="Game events (dice rolls, turns, rent and cards)"
+        {/* Drawn card — the one thing besides dice and whose-turn that still
+            belongs in the middle of the board: it is a transient reveal, not
+            a control or a status readout. */}
+        <AnimatePresence>
+          {activeCardDraw && cardVisible && (
+            <motion.div
+              className={`card-draw-overlay ${activeCardDraw.type}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.25 }}
             >
-              {engineState.log?.map((logLine: string, idx: number) => (
-                <div
-                  key={idx}
-                  className={getLogClass(logLine)}
-                  style={{ fontSize: "0.78rem", padding: "2px 0", textAlign: "center" }}
-                >
-                  {logLine}
-                </div>
-              ))}
-              <div ref={logsEndRef} />
-            </div>
-          </div>
-        </div>
+              <div className="card-deck-title">
+                {activeCardDraw.type} DRAWN BY {activeCardDraw.player.toUpperCase()}
+              </div>
+              <div className="card-text">"{activeCardDraw.text}"</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Render 40 tiles */}
@@ -748,6 +410,18 @@ export default function GameBoard({
         const hasColorBar = tile.type === "property";
         const groupColor = hasColorBar ? (tile as PropertyTile).group : null;
         const tileIcon = !hasColorBar ? getSpecialTileIcon(tile) : "";
+
+        // The tile's zone drives its band and its owned wash. Handing CSS two
+        // custom properties keeps every colour decision in the stylesheet —
+        // the alternative is eight `[data-zone="…"]` rules per surface.
+        const zoneSlug = groupColor ? zoneOfGroup(groupColor).slug : null;
+        const zoneVars = zoneSlug
+          ? ({
+              "--tile-zone": `var(--zone-${zoneSlug}-bar)`,
+              "--tile-zone-tint": `var(--zone-${zoneSlug}-tint)`,
+              "--tile-zone-ink": `var(--zone-${zoneSlug}-ink)`,
+            } as React.CSSProperties)
+          : {};
 
         // Render houses/hotels — richup.io style: one icon + a ×N count badge
         // (a compact pill on the colour band) rather than repeating the icon.
@@ -797,10 +471,12 @@ export default function GameBoard({
           <div
             key={tile.pos}
             className={`tile ${isCorner ? "tile-corner" : ""} edge-${getTileEdge(tile.pos)}${hasMyToken ? " tile-has-me" : ""}${playersOnTile.length > 0 ? " tile-has-player" : ""}${hasActivePlayer ? " tile-active-player" : ""}${isMortgaged ? " tile-mortgaged" : ""}`}
+            data-owned={ownerEmoji ? "" : undefined}
             style={{
               gridColumn: coords.col,
               gridRow: coords.row,
               cursor: "pointer",
+              ...zoneVars,
               ...getColorBarPadding(tile.pos, hasColorBar, isCorner),
             }}
             onClick={() => onTileClick?.(tile.pos)}
@@ -815,23 +491,13 @@ export default function GameBoard({
             aria-label={getTileTitle()}
             title={getTileTitle()}
           >
-            {/* Real-place photo behind the tile content (purchasable tiles) */}
-            {tileImageUrl(tile.pos) && (
-              <div className="tile-photo-layer">
-                <TileImage pos={tile.pos} />
-                <div className="tile-photo-scrim" />
-              </div>
-            )}
+            {/* No photo layer. A 30px tile rendered a city as a brown smear
+                and cost 31 remote Wikimedia fetches on first paint; the deed
+                sheet shows the same photo at a size worth its bytes. */}
 
             {/* Edge-aware color bar */}
             {hasColorBar && groupColor && (
-              <div
-                className="tile-color-bar"
-                style={{
-                  backgroundColor: `var(--color-${groupColor})`,
-                  ...getColorBarStyle(tile.pos),
-                }}
-              />
+              <div className="tile-color-bar" style={getColorBarStyle(tile.pos)} />
             )}
 
             {/* House dots container */}
@@ -868,18 +534,7 @@ export default function GameBoard({
 
             {/* Owner badge */}
             {ownerEmoji && (
-              <span
-                className="tile-owner-indicator"
-                title={getOwnerTitle()}
-                style={
-                  isMortgaged
-                    ? {
-                        border: "1px solid var(--color-danger)",
-                        background: "rgba(239, 68, 68, 0.2)",
-                      }
-                    : {}
-                }
-              >
+              <span className="tile-owner-indicator" title={getOwnerTitle()}>
                 {ownerEmoji} {isMortgaged && "🔒"}
               </span>
             )}

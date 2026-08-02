@@ -45,6 +45,9 @@ interface Props {
   sidebar: ReactNode;
   /** ChatPanel — left dock on desktop, the `💬` sheet on mobile. */
   chat: ReactNode;
+  /** GameFeed — desktop left rail only; mobile reads it in the ticker and the
+   * history sheet, so it is never mounted on a phone. */
+  feed: ReactNode;
   /** Decision sheets, inspectors and other portalled overlays. */
   overlays?: ReactNode;
 }
@@ -66,6 +69,7 @@ export default function GameShell({
   board,
   sidebar,
   chat,
+  feed,
   overlays,
 }: Props) {
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
@@ -109,9 +113,20 @@ export default function GameShell({
 
       <TurnStrip engineState={engineState} roomState={roomState} mySessionId={mySessionId} />
 
-      {isDesktop && <aside className="v2-shell-rail v2-shell-rail-left">{chat}</aside>}
+      {isDesktop && (
+        <aside className="v2-shell-rail v2-shell-rail-left">
+          {feed}
+          {chat}
+        </aside>
+      )}
 
-      <main className="v2-shell-board">{board}</main>
+      <main className="v2-shell-board">
+        {/* The band is taller than the board on most phones. Sand with nothing
+            on it reads as a loading state, so the adire crosshatch from the
+            landing fills it — CSS gradients, no bytes. */}
+        <div className="v2-adire" aria-hidden="true" />
+        {board}
+      </main>
 
       {isDesktop && <aside className="v2-shell-rail v2-shell-rail-right">{sidebar}</aside>}
 
