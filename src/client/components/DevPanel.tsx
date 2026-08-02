@@ -11,7 +11,11 @@ interface Props {
 
 // Card ids map to the redesigned chaos mechanics (see board.ts CHAOS_CHANCE_CARDS).
 const FORCE_BUTTONS: { label: string; cardId: string; hint: string }[] = [
-  { label: "C1 · NEPA blackout", cardId: "cx01", hint: "aim a zone dark (+ generator buyout = C2)" },
+  {
+    label: "C1 · NEPA blackout",
+    cardId: "cx01",
+    hint: "aim a zone dark (+ generator buyout = C2)",
+  },
   { label: "C3 · Fuel stockpile", cardId: "cx03", hint: "take now vs double next round" },
   { label: "C4 · Fire sale", cardId: "cx04", hint: "buy a tile at a discount" },
   { label: "C5 · EFCC settlement", cardId: "cx05", hint: "richest pays or surrenders" },
@@ -38,7 +42,13 @@ export default function DevPanel({ status, onStartChaosGame, onForceChaos }: Pro
       }}
     >
       <div
-        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, cursor: "pointer" }}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 8,
+          cursor: "pointer",
+        }}
         onClick={() => setOpen((o) => !o)}
       >
         <strong>🧪 DEV</strong>
@@ -46,7 +56,9 @@ export default function DevPanel({ status, onStartChaosGame, onForceChaos }: Pro
       </div>
 
       {open && (
-        <div style={{ marginTop: "0.4rem", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+        <div
+          style={{ marginTop: "0.4rem", display: "flex", flexDirection: "column", gap: "0.3rem" }}
+        >
           {status === "lobby" && (
             <button
               onClick={onStartChaosGame}
@@ -64,7 +76,12 @@ export default function DevPanel({ status, onStartChaosGame, onForceChaos }: Pro
                   key={b.cardId}
                   onClick={() => onForceChaos(b.cardId)}
                   title={b.hint}
-                  style={{ padding: "0.3rem", borderRadius: 3, cursor: "pointer", textAlign: "left" }}
+                  style={{
+                    padding: "0.3rem",
+                    borderRadius: 3,
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
                 >
                   {b.label}
                 </button>

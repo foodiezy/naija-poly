@@ -12,6 +12,7 @@
 // =============================================================================
 
 import { PropertyTile, Tile } from "../data/board";
+import { zoneOfGroup } from "./lib/zones";
 
 // Reused zone landmarks (a few towns share their region's photo).
 const MAIDUGURI =
@@ -87,17 +88,6 @@ export const TILE_IMAGES: Record<number, string> = {
 // Themed fallback (used when a tile has no photo or the photo fails to load).
 // ----------------------------------------------------------------------------
 
-const GROUP_COLORS: Record<string, string> = {
-  brown: "var(--color-brown)",
-  lightblue: "var(--color-lightblue)",
-  pink: "var(--color-pink)",
-  orange: "var(--color-orange)",
-  red: "var(--color-red)",
-  yellow: "var(--color-yellow)",
-  green: "var(--color-green)",
-  darkblue: "var(--color-darkblue)",
-};
-
 export function tileFallbackEmoji(tile: Tile): string {
   switch (tile.type) {
     case "airport":
@@ -126,13 +116,14 @@ export function tileFallbackEmoji(tile: Tile): string {
 }
 
 export function tileFallbackGradient(tile: Tile): string {
+  // Light-system fallback: a wash of the tile own zone, not a dark vignette.
   if (tile.type === "property") {
-    const c = GROUP_COLORS[(tile as PropertyTile).group] || "#334155";
-    return `linear-gradient(135deg, ${c} 0%, rgba(8,12,24,0.9) 130%)`;
+    const slug = zoneOfGroup((tile as PropertyTile).group).slug;
+    return `linear-gradient(135deg, var(--zone-${slug}-tint) 0%, var(--zone-${slug}-bar) 190%)`;
   }
-  if (tile.type === "airport") return "linear-gradient(135deg, #1e3a5f 0%, #0a0f1e 100%)";
-  if (tile.type === "utility") return "linear-gradient(135deg, #4b5563 0%, #0a0f1e 100%)";
-  return "linear-gradient(135deg, #1f2937 0%, #0a0f1e 100%)";
+  if (tile.type === "airport") return "linear-gradient(135deg, var(--sunken) 0%, var(--ln-3) 190%)";
+  if (tile.type === "utility") return "linear-gradient(135deg, var(--sunken) 0%, var(--ln-3) 190%)";
+  return "linear-gradient(135deg, var(--sunken) 0%, var(--ln-2) 190%)";
 }
 
 export const tileImageUrl = (pos: number): string | undefined => TILE_IMAGES[pos];

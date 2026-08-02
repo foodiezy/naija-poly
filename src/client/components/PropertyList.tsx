@@ -2,6 +2,7 @@ import { BOARD, AirportTile, PropertyTile, UtilityTile } from "../../data/board"
 import type { Tile } from "../../data/board";
 import { getDevelopmentName } from "../../engine/engine";
 import { GameState, TileState } from "../../engine/types";
+import { zoneOfGroup } from "../lib/zones";
 
 interface Props {
   engineState: GameState;
@@ -39,7 +40,8 @@ function currentRent(
 }
 
 function colorVar(tile: Tile): string {
-  if (tile.type === "property") return `var(--color-${(tile as PropertyTile).group})`;
+  if (tile.type === "property")
+    return `var(--zone-${zoneOfGroup((tile as PropertyTile).group).slug}-bar)`;
   if (tile.type === "airport") return "var(--ink-3)";
   if (tile.type === "utility") return "var(--ink-2)";
   return "var(--text-muted)";

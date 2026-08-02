@@ -8,6 +8,7 @@ import { IconTrade } from "./icons";
 import { tokenEmoji } from "../../data/tokens";
 import { tileValue } from "../lib/holdings";
 import { RoomState } from "../../shared/room";
+import { zoneOfGroup } from "../lib/zones";
 
 interface Props {
   engineState: GameState;
@@ -22,7 +23,8 @@ interface Props {
 }
 
 function groupColorVar(tile: Tile): string {
-  if (tile.type === "property") return `var(--color-${(tile as PropertyTile).group})`;
+  if (tile.type === "property")
+    return `var(--zone-${zoneOfGroup((tile as PropertyTile).group).slug}-bar)`;
   if (tile.type === "airport") return "var(--ink-3)";
   if (tile.type === "utility") return "var(--ink-2)";
   return "var(--text-muted)";

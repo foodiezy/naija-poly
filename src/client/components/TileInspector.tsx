@@ -6,6 +6,7 @@ import { tokenEmoji } from "../../data/tokens";
 import { GameState, Player, Action } from "../../engine/types";
 import { RoomState } from "../../shared/room";
 import { getFactForTile } from "../../data/facts";
+import { zoneOfGroup } from "../lib/zones";
 import TileImage from "./TileImage";
 import { IconArrowUp, IconArrowDown, IconMortgage, IconUnmortgage } from "./icons";
 
@@ -42,17 +43,8 @@ export default function TileInspector({
 
   const playersOnTile = players.filter((p: Player) => p.position === tilePos && !p.bankrupt);
 
-  // Color map for property groups
-  const groupColorMap: Record<string, string> = {
-    brown: "var(--color-brown)",
-    lightblue: "var(--color-lightblue)",
-    pink: "var(--color-pink)",
-    orange: "var(--color-orange)",
-    red: "var(--color-red)",
-    yellow: "var(--color-yellow)",
-    green: "var(--color-green)",
-    darkblue: "var(--color-darkblue)",
-  };
+  // Group colours and names both come from lib/zones now: the board speaks in
+  // Nigerian zones, so this card says "Kwara", not "lightblue".
 
   // Manage the property straight from its card (richup.io style). Only shown to
   // the owner on their turn; each button is gated by the same pure predicate the
@@ -141,7 +133,8 @@ export default function TileInspector({
   };
 
   const renderPropertyDeed = (t: PropertyTile) => {
-    const groupColor = groupColorMap[t.group] || "var(--ln-3)";
+    const zone = zoneOfGroup(t.group);
+    const groupColor = `var(--zone-${zone.slug}-bar)`;
     const houses = tileState?.houses ?? 0;
     const isMortgaged = tileState?.mortgaged ?? false;
 
@@ -222,7 +215,7 @@ export default function TileInspector({
                   display: "inline-block",
                 }}
               />
-              <span style={{ textTransform: "capitalize" }}>{t.group} Group</span>
+              <span>{zone.label} zone</span>
               {ownsFullGroup && (
                 <span style={{ color: "var(--color-naira)", fontWeight: "bold" }}>✓ Complete</span>
               )}

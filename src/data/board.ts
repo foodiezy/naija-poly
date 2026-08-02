@@ -18,9 +18,11 @@
 
 // ----------------------------- Types ----------------------------------------
 
-// Color group ids. Their *names* are legacy (kept stable so existing CSS
-// custom-properties --color-brown ... --color-darkblue continue to work),
-// but the *meaning* maps to Nigerian zones in ascending price order:
+// Color group ids. Their *names* are legacy — kept stable only because the
+// engine, its tests and saved game state key off them; nothing visual reads
+// them any more (src/client/lib/zones.ts translates a group to its zone, and
+// the UI shows the zone). The *meaning* is Nigerian zones in ascending price
+// order:
 //   brown     = Borno
 //   lightblue = Kwara
 //   pink      = Enugu

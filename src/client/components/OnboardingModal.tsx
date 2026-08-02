@@ -52,7 +52,7 @@ export default function OnboardingModal({ onClose }: OnboardingModalProps) {
               background: "var(--surface-3)",
               padding: "1rem",
               borderRadius: "var(--radius-md)",
-              borderLeft: "4px solid var(--color-property-2)",
+              borderLeft: "4px solid var(--zone-kwara-bar)",
             }}
           >
             <h3 style={{ margin: "0 0 0.5rem 0", color: "var(--ink)", fontSize: "1.1rem" }}>

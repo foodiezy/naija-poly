@@ -24,25 +24,10 @@
   --color-naira: var(--pri);
   --color-danger: var(--bad);
 
-  /* Board group colors. These were hand-tuned to read on the old dark UI; the
-     redesign speaks in Nigerian zones instead, and the zone bars in tokens.css
-     are the tuned-for-white set (see lib/zones.ts for the group→zone map).
-     Aliased rather than deleted because TileInspector, TradeBuilder and the
-     tile fallback gradients still read these names — B7 converts those and
-     these eight aliases go with them. The board itself no longer uses them. */
-  --color-brown: var(--zone-borno-bar);
-  --color-lightblue: var(--zone-kwara-bar);
-  --color-pink: var(--zone-enugu-bar);
-  --color-orange: var(--zone-kaduna-bar);
-  --color-red: var(--zone-edo-bar);
-  --color-yellow: var(--zone-rivers-bar);
-  --color-green: var(--zone-abuja-bar);
-  --color-darkblue: var(--zone-lagos-bar);
-
-  /* Semantic aliases referenced by components (kept mapping to the tuned
-     palette above so there's still one source of truth). */
-  --color-blue: var(--color-darkblue);
-  --color-property-2: var(--color-lightblue);
+  /* The eight --color-<group> aliases are gone. Every surface that needed a
+     group colour now asks lib/zones for the zone and reads --zone-<slug>-bar
+     directly, which also means the UI says "KWARA" where it used to say
+     "Lightblue Group". */
 
   /* Text Colors — B7: ink on white, from tokens.css. */
   --text-primary: var(--ink);

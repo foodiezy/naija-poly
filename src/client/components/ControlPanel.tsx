@@ -313,7 +313,7 @@ export default function ControlPanel({
               {me.secretObjective === "first_hotel" && "Build a Hotel"}
             </div>
             {me.objectiveCompleted && (
-              <div style={{ color: "var(--color-green)", fontWeight: 600, marginTop: "0.2rem" }}>
+              <div style={{ color: "var(--pri)", fontWeight: 600, marginTop: "0.2rem" }}>
                 Bonus claimed! ✅
               </div>
             )}
