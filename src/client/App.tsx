@@ -313,7 +313,7 @@ export default function App() {
           // not share a parent: buy/auction/chaos render here, incoming trade
           // and debt rescue render inside ControlPanel. Only one gets the
           // screen (spec §2).
-          <DecisionQueueProvider>
+          <DecisionQueueProvider suspended={engineState.phase === "game-over"}>
             <GameShell
               engineState={engineState}
               roomState={roomState}

@@ -18,15 +18,31 @@ import { pickDecision, type DecisionKind } from "./sheetQueue";
 interface QueueApi {
   active: readonly DecisionKind[];
   setActive: (kind: DecisionKind, wants: boolean) => void;
+  /** When true, no decision surface may take the screen. See `suspended`. */
+  suspended: boolean;
 }
 
 // No provider (preview harness, tests, storybook-ish usage): every surface
 // renders as it always did. Failing open beats blanking the screen.
-const FALLBACK: QueueApi = { active: [], setActive: () => {} };
+const FALLBACK: QueueApi = { active: [], setActive: () => {}, suspended: false };
 
 const DecisionQueueContext = createContext<QueueApi | null>(null);
 
-export function DecisionQueueProvider({ children }: { children: ReactNode }) {
+export function DecisionQueueProvider({
+  children,
+  suspended = false,
+}: {
+  children: ReactNode;
+  /**
+   * Close every decision surface at once.
+   *
+   * Set at game over. A pending trade offer outlives the final turn, so the
+   * incoming-trade sheet was rendering ON TOP of the results screen, inviting a
+   * player to accept a deal in a game that had already finished. Suspending
+   * centrally beats adding the same phase check to all five surfaces.
+   */
+  suspended?: boolean;
+}) {
   const [flags, setFlags] = useState<Partial<Record<DecisionKind, boolean>>>({});
 
   const setActive = useCallback((kind: DecisionKind, wants: boolean) => {
@@ -38,7 +54,10 @@ export function DecisionQueueProvider({ children }: { children: ReactNode }) {
     [flags],
   );
 
-  const value = useMemo<QueueApi>(() => ({ active, setActive }), [active, setActive]);
+  const value = useMemo<QueueApi>(
+    () => ({ active, setActive, suspended }),
+    [active, setActive, suspended],
+  );
 
   return <DecisionQueueContext.Provider value={value}>{children}</DecisionQueueContext.Provider>;
 }
@@ -59,7 +78,7 @@ export interface DecisionSlot {
  */
 export function useDecisionSlot(kind: DecisionKind, wants: boolean): DecisionSlot {
   const ctx = useContext(DecisionQueueContext);
-  const { active, setActive } = ctx ?? FALLBACK;
+  const { active, setActive, suspended } = ctx ?? FALLBACK;
 
   useEffect(() => {
     setActive(kind, wants);
@@ -72,5 +91,6 @@ export function useDecisionSlot(kind: DecisionKind, wants: boolean): DecisionSlo
 
   // Without a provider the queue is inert, so honour the caller's own wish.
   if (!ctx) return { visible: wants, waiting: 0 };
+  if (suspended) return { visible: false, waiting: 0 };
   return { visible: visible === kind, waiting };
 }
