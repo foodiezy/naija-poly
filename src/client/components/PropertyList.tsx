@@ -48,8 +48,7 @@ function colorVar(tile: Tile): string {
 }
 
 function tileSubLabel(tile: Tile): string {
-  if (tile.type === "property")
-    return (tile as PropertyTile).group.replace(/^\w/, (c) => c.toUpperCase());
+  if (tile.type === "property") return zoneOfGroup((tile as PropertyTile).group).label;
   if (tile.type === "airport") return "Airport";
   if (tile.type === "utility") {
     const t = tile as UtilityTile;

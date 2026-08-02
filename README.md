@@ -16,17 +16,26 @@ and bankrupt your rivals.
 
 ---
 
+|                                                                                     |                                                                                     |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| ![Landing](docs/screenshots/landing.jpg)                                            | ![In game](docs/screenshots/in-game.jpg)                                            |
+| One promise, one button — and inline-SVG naira, okada and jollof drifting behind it | The board as a map: zone bands, ownership tints, one primary action under the thumb |
+
+![Buying a property](docs/screenshots/deed-sheet.jpg)
+
+---
+
 ## Highlights
 
 - **Authoritative server, not trust-the-client.** The server owns the true game state;
-  clients send *intent* (`ROLL`, `BUY`, `BID`…) and receive state updates. Money, rent,
+  clients send _intent_ (`ROLL`, `BUY`, `BID`…) and receive state updates. Money, rent,
   and ownership are **never** computed on the client — you can't cheat by tampering with
   the browser.
 - **A pure, deterministic game engine.** All rules live in one place:
   `applyAction(state, playerId, action) => newState` — no mutation, no I/O, randomness
   only via an injected RNG. That purity is what makes the whole rulebook exhaustively
   testable headless.
-- **169 passing tests**, including a full 2-player game simulated end-to-end
+- **198 passing tests**, including a full 2-player game simulated end-to-end
   (roll → rent → building → auctions → bankruptcy → winner). Strict TypeScript, no `any`.
 - **Real-time multiplayer** over Colyseus/WebSockets: lobbies, invite links, AI bots,
   turn & auction timers, room-lock on start, and **60s reconnection grace** so a dropped
@@ -45,7 +54,7 @@ An **authoritative server** holds the single source of truth for every game. Cli
 thin: they render synced state and emit intents. The rules are a **pure reducer** —
 `applyAction(state, playerId, action) => newState` — with all randomness injected, so every
 edge case (full-group rent doubling, even-building, auctions on declined buys, multi-asset
-trades, mortgage interest, cascading bankruptcy) is unit-tested deterministically *before*
+trades, mortgage interest, cascading bankruptcy) is unit-tested deterministically _before_
 any UI exists. The Colyseus server just validates an intent and calls the engine; the React
 client just renders and sends intents. Because board content is data, the game is a
 retheme-able platform rather than a one-off.
@@ -62,6 +71,11 @@ Client (React)  ──intent──▶  Colyseus server  ──▶  pure engine  
 TypeScript (strict) · Colyseus + `@colyseus/schema` (authoritative multiplayer) ·
 Express 5 · React 18 + Framer Motion · Vite 5 · Vitest. Deploys as a single Node web
 service on Render (Express serves the built client and the WebSocket server same-origin).
+
+**No third-party requests.** No web fonts, no CDN, no image hosts, no analytics or
+tracking SDKs — the font is self-hosted, every illustration is inline SVG, and the board
+is drawn entirely in CSS. A full page load plus opening a property deed makes 84 requests,
+all to the app's own origin.
 
 ## Project structure
 
@@ -87,10 +101,30 @@ npm install            # installs deps and builds the client (postinstall)
 npm run dev:server     # Colyseus + Express on the API port
 npm run dev:client     # Vite dev server for the UI
 
-npm test               # run the vitest suite (169 tests)
+npm test               # run the vitest suite (198 tests)
 npm run typecheck      # strict tsc --noEmit
 npm run build          # production client build
 ```
+
+## Design system
+
+The UI was rebuilt in 2026 from a dark, desktop-first layout into a light,
+**mobile-first** one — a 360px Android phone on metered data is the target, not a
+1440px monitor. Full write-up: **[docs/redesign.md](docs/redesign.md)**.
+
+- **Every colour is a token.** `src/client/tokens.css` is the single source of truth;
+  components reference `var(--pri)`, `var(--zone-kwara-bar)` and so on, never a literal.
+  A **CI gate** (`npm run check:colors`) fails the build if a hex or `rgb()` sneaks back
+  into a component — which is exactly how the theme rotted the first time.
+- **One contextual action.** `lib/primaryAction.ts` is a pure, unit-tested function
+  deciding the single most important thing you can do right now (roll → buy → end turn →
+  waiting). The action bar renders its answer; nothing else competes with it.
+- **One decision at a time.** Buy, auction, chaos, debt rescue and incoming trade all
+  route through a queue (`lib/sheetQueue.ts`), so a second decision waits its turn behind
+  a "1 waiting" chip instead of stacking modals.
+- **The board is a map.** Under 600px, tile names and prices come off — a zone band, an
+  ownership tint and the owner's token say it at a glance, and the ticker names the tile
+  you're standing on.
 
 ## Testing
 
