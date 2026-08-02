@@ -877,9 +877,16 @@ h6 {
   display: grid;
   /* Corner + side columns/rows get more room than the interior; real Monopoly
      boards use oversized corner squares, and it also frees up width for the
-     side tiles' long Nigerian place names on small screens. */
-  grid-template-columns: 1.5fr repeat(9, 1fr) 1.5fr;
-  grid-template-rows: 1.5fr repeat(9, 1fr) 1.5fr;
+     side tiles' long Nigerian place names on small screens.
+
+     minmax(0, …) rather than a bare fr: a plain `1fr` is `minmax(auto, 1fr)`,
+     so a tile whose name is too long to wrap pushes its whole row past its
+     share. Under the B5 shell the board is handed a fixed band, and that
+     overflow silently clipped the bottom two rows of the board off a phone —
+     an 11×11 grid must never be sized by its contents. Tile text is expected
+     to be squeezed here until step B6 takes the names off the board. */
+  grid-template-columns: minmax(0, 1.5fr) repeat(9, minmax(0, 1fr)) minmax(0, 1.5fr);
+  grid-template-rows: minmax(0, 1.5fr) repeat(9, minmax(0, 1fr)) minmax(0, 1.5fr);
   background:
     radial-gradient(ellipse at 50% 45%, rgba(70, 199, 141, 0.12) 0%, transparent 70%), #0f172a;
   border: 6px solid rgba(232, 182, 74, 0.25);
@@ -890,6 +897,14 @@ h6 {
   border-radius: 2px;
   /* Authentic sharp tabletop boxes */
   position: relative;
+  overflow: hidden;
+}
+
+/* Grid items default to min-*-size:auto, which would re-introduce the same
+   content-driven overflow the minmax(0, …) tracks above exist to prevent. */
+.monopoly-board > * {
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
 }
 

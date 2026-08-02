@@ -557,13 +557,15 @@
   }
 }
 
-/* TRANSITIONAL: the page now paints warm sand by default (index.html) because
-   the landing is the first thing every visitor sees. The screens still on the
-   legacy dark design opt back in here so they don't render light gaps around
-   their dark panels. Delete this block once the game view is rebuilt on the
-   light system (redesign step B5). The lobby left this selector in B3. */
-body:has(.game-view) {
-  background-color: #0e1320;
+/* TRANSITIONAL: B5 put the in-game CHROME — top bar, turn strip, ticker,
+   action bar — on the light system, so the page no longer repaints dark for
+   the game view. What the shell frames is still legacy: the board (step B6)
+   and the rail panels (step B7) supply their own dark backgrounds and expect
+   light text. Rather than drag the whole page back into the dark, lend that
+   text colour only to the containers holding them. Delete both selectors once
+   B6 and B7 land. */
+.v2-shell-rail,
+.v2-shell-sheet-panel {
   color: #f3f4f6;
 }
 
@@ -2186,4 +2188,474 @@ body.v2-sh-locked {
 .v2-trade-empty {
   font-size: var(--fs-caption);
   color: var(--ink-4);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   In-game shell (step B5 · spec §2 · mockup screen 4)
+
+   Five fixed bands, no page scroll. The old game view was a three-column
+   desktop grid that collapsed into one long scrolling page, so on a phone the
+   turn timer ran while the button you needed sat below the fold. Here the
+   board is the only elastic band; everything else is a fixed height the
+   layout is allowed to guarantee.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.v2-shell {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-v2);
+  overflow: hidden;
+  /* The board takes what the four chrome bands leave. Declared HERE and not at
+     :root so --tile-size resolves against this value: custom properties
+     substitute on the element that declares them, so a --tile-size computed at
+     :root would keep the old desktop board size. */
+  --board-size: min(calc(100vw - var(--s-4)), calc(100dvh - 268px));
+  --tile-size: calc(var(--board-size) / 11);
+}
+
+/* ── Band 1 · top bar (56px) ───────────────────────────────────────── */
+
+.v2-gtop {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0 var(--s-3);
+  background: var(--sf);
+  border-bottom: 1px solid var(--ln);
+}
+
+.v2-gtop-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  border-radius: var(--r-md);
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.v2-gtop-icon:hover {
+  background: var(--sf-hover);
+}
+
+.v2-gtop-room {
+  flex-shrink: 0;
+  font-family: inherit;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  background: var(--canvas);
+  border: 1px solid var(--ln-2);
+  border-radius: var(--r-full);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.v2-gtop-room:hover {
+  background: var(--sf-hover);
+}
+
+.v2-gtop-chip {
+  flex-shrink: 0;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  border-radius: var(--r-full);
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.v2-gtop-chip-pot {
+  background: var(--gold-50);
+  color: var(--gold-v2);
+}
+
+.v2-gtop-chip-nepa {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+/* The biggest thing in the bar, and the reason the bar exists. */
+.v2-gtop-cash {
+  margin-left: auto;
+  padding-left: var(--s-2);
+  font-size: var(--fs-body-lg);
+  font-weight: 800;
+  color: var(--money);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── Band 2 · turn strip (44px) ────────────────────────────────────── */
+
+.v2-turnstrip {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: var(--canvas);
+}
+
+.v2-turnstrip-list {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  margin: 0;
+  padding: var(--s-1) var(--s-3);
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.v2-turnstrip-list::-webkit-scrollbar {
+  display: none;
+}
+
+.v2-tp {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  background: var(--sf);
+  border: 1.5px solid var(--ln);
+  border-radius: var(--r-full);
+  padding: 3px 10px 3px 4px;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.v2-tp-token {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-full);
+  background: var(--sunken);
+  font-size: 0.8rem;
+}
+
+.v2-tp-cash {
+  color: var(--money);
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-tp.active {
+  border-color: var(--cor);
+  box-shadow: 0 0 0 3px var(--cor-50);
+}
+
+.v2-tp.out {
+  opacity: 0.55;
+}
+
+.v2-tp.out .v2-tp-cash {
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Band 3 · the board ────────────────────────────────────────────── */
+
+.v2-shell-board {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--s-2);
+  overflow: hidden;
+}
+
+/* ── Band 4 · context ticker (36px) ────────────────────────────────── */
+
+.v2-ticker {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  padding: 0 var(--s-4);
+  background: var(--sf);
+  border: 0;
+  border-top: 1px solid var(--ln);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  text-align: left;
+  cursor: pointer;
+}
+
+.v2-ticker b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.v2-ticker-dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  background: var(--ln-3);
+}
+
+.v2-ticker-body {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-ticker-feed {
+  color: var(--ink-3);
+}
+
+.v2-ticker-more {
+  flex-shrink: 0;
+  color: var(--ink-4);
+  font-size: var(--fs-micro);
+}
+
+/* ── Band 5 · action bar (72px + safe area) ────────────────────────── */
+
+.v2-actbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 72px;
+  padding: var(--s-2) var(--s-3) calc(var(--s-2) + env(safe-area-inset-bottom, 0px));
+  background: var(--sf);
+  border-top: 1px solid var(--ln);
+  box-shadow: var(--sh-sheet);
+}
+
+.v2-act-icon {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--ln-2);
+  border-radius: var(--r-md);
+  background: var(--sf);
+  font-size: 1.05rem;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.v2-act-icon:hover {
+  background: var(--sf-hover);
+}
+
+.v2-act-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-full);
+  background: var(--cor);
+  border: 1.5px solid var(--sf);
+}
+
+.v2-act-main {
+  flex: 1;
+  min-width: 0;
+  height: 52px;
+  padding: 0 var(--s-3);
+  border: 0;
+  border-radius: var(--r-md);
+  font-family: inherit;
+  font-size: var(--fs-body);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--d-fast) var(--e-std);
+}
+
+.v2-act-primary {
+  background: var(--pri);
+  color: var(--ink-on-pri);
+  box-shadow: var(--sh-md);
+}
+
+.v2-act-primary:hover {
+  background: var(--pri-6);
+}
+
+.v2-act-danger {
+  background: var(--bad);
+  color: var(--ink-on-pri);
+  box-shadow: var(--sh-md);
+}
+
+.v2-act-quiet {
+  background: var(--sunken);
+  color: var(--ink-3);
+}
+
+.v2-act-main:disabled {
+  cursor: default;
+}
+
+.v2-gtop-icon:focus-visible,
+.v2-gtop-room:focus-visible,
+.v2-ticker:focus-visible,
+.v2-act-icon:focus-visible,
+.v2-act-main:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
+/* ── Shell sheets: menu, history, and the mobile homes of the rails ── */
+
+.v2-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.v2-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-3);
+  border: 1px solid var(--ln);
+  border-radius: var(--r-md);
+  background: var(--sf);
+  font-family: inherit;
+  font-size: var(--fs-body);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.v2-menu-item:hover {
+  background: var(--sf-hover);
+}
+
+.v2-menu-item span {
+  flex: 1;
+  font-weight: 600;
+}
+
+.v2-menu-item em {
+  font-style: normal;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+
+.v2-menu-item-bad {
+  color: var(--bad);
+}
+
+.v2-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+
+.v2-history li {
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--ln);
+}
+
+.v2-history li:last-child {
+  border-bottom: 0;
+}
+
+.v2-history-empty {
+  color: var(--ink-3);
+  border-bottom: 0;
+}
+
+/* The rails are still legacy panels; give them room to breathe inside the
+   sheet and let them own their own background (see the transitional note by
+   .v2-shell-rail above). */
+.v2-shell-sheet-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ── Desktop: three columns around the board, same five bands ──────── */
+
+@media (min-width: 1024px) {
+  .v2-shell {
+    grid-template-columns: minmax(260px, 340px) minmax(0, 1fr) minmax(300px, 400px);
+    column-gap: var(--s-4);
+    /* Height-bound here: the board's grid cell is already the widest thing on
+       the row, so the vertical space is what actually runs out. */
+    --board-size: calc(100dvh - 260px);
+  }
+
+  .v2-gtop,
+  .v2-turnstrip,
+  .v2-ticker,
+  .v2-actbar {
+    grid-column: 1 / -1;
+  }
+
+  .v2-shell-rail-left {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .v2-shell-board {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .v2-shell-rail-right {
+    grid-column: 3;
+    grid-row: 3;
+  }
+
+  .v2-shell-rail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-4);
+    min-height: 0;
+    padding: var(--s-3) var(--s-3) var(--s-4);
+    overflow-y: auto;
+  }
+
+  /* One primary action stays one primary action — it just stops being a
+     full-bleed thumb target when there is a mouse. */
+  .v2-act-main {
+    max-width: 420px;
+    margin: 0 auto;
+  }
 }

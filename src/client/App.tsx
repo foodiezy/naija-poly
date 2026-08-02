@@ -8,8 +8,10 @@ import LandingView from "./components/LandingView";
 import JoinGate from "./components/JoinGate";
 import RoomLobbyView from "./components/RoomLobbyView";
 import GameBoard from "./components/GameBoard";
+import GameShell from "./components/GameShell";
 import ChatPanel from "./components/ChatPanel";
-import SettingsPanel from "./components/SettingsPanel";
+// (SettingsPanel removed in B5 — mute moved to the shell top bar and its
+// overflow menu, where it is reachable without scrolling a sidebar.)
 import ControlPanel from "./components/ControlPanel";
 // (AssetsPanel removed — its holdings list duplicated ControlPanel's PropertyList;
 // its unique Round + Net Worth now live in ControlPanel's player card.)
@@ -184,11 +186,16 @@ export default function App() {
     }
   }, [room]);
 
+  // The in-game shell owns the whole viewport once play starts (spec §2): it
+  // carries its own top bar, so the generic app header/footer would only be
+  // stealing two bands from the board.
+  const inGame = !!room && roomState?.status !== "lobby" && !!engineState;
+
   return (
     <div className="app-container">
       {/* Header — 3-section layout. Hidden before a room is joined: the v2
           landing / join screens carry their own identity (spec §2). */}
-      {room && (
+      {room && !inGame && (
         <header className="app-header">
           <div className="header-left">
             <div className="logo-container">
@@ -306,35 +313,25 @@ export default function App() {
           // and debt rescue render inside ControlPanel. Only one gets the
           // screen (spec §2).
           <DecisionQueueProvider>
-            <div className="game-view view-fade">
-              {reconnecting && (
-                <div className="reconnect-overlay">
-                  <div className="reconnect-spinner"></div>
-                  <h2>Connection Lost</h2>
-                  <p>Attempting to reconnect...</p>
-                </div>
-              )}
-
-              {/* Left column: room chat + settings */}
-              <div className="game-col game-col-left">
-                <ChatPanel
-                  room={room}
-                  engineState={engineState}
-                  chatMessages={chatMessages}
-                  onSendChatMessage={sendChatMessage}
-                />
-                <SettingsPanel
-                  muted={muted}
-                  onToggleMute={() => {
-                    const nextMute = !muted;
-                    setMuted(nextMute);
-                    sound.setMuted(nextMute);
-                  }}
-                />
-              </div>
-
-              {/* Center: the board */}
-              <div className="board-panel">
+            <GameShell
+              engineState={engineState}
+              roomState={roomState}
+              mySessionId={mySessionId ?? ""}
+              roomId={room.roomId}
+              muted={muted}
+              myTokenWalking={myTokenWalking}
+              chatMessageCount={chatMessages.length}
+              onToggleMute={() => {
+                const nextMute = !muted;
+                setMuted(nextMute);
+                sound.setMuted(nextMute);
+              }}
+              onCopyRoomCode={copyRoomCode}
+              onLeave={leaveRoom}
+              onHowToPlay={() => setShowOnboarding(true)}
+              onSendAction={sendAction}
+              onShowResults={() => setShowGameOverModal(true)}
+              board={
                 <GameBoard
                   engineState={engineState}
                   roomState={roomState}
@@ -344,10 +341,8 @@ export default function App() {
                   onRoll={() => sendAction({ type: "ROLL" })}
                   displayedPositions={displayedPositions}
                 />
-              </div>
-
-              {/* Right column: redesigned sidebar */}
-              <div className="game-col game-col-right">
+              }
+              sidebar={
                 <ControlPanel
                   room={room}
                   engineState={engineState}
@@ -360,89 +355,96 @@ export default function App() {
                   onComposerOpenChange={setComposerOpen}
                   myTokenWalking={myTokenWalking}
                 />
-              </div>
-
-              <AnimatePresence>
-                {selectedTilePos !== null && (
-                  <TileInspector
-                    tilePos={selectedTilePos}
-                    engineState={engineState}
-                    roomState={roomState}
-                    onClose={() => setSelectedTilePos(null)}
-                    mySessionId={mySessionId}
-                    canManage={
-                      engineState.players?.[engineState.currentPlayerIndex]?.id === mySessionId &&
-                      (engineState.phase === "awaiting-roll" ||
-                        engineState.phase === "awaiting-end-turn")
-                    }
-                    onSendAction={sendAction}
-                  />
-                )}
-              </AnimatePresence>
-
-              {/* Decision sheets (spec §2 L2). The auction and the chaos
-                decisions were promoted out of ControlPanel in step B4a: that
-                sidebar drops below the board under 980px, so these two timed
-                decisions were rendering off-screen on phones. */}
-              {mySessionId && !myTokenWalking && (
-                <BuyDeedModal
+              }
+              chat={
+                <ChatPanel
+                  room={room}
                   engineState={engineState}
-                  mySessionId={mySessionId}
-                  onSendAction={sendAction}
+                  chatMessages={chatMessages}
+                  onSendChatMessage={sendChatMessage}
                 />
-              )}
+              }
+              overlays={
+                <>
+                  {reconnecting && (
+                    <div className="reconnect-overlay">
+                      <div className="reconnect-spinner"></div>
+                      <h2>Connection Lost</h2>
+                      <p>Attempting to reconnect...</p>
+                    </div>
+                  )}
 
-              {mySessionId && engineState.phase === "auction" && engineState.auctionState && (
-                <AuctionPanel
-                  auction={engineState.auctionState}
-                  players={engineState.players}
-                  mySessionId={mySessionId}
-                  myCash={engineState.players?.find((p: Player) => p.id === mySessionId)?.cash ?? 0}
-                  onSendAction={sendAction}
-                />
-              )}
+                  <AnimatePresence>
+                    {selectedTilePos !== null && (
+                      <TileInspector
+                        tilePos={selectedTilePos}
+                        engineState={engineState}
+                        roomState={roomState}
+                        onClose={() => setSelectedTilePos(null)}
+                        mySessionId={mySessionId}
+                        canManage={
+                          engineState.players?.[engineState.currentPlayerIndex]?.id ===
+                            mySessionId &&
+                          (engineState.phase === "awaiting-roll" ||
+                            engineState.phase === "awaiting-end-turn")
+                        }
+                        onSendAction={sendAction}
+                      />
+                    )}
+                  </AnimatePresence>
 
-              {mySessionId && (
-                <ChaosDecisionPanel
-                  engineState={engineState}
-                  mySessionId={mySessionId}
-                  onSendAction={sendAction}
-                />
-              )}
+                  {/* Decision sheets (spec §2 L2). The auction and the chaos
+                    decisions were promoted out of ControlPanel in step B4a:
+                    that sidebar drops below the board under 980px, so these
+                    two timed decisions were rendering off-screen on phones. */}
+                  {mySessionId && !myTokenWalking && (
+                    <BuyDeedModal
+                      engineState={engineState}
+                      mySessionId={mySessionId}
+                      onSendAction={sendAction}
+                    />
+                  )}
 
-              <AnimatePresence>
-                {engineState.phase === "game-over" && showGameOverModal && (
-                  <GameOverModal
-                    engineState={engineState}
-                    roomState={roomState}
-                    mySessionId={mySessionId}
-                    onResetGame={() => {
-                      setShowGameOverModal(false);
-                      resetGame();
-                    }}
-                    onClose={() => setShowGameOverModal(false)}
-                  />
-                )}
-              </AnimatePresence>
+                  {mySessionId && engineState.phase === "auction" && engineState.auctionState && (
+                    <AuctionPanel
+                      auction={engineState.auctionState}
+                      players={engineState.players}
+                      mySessionId={mySessionId}
+                      myCash={
+                        engineState.players?.find((p: Player) => p.id === mySessionId)?.cash ?? 0
+                      }
+                      onSendAction={sendAction}
+                    />
+                  )}
 
-              {/* Reopen the results after dismissing them to inspect the board */}
-              {engineState.phase === "game-over" && !showGameOverModal && (
-                <button
-                  className="button-primary"
-                  style={{
-                    position: "fixed",
-                    bottom: "4.5rem",
-                    right: "1rem",
-                    zIndex: 90,
-                    padding: "0.6rem 1rem",
-                    borderRadius: "4px",
-                  }}
-                  onClick={() => setShowGameOverModal(true)}
-                >
-                  🏆 Show Results
-                </button>
-              )}
-            </div>
+                  {mySessionId && (
+                    <ChaosDecisionPanel
+                      engineState={engineState}
+                      mySessionId={mySessionId}
+                      onSendAction={sendAction}
+                    />
+                  )}
+
+                  <AnimatePresence>
+                    {engineState.phase === "game-over" && showGameOverModal && (
+                      <GameOverModal
+                        engineState={engineState}
+                        roomState={roomState}
+                        mySessionId={mySessionId}
+                        onResetGame={() => {
+                          setShowGameOverModal(false);
+                          resetGame();
+                        }}
+                        onClose={() => setShowGameOverModal(false)}
+                      />
+                    )}
+                  </AnimatePresence>
+                  {/* Dismissed the results to look at the board? The action
+                    bar's primary becomes "See who be Odogwu" — no floating
+                    button needed any more. */}
+                </>
+              }
+            />
           </DecisionQueueProvider>
         ) : null}
       </>
@@ -463,8 +465,9 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Footer chrome — hidden pre-room like the header (landing has its own). */}
-      {room && (
+      {/* Footer chrome — hidden pre-room like the header, and in game, where
+          the shell's five bands leave no room for it (spec §2). */}
+      {room && !inGame && (
         <footer className="app-footer">
           <div className="footer-left">
             <span className="footer-logo">🏛️ Odogwu Empire</span>
