@@ -176,7 +176,7 @@ export default function ControlPanel({
         <div
           style={{
             padding: "0.5rem 1rem",
-            background: "rgba(70,199,141,0.05)",
+            background: "var(--pri-50)",
             borderBottom: "1px solid var(--border-subtle)",
           }}
         >
@@ -210,7 +210,7 @@ export default function ControlPanel({
           <div
             style={{
               height: "6px",
-              background: "rgba(0,0,0,0.4)",
+              background: "var(--sunken)",
               borderRadius: "2px",
               overflow: "hidden",
             }}
@@ -236,7 +236,7 @@ export default function ControlPanel({
       <div
         className="sidebar-player-card"
         style={{
-          background: "rgba(0,0,0,0.15)",
+          background: "var(--sunken)",
           margin: 0,
           borderBottom: "1px solid var(--border-subtle)",
           borderRadius: 0,
@@ -279,7 +279,7 @@ export default function ControlPanel({
             style={{
               marginTop: "0.75rem",
               width: "100%",
-              background: "rgba(0,0,0,0.3)",
+              background: "var(--sunken)",
               borderRadius: "var(--radius-md)",
               padding: "0.5rem",
               borderLeft: "2px solid var(--color-gold)",
@@ -342,8 +342,8 @@ export default function ControlPanel({
           style={{
             margin: "0.75rem",
             padding: "0.5rem",
-            background: "rgba(239,68,68,0.06)",
-            border: "1px solid rgba(239,68,68,0.2)",
+            background: "var(--bad-bg)",
+            border: "1px solid var(--bad)",
             borderRadius: "2px",
           }}
         >
@@ -368,7 +368,7 @@ export default function ControlPanel({
             style={{
               width: "100%",
               background: "var(--color-gold)",
-              color: "#000",
+              color: "var(--ink)",
               fontSize: "0.75rem",
               padding: "0.4rem",
               display: "flex",
@@ -393,9 +393,9 @@ export default function ControlPanel({
             fontSize: "0.72rem",
             textAlign: "center",
             color: "var(--text-secondary)",
-            border: "1px solid rgba(232,182,74,0.15)",
+            border: "1px solid var(--gold-v2)",
             borderRadius: "2px",
-            background: "rgba(232,182,74,0.03)",
+            background: "var(--gold-50)",
           }}
         >
           <div style={{ marginBottom: "0.35rem" }}>🤝 Waiting for trade response...</div>
@@ -404,7 +404,7 @@ export default function ControlPanel({
             style={{
               width: "100%",
               background: "transparent",
-              border: "1px solid rgba(232,182,74,0.35)",
+              border: "1px solid var(--gold-v2)",
               color: "var(--color-gold)",
               fontSize: "0.68rem",
               padding: "0.25rem",
@@ -437,7 +437,7 @@ export default function ControlPanel({
         className="sidebar-actions"
         style={{
           padding: "0.75rem 1rem",
-          background: "#1c1835",
+          background: "var(--sf)",
           borderBottom: "1px solid var(--border-subtle)",
         }}
       >
@@ -471,7 +471,7 @@ export default function ControlPanel({
               style={{
                 width: "100%",
                 background: "transparent",
-                border: "1px solid rgba(239,68,68,0.3)",
+                border: "1px solid var(--bad)",
                 color: "var(--color-danger)",
                 fontSize: "0.65rem",
                 padding: "0.25rem",
@@ -495,7 +495,7 @@ export default function ControlPanel({
               alignItems: "center",
               justifyContent: "space-between",
               padding: "0.4rem 1rem",
-              background: "rgba(0,0,0,0.2)",
+              background: "var(--sunken)",
               borderBottom: "1px solid var(--border-subtle)",
             }}
           >

@@ -557,17 +557,9 @@
   }
 }
 
-/* TRANSITIONAL: B5 put the in-game CHROME — top bar, turn strip, ticker,
-   action bar — on the light system, so the page no longer repaints dark for
-   the game view. What the shell frames is still legacy: the board (step B6)
-   and the rail panels (step B7) supply their own dark backgrounds and expect
-   light text. Rather than drag the whole page back into the dark, lend that
-   text colour only to the containers holding them. Delete both selectors once
-   B6 and B7 land. */
-.v2-shell-rail,
-.v2-shell-sheet-panel {
-  color: #f3f4f6;
-}
+/* The B5 dark-text bridge for the legacy rails is gone: B6 converted the board
+   and B7 converted the rails, so everything inside the shell is on the light
+   system and inherits ink from .v2-shell. */
 
 /* ═══════════════════════════════════════════════════════════════════
    Room lobby (step B3 · spec §2 · mockup screen 3)

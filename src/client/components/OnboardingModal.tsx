@@ -55,7 +55,7 @@ export default function OnboardingModal({ onClose }: OnboardingModalProps) {
               borderLeft: "4px solid var(--color-property-2)",
             }}
           >
-            <h3 style={{ margin: "0 0 0.5rem 0", color: "#fff", fontSize: "1.1rem" }}>
+            <h3 style={{ margin: "0 0 0.5rem 0", color: "var(--ink)", fontSize: "1.1rem" }}>
               🏢 The Map
             </h3>
             <p
@@ -79,7 +79,7 @@ export default function OnboardingModal({ onClose }: OnboardingModalProps) {
               borderLeft: "4px solid var(--color-gold)",
             }}
           >
-            <h3 style={{ margin: "0 0 0.5rem 0", color: "#fff", fontSize: "1.1rem" }}>
+            <h3 style={{ margin: "0 0 0.5rem 0", color: "var(--ink)", fontSize: "1.1rem" }}>
               🎲 Hustle & Chance
             </h3>
             <p
@@ -103,7 +103,7 @@ export default function OnboardingModal({ onClose }: OnboardingModalProps) {
               borderLeft: "4px solid var(--color-naira)",
             }}
           >
-            <h3 style={{ margin: "0 0 0.5rem 0", color: "#fff", fontSize: "1.1rem" }}>
+            <h3 style={{ margin: "0 0 0.5rem 0", color: "var(--ink)", fontSize: "1.1rem" }}>
               🔌 Utilities & Transport
             </h3>
             <p

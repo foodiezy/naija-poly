@@ -6,18 +6,23 @@
   --font-display: "Yanone Kaffeesatz", "Nunito", system-ui, sans-serif;
   --font-sans: "Nunito", system-ui, -apple-system, sans-serif;
 
-  /* Theme Colors — "Refined Midnight": clean indigo-slate, not purple */
-  --bg-main: #0e1320;
-  --bg-panel: rgba(20, 27, 45, 0.74);
-  --bg-card: rgba(26, 34, 56, 0.55);
+  /* B7: the legacy theme tokens are now aliases of the v2 light system in
+     tokens.css. The surfaces still on legacy CSS (the rails, the inspector,
+     the trade builder, the modals) mostly reference these names rather than
+     hardcoding, so repointing them here converts the bulk of that surface in
+     one place; the hardcoded rgba() left behind is converted per rule below.
+     Delete this block once nothing reads these names. */
+  --bg-main: var(--canvas);
+  --bg-panel: var(--sf);
+  --bg-card: var(--sf);
 
-  --border-glow: rgba(99, 102, 241, 0.18);
-  --border-glow-active: rgba(99, 102, 241, 0.5);
+  --border-glow: var(--pri-ring);
+  --border-glow-active: var(--pri);
 
-  --color-gold: #e8b64a;
-  --color-gold-hover: #c9962f;
-  --color-naira: #46c78d;
-  --color-danger: #ef4444;
+  --color-gold: var(--gold-v2);
+  --color-gold-hover: #a8761f;
+  --color-naira: var(--pri);
+  --color-danger: var(--bad);
 
   /* Board group colors. These were hand-tuned to read on the old dark UI; the
      redesign speaks in Nigerian zones instead, and the zone bars in tokens.css
@@ -39,12 +44,10 @@
   --color-blue: var(--color-darkblue);
   --color-property-2: var(--color-lightblue);
 
-  /* Text Colors */
-  --text-primary: #f9fafb;
-  --text-secondary: #9ca3af;
-  /* Lightened from #6b7280 (~3.7:1 on --bg-main, below WCAG AA) to clear the
-     4.5:1 body-text minimum while staying visibly dimmer than --text-secondary. */
-  --text-muted: #8d96a5;
+  /* Text Colors — B7: ink on white, from tokens.css. */
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-2);
+  --text-muted: var(--ink-3);
 
   /* ── Design tokens ─────────────────────────────────────────────────────
      One source of truth for spacing, radius, elevation, type, and surface
@@ -60,25 +63,26 @@
   --space-6: 2rem;
   --space-8: 3rem;
 
-  /* Radius scale — Authentic sharp tabletop cardboard/wood boxes */
-  --radius-sm: 2px;
-  --radius-md: 2px;
-  --radius-lg: 2px;
-  --radius-xl: 2px;
-  --radius-full: 999px;
+  /* Radius scale — B7: the 2px "sharp cardboard" scale is gone; v2 rounds. */
+  --radius-sm: var(--r-xs);
+  --radius-md: var(--r-sm);
+  --radius-lg: var(--r-md);
+  --radius-xl: var(--r-lg);
+  --radius-full: var(--r-full);
 
-  /* Elevation / shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.45);
-  --shadow-glow: 0 0 18px rgba(99, 102, 241, 0.35);
+  /* Elevation / shadows — warm and low-alpha, for white surfaces. */
+  --shadow-sm: var(--sh-sm);
+  --shadow-md: var(--sh-md);
+  --shadow-lg: var(--sh-lg);
+  --shadow-glow: var(--sh-focus);
 
-  /* Surface tints (white overlays) + borders — replaces scattered rgba()s */
-  --surface-1: rgba(255, 255, 255, 0.03);
-  --surface-2: rgba(255, 255, 255, 0.05);
-  --surface-3: rgba(255, 255, 255, 0.08);
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.14);
+  /* Surface tints + borders. These were white-on-black overlays; on a light
+     page they become real surfaces and hairlines. */
+  --surface-1: var(--sf);
+  --surface-2: var(--sf-tint);
+  --surface-3: var(--sunken);
+  --border-subtle: var(--ln);
+  --border-strong: var(--ln-2);
   /* Generic component border alias (referenced by modals). */
   --border-color: var(--border-strong);
 
@@ -104,16 +108,14 @@
   margin: 0;
   padding: 0;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  scrollbar-color: var(--ln-3) transparent;
 }
 
 body {
   background-color: var(--bg-main);
-  background-image:
-    radial-gradient(ellipse at 0% 0%, rgba(79, 110, 245, 0.12) 0, transparent 55%),
-    radial-gradient(ellipse at 100% 100%, rgba(70, 199, 141, 0.07) 0, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(14, 19, 32, 0.6) 0, transparent 80%);
-  background-attachment: fixed;
+  /* B7: the three indigo/green glows that lit the old dark page are gone —
+     on warm sand they just muddied it. Texture is the adire motif instead. */
+  background-image: none;
   color: var(--text-primary);
   font-family: var(--font-sans);
   font-size: 15px;
@@ -151,7 +153,7 @@ h6 {
   background: var(--bg-panel);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--ln);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   border-radius: 2px;
 }
@@ -237,7 +239,7 @@ h6 {
 .reconnect-spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid rgba(255, 255, 255, 0.14);
+  border: 4px solid var(--ln);
   border-top-color: var(--color-naira);
   border-radius: 50%;
   animation: reconnectSpin 0.9s linear infinite;
@@ -262,8 +264,8 @@ h6 {
   justify-content: space-between;
   align-items: center;
   padding: 0.6rem 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(11, 15, 25, 0.85);
+  border-bottom: 1px solid var(--ln);
+  background: var(--sf);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   gap: 1rem;
@@ -332,7 +334,7 @@ h6 {
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: 0.02em;
-  background: linear-gradient(to right, #46c78d, #e8b64a);
+  background: var(--pri);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -340,8 +342,8 @@ h6 {
 }
 
 .room-badge {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--sf-hover);
+  border: 1px solid var(--ln);
   padding: 0.3rem 0.7rem;
   border-radius: var(--radius-full);
   font-size: 0.8rem;
@@ -354,8 +356,8 @@ h6 {
 }
 
 .room-badge:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--sf-hover);
+  border-color: var(--ln-2);
 }
 
 .header-btn {
@@ -370,7 +372,7 @@ h6 {
 }
 
 .header-btn-gold {
-  background: linear-gradient(135deg, #e8b64a 0%, #c9962f 100%);
+  background: var(--gold-v2);
   color: #000;
   box-shadow: 0 2px 8px rgba(232, 182, 74, 0.25);
 }
@@ -383,13 +385,13 @@ h6 {
 .header-btn-outline {
   background: transparent;
   color: var(--text-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--ln);
 }
 
 .header-btn-outline:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--sf-hover);
+  color: var(--ink);
+  border-color: var(--ln-2);
 }
 
 /* (v2) The old landing-page CSS (.lobby-landing-page, .lobby-hero,
@@ -403,11 +405,11 @@ h6 {
    `.lobby-view` survives only as the App.tsx wrapper hook the v2 rules key off. */
 
 .input-field {
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--sf);
   border: 1px solid var(--border-strong);
   padding: 0.75rem 1rem;
   border-radius: var(--radius-md);
-  color: #fff;
+  color: var(--ink);
   font-size: 1rem;
   outline: none;
   transition:
@@ -416,12 +418,12 @@ h6 {
 }
 
 .input-field:focus {
-  border-color: var(--color-naira);
-  box-shadow: 0 0 0 3px rgba(70, 199, 141, 0.18);
+  border-color: var(--pri);
+  box-shadow: var(--sh-focus);
 }
 
 .button-primary {
-  background: linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%);
+  background: var(--pri);
   color: #fff;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -459,9 +461,9 @@ h6 {
 }
 
 .button-secondary {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--sf-hover);
+  color: var(--ink);
+  border: 1px solid var(--ln);
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   font-weight: 600;
@@ -472,13 +474,13 @@ h6 {
 }
 
 .button-secondary:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--sf-hover);
+  border-color: var(--ln-2);
 }
 
 .host-tag {
   font-size: 0.7rem;
-  background: #e8b64a;
+  background: var(--gold-v2);
   color: #000;
   padding: 0.1rem 0.3rem;
   border-radius: 4px;
@@ -1003,8 +1005,8 @@ h6 {
 
 /* Notification bar at bottom of board center */
 .board-notification-bar {
-  background: rgba(8, 12, 24, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--sf);
+  border: 1px solid var(--ln);
   border-radius: var(--radius-md);
   padding: 0.4rem 1rem;
   font-size: 0.78rem;
@@ -1023,9 +1025,9 @@ h6 {
   padding: 0.5rem 1.5rem;
   font-size: 0.85rem;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: var(--sf-hover);
+  color: var(--ink);
+  border: 1px solid var(--ln);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.2s;
@@ -1033,8 +1035,8 @@ h6 {
 }
 
 .board-end-turn-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--sf-hover);
+  border-color: var(--ln-2);
 }
 
 .board-end-turn-btn:disabled {
@@ -1059,7 +1061,7 @@ h6 {
   font-size: 3.8rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-  background: linear-gradient(135deg, #46c78d 0%, #e8b64a 100%);
+  background: var(--pri);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1095,7 +1097,7 @@ h6 {
   font-size: 1.75rem;
   font-weight: 800;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-  border: 2px solid rgba(0, 0, 0, 0.1);
+  border: 2px solid var(--ln);
   animation: dieRoll 0.4s ease-out;
 }
 
@@ -1645,8 +1647,8 @@ h6 {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.04);
-  border: 2px solid rgba(255, 255, 255, 0.12);
+  background: var(--sf-hover);
+  border: 2px solid var(--ln);
 }
 
 .sidebar-player-name {
@@ -1695,7 +1697,7 @@ h6 {
 }
 
 .sidebar-prop-row:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--sf-hover);
 }
 
 .sidebar-prop-left {
@@ -1750,7 +1752,7 @@ h6 {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--ln);
   padding-bottom: 0.5rem;
 }
 
@@ -1784,7 +1786,7 @@ h6 {
   letter-spacing: 0.03em;
   padding: 2px 8px;
   border-radius: var(--radius-full);
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--sunken);
   color: var(--text-muted);
 }
 
@@ -1817,7 +1819,7 @@ h6 {
   width: 70px;
   height: 4px;
   appearance: none;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--sf-hover);
   border-radius: 999px;
   outline: none;
   cursor: pointer;
@@ -1828,7 +1830,7 @@ h6 {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: var(--color-gold, #e8b64a);
+  background: var(--gold-v2);
   cursor: pointer;
   transition: transform 0.1s ease;
 }
@@ -1842,7 +1844,7 @@ h6 {
   height: 12px;
   border: none;
   border-radius: 50%;
-  background: var(--color-gold, #e8b64a);
+  background: var(--gold-v2);
   cursor: pointer;
   transition: transform 0.1s ease;
 }
@@ -1871,13 +1873,14 @@ h6 {
   z-index: 40;
 }
 
-/* High-contrast accessibility mode — brighten dim text and strengthen borders */
+/* High-contrast accessibility mode — darken dim text and strengthen borders.
+   B7 flipped these from "brighten on black" to "deepen on white". */
 html.high-contrast {
-  --text-secondary: #e5e7eb;
-  --text-muted: #c3ccd9;
-  --border-subtle: rgba(255, 255, 255, 0.22);
-  --border-strong: rgba(255, 255, 255, 0.42);
-  --bg-panel: rgba(13, 18, 32, 0.94);
+  --text-secondary: var(--ink);
+  --text-muted: var(--ink-2);
+  --border-subtle: var(--ln-2);
+  --border-strong: var(--ink-4);
+  --bg-panel: var(--sf);
 }
 
 html.high-contrast .glass-panel {
@@ -1905,7 +1908,7 @@ html.high-contrast .glass-panel {
 }
 
 .sidebar-action-btn-primary {
-  background: linear-gradient(135deg, #e8b64a 0%, #c9962f 100%);
+  background: var(--gold-v2);
   color: #000;
   border: none;
   box-shadow: 0 2px 8px rgba(232, 182, 74, 0.2);
@@ -1926,13 +1929,13 @@ html.high-contrast .glass-panel {
 .sidebar-action-btn-outline {
   background: transparent;
   color: var(--text-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--ln);
 }
 
 .sidebar-action-btn-outline:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--sf-hover);
+  color: var(--ink);
+  border-color: var(--ln-2);
 }
 
 .sidebar-action-btn-outline:disabled {
@@ -1971,7 +1974,7 @@ html.high-contrast .glass-panel {
 }
 
 .sidebar-player-row:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--sf-hover);
 }
 
 .sidebar-player-row-left {
@@ -1988,8 +1991,8 @@ html.high-contrast .glass-panel {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  background: var(--sf-hover);
+  border: 1.5px solid var(--ln);
   flex-shrink: 0;
 }
 
@@ -2040,7 +2043,7 @@ html.high-contrast .glass-panel {
   font-weight: 700;
   text-transform: uppercase;
   color: var(--text-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--ln);
   padding-bottom: 0.5rem;
   margin-bottom: 0.75rem;
 }
@@ -2051,8 +2054,8 @@ html.high-contrast .glass-panel {
   justify-content: space-between;
   padding: 0.6rem 0.8rem;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--sf-hover);
+  border: 1px solid var(--ln);
   margin-bottom: 0.5rem;
   transition: all 0.2s;
 }
@@ -2095,8 +2098,8 @@ html.high-contrast .glass-panel {
   justify-content: space-between;
   align-items: center;
   padding: 0.6rem 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(11, 15, 25, 0.7);
+  border-top: 1px solid var(--ln);
+  background: var(--sf);
   font-size: 0.72rem;
   color: var(--text-muted);
 }
@@ -2166,10 +2169,10 @@ html.high-contrast .glass-panel {
   overflow-y: auto;
   font-size: 0.825rem;
   line-height: 1.5;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--sunken);
   padding: 0.75rem;
-  border-radius: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--ln);
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -2216,7 +2219,7 @@ html.high-contrast .glass-panel {
   text-align: center;
   color: var(--text-secondary);
   padding: 0.4rem;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--sf-hover);
   border-radius: 4px;
 }
 
@@ -2298,9 +2301,9 @@ html.high-contrast .glass-panel {
 
 .bid-input {
   width: 80px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--sunken);
+  border: 1px solid var(--ln);
+  color: var(--ink);
   padding: 0.4rem;
   border-radius: 4px;
   outline: none;
@@ -2332,14 +2335,14 @@ html.high-contrast .glass-panel {
 .auction-timer-bar {
   flex: 1;
   height: 8px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--sf-hover);
   border-radius: 999px;
   overflow: hidden;
 }
 
 .auction-timer-fill {
   height: 100%;
-  background: var(--color-naira, #46c78d);
+  background: var(--pri);
   border-radius: 999px;
   transition: width 0.12s linear;
 }
@@ -2401,8 +2404,8 @@ html.high-contrast .glass-panel {
   font-weight: 600;
   padding: 0.2rem 0.5rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--ln);
+  background: var(--sf-hover);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -2410,13 +2413,13 @@ html.high-contrast .glass-panel {
 }
 
 .chat-channel-chip:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--sf-hover);
 }
 
 .chat-channel-chip.active {
   background: rgba(70, 199, 141, 0.15);
-  border-color: var(--color-naira, #46c78d);
-  color: var(--color-naira, #46c78d);
+  border-color: var(--pri);
+  color: var(--pri);
 }
 
 .chat-channel-dot {
@@ -2719,8 +2722,8 @@ html.high-contrast .glass-panel {
   top: 50%;
   transform: translateY(-50%) translateX(-15px);
   width: 280px;
-  background: rgba(8, 12, 20, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--sf);
+  border: 1px solid var(--ln);
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.6),
     0 0 20px rgba(59, 130, 246, 0.05);
@@ -2744,7 +2747,7 @@ html.high-contrast .glass-panel {
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--text-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--ln);
   padding-bottom: 0.4rem;
   margin-bottom: 0.5rem;
   text-transform: uppercase;
@@ -2764,16 +2767,16 @@ html.high-contrast .glass-panel {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255, 255, 255, 0.01);
+  background: var(--sf-hover);
   padding: 0.25rem 0.4rem;
   border-radius: 4px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--ln);
 }
 
 .popover-tile-name {
   font-size: 0.75rem;
   font-weight: 500;
-  color: #fff;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2803,8 +2806,8 @@ html.high-contrast .glass-panel {
 .leaderboard-table {
   display: flex;
   flex-direction: column;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--sunken);
+  border: 1px solid var(--ln);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -2813,13 +2816,13 @@ html.high-contrast .glass-panel {
   display: grid;
   grid-template-columns: 0.6fr 1.6fr 1fr 1fr 1fr 1.2fr;
   padding: 0.75rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--sf-hover);
   font-weight: 600;
   font-size: 0.8rem;
   text-transform: uppercase;
   color: var(--text-secondary);
   letter-spacing: 0.5px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--ln);
 }
 
 .leaderboard-row {
@@ -2829,7 +2832,7 @@ html.high-contrast .glass-panel {
   align-items: center;
   font-size: 0.875rem;
   color: var(--text-primary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--ln);
   transition: background 0.2s;
 }
 
@@ -2846,7 +2849,7 @@ html.high-contrast .glass-panel {
 }
 
 .leaderboard-row:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--sf-hover);
 }
 
 .player-rank {
@@ -2866,7 +2869,7 @@ html.high-contrast .glass-panel {
 }
 
 .player-status.active {
-  color: #46c78d;
+  color: var(--pri);
   font-size: 0.8rem;
 }
 
@@ -2900,8 +2903,8 @@ html.high-contrast .glass-panel {
 }
 
 .mute-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
+  background: var(--sf-hover) !important;
+  border-color: var(--ln-2) !important;
   transform: scale(1.05);
 }
 
@@ -2984,7 +2987,7 @@ html.high-contrast .glass-panel {
   line-height: 1.4;
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.01);
+  background: var(--sf-hover);
   word-break: break-word;
 }
 
@@ -2995,7 +2998,7 @@ html.high-contrast .glass-panel {
 }
 
 .chat-msg-text {
-  color: #f3f4f6;
+  color: var(--ink);
 }
 
 .chat-input-box {
@@ -3042,8 +3045,8 @@ html.high-contrast .glass-panel {
   height: 28px;
   border-radius: var(--radius-full);
   border: 1px solid var(--border-strong);
-  background: rgba(0, 0, 0, 0.45);
-  color: #fff;
+  background: var(--sunken);
+  color: var(--ink);
   font-size: 0.85rem;
   cursor: pointer;
   display: flex;
@@ -3065,8 +3068,8 @@ html.high-contrast .glass-panel {
 .deed-card {
   width: 90%;
   max-width: 330px;
-  background: rgba(15, 23, 42, 0.97) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: var(--sf) !important;
+  border: 1px solid var(--ln) !important;
   box-shadow:
     0 20px 40px rgba(0, 0, 0, 0.5),
     0 0 25px rgba(232, 182, 74, 0.05);
@@ -3082,12 +3085,12 @@ html.high-contrast .glass-panel {
   text-align: center;
   font-weight: bold;
   box-shadow: inset 0 -5px 15px rgba(0, 0, 0, 0.1);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 2px solid var(--ln);
 }
 
 .deed-header.generic {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background: var(--sf-hover);
+  color: var(--ink);
 }
 
 .deed-title {
@@ -3120,7 +3123,7 @@ html.high-contrast .glass-panel {
   justify-content: space-between;
   font-size: 0.85rem;
   padding: 0.35rem 0.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--ln);
 }
 
 .deed-rent-row.base-rent {
@@ -3137,7 +3140,7 @@ html.high-contrast .glass-panel {
 
 .deed-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--sf-hover);
   margin: 1rem 0;
 }
 
@@ -3150,7 +3153,7 @@ html.high-contrast .glass-panel {
 }
 
 .deed-cost-info strong {
-  color: #fff;
+  color: var(--ink);
 }
 
 .deed-status-box {
@@ -3177,10 +3180,10 @@ html.high-contrast .glass-panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--ln);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #fca5a5;
+  background: var(--sf-hover);
+  color: var(--bad);
   cursor: pointer;
   transition:
     filter 0.15s ease,
@@ -3189,11 +3192,11 @@ html.high-contrast .glass-panel {
 }
 
 .deed-arrow.up {
-  color: #6ee7b7;
+  color: var(--pri);
 }
 
 .deed-arrow:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--sf-hover);
   filter: brightness(1.15);
 }
 
@@ -3214,11 +3217,11 @@ html.high-contrast .glass-panel {
   gap: 0.4rem;
   padding: 0.5rem;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--sunken);
+  border: 1px solid var(--ln);
   font-size: 0.85rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--ink);
 }
 
 .deed-upgrade-badge {
@@ -3232,7 +3235,7 @@ html.high-contrast .glass-panel {
   justify-content: center;
   gap: 0.4rem;
   padding: 0.55rem 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--ln);
   border-radius: 8px;
   font-size: 0.82rem;
   font-weight: 700;
@@ -3264,12 +3267,12 @@ html.high-contrast .glass-panel {
 }
 
 .panel-tab-btn:hover {
-  background: rgba(255, 255, 255, 0.03) !important;
-  color: #fff !important;
+  background: var(--sf-hover) !important;
+  color: var(--ink) !important;
 }
 
 .panel-tab-btn.active:hover {
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: var(--sf-hover) !important;
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -3300,7 +3303,7 @@ html.high-contrast .glass-panel {
      keeps the top reachable when the card is taller than the viewport. */
   margin: auto;
   background: #0b1020;
-  border: 2px solid rgba(255, 255, 255, 0.08);
+  border: 2px solid var(--ln);
   border-radius: 14px;
   box-shadow:
     0 30px 80px rgba(0, 0, 0, 0.7),
@@ -3316,7 +3319,7 @@ html.high-contrast .glass-panel {
   top: -14px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, #e8b64a 0%, #c9962f 100%);
+  background: var(--gold-v2);
   color: #1a0d00;
   font-family: var(--font-display);
   font-size: 0.75rem;
@@ -3333,7 +3336,7 @@ html.high-contrast .glass-panel {
 .buy-deed-header {
   padding: 1.7rem 1rem 1rem;
   text-align: center;
-  border-bottom: 4px solid rgba(0, 0, 0, 0.35);
+  border-bottom: 4px solid var(--ln-2);
   position: relative;
   overflow: hidden;
 }
@@ -3342,7 +3345,7 @@ html.high-contrast .glass-panel {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(0, 0, 0, 0.18) 100%);
+  background: var(--sunken);
   pointer-events: none;
 }
 
@@ -3361,7 +3364,7 @@ html.high-contrast .glass-panel {
   font-family: var(--font-display);
   font-size: 1.8rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--ink);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
   margin-top: 4px;
   letter-spacing: 0.02em;
@@ -3377,10 +3380,10 @@ html.high-contrast .glass-panel {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--sf-hover);
   border-radius: 8px;
   padding: 0.4rem 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--ln);
 }
 
 .buy-deed-rent-row {
@@ -3394,7 +3397,7 @@ html.high-contrast .glass-panel {
 }
 
 .buy-deed-rent-row.base {
-  color: #fff;
+  color: var(--ink);
   font-weight: 700;
   background: rgba(232, 182, 74, 0.08);
 }
@@ -3464,7 +3467,7 @@ html.high-contrast .glass-panel {
   font-size: 0.75rem;
   color: var(--text-secondary);
   padding-top: 0.45rem;
-  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  border-top: 1px dashed var(--ln-2);
 }
 
 .buy-deed-cash-row strong.ok {
@@ -3501,7 +3504,7 @@ html.high-contrast .glass-panel {
 }
 
 .buy-deed-btn.buy {
-  background: linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%);
+  background: var(--pri);
   color: #fff;
   box-shadow: 0 6px 22px rgba(70, 199, 141, 0.35);
 }
@@ -3511,20 +3514,20 @@ html.high-contrast .glass-panel {
 }
 
 .buy-deed-btn.buy:disabled {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--sf-hover);
   color: var(--text-muted);
   box-shadow: none;
   cursor: not-allowed;
 }
 
 .buy-deed-btn.auction {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--sf-hover);
+  color: var(--ink);
+  border: 1px solid var(--ln);
 }
 
 .buy-deed-btn.auction:hover {
-  background: rgba(255, 255, 255, 0.11);
+  background: var(--sf-hover);
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -3598,7 +3601,7 @@ html.high-contrast .glass-panel {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #46c78d;
+  color: var(--pri);
 }
 
 .trivia-text {
@@ -3657,8 +3660,8 @@ html.high-contrast .glass-panel {
   margin-top: 0.6rem;
   padding: 0.5rem 0.8rem;
   text-align: center;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--sf-hover);
+  border: 1px solid var(--ln);
   border-radius: 6px;
   max-width: 380px;
   min-height: 3rem;
@@ -3708,7 +3711,7 @@ html.high-contrast .glass-panel {
   letter-spacing: 0.06em;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--sf-hover);
   color: var(--text-secondary);
 }
 
@@ -3728,8 +3731,8 @@ html.high-contrast .glass-panel {
 
 .holdings-card {
   display: flex;
-  background: rgba(8, 12, 22, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--sf);
+  border: 1px solid var(--ln);
   border-radius: 8px;
   overflow: hidden;
   transition:
@@ -3740,7 +3743,7 @@ html.high-contrast .glass-panel {
 }
 
 .holdings-card:hover {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: var(--ln-2);
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 }
@@ -3750,7 +3753,7 @@ html.high-contrast .glass-panel {
 }
 
 .holdings-card-clickable:hover {
-  border-color: var(--color-gold, #e8b64a);
+  border-color: var(--gold-v2);
 }
 
 .holdings-card.full-set {
@@ -3769,7 +3772,7 @@ html.high-contrast .glass-panel {
   width: 8px;
   flex-shrink: 0;
   position: relative;
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(0, 0, 0, 0.22));
+  background-image: none;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
 }
 
@@ -3797,7 +3800,7 @@ html.high-contrast .glass-panel {
 .holdings-name {
   font-size: 0.84rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3884,8 +3887,8 @@ html.high-contrast .glass-panel {
 }
 
 .dev-pip.dev-empty {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  background: var(--sf-hover);
+  border: 1px dashed var(--ln-2);
 }
 
 .dev-pip.dev-hotel {
@@ -3909,9 +3912,9 @@ html.high-contrast .glass-panel {
    Players panel — redesigned cards with stats + wealth bar
    ────────────────────────────────────────────────────────────────────── */
 .players-panel {
-  background: linear-gradient(180deg, rgba(20, 18, 36, 0.85) 0%, rgba(11, 13, 24, 0.85) 100%);
+  background: var(--sf);
   padding: 0.85rem 0.85rem 0.95rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--ln);
 }
 
 .players-panel-header {
@@ -3965,34 +3968,33 @@ html.high-contrast .glass-panel {
   gap: 0.5rem;
 }
 
+/* B7: same signals the board and the turn strip use — green ring for whoever
+   is playing, coral for you — instead of gold/cyan glows tuned for black. */
 .player-card {
-  background: rgba(0, 0, 0, 0.32);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
+  background: var(--sf);
+  border: 1px solid var(--ln);
+  border-radius: var(--r-md);
   padding: 0.55rem 0.7rem 0.5rem;
   transition:
-    background 0.15s ease,
-    border-color 0.2s ease,
-    box-shadow 0.25s ease;
+    background var(--d-base) var(--e-std),
+    border-color var(--d-base) var(--e-std),
+    box-shadow var(--d-base) var(--e-std);
   position: relative;
 }
 
 .player-card.is-active {
-  background: linear-gradient(135deg, rgba(232, 182, 74, 0.12) 0%, rgba(0, 0, 0, 0.3) 100%);
-  border-color: rgba(232, 182, 74, 0.4);
-  box-shadow:
-    0 4px 18px rgba(232, 182, 74, 0.18),
-    inset 0 0 0 1px rgba(232, 182, 74, 0.06);
+  background: var(--pri-50);
+  border-color: var(--pri);
 }
 
 .player-card.is-me {
-  border-color: rgba(55, 214, 194, 0.35);
+  border-color: var(--cor);
 }
 
 .player-card.is-me.is-active {
-  background: linear-gradient(135deg, rgba(55, 214, 194, 0.16) 0%, rgba(0, 0, 0, 0.3) 100%);
-  border-color: rgba(55, 214, 194, 0.55);
-  box-shadow: 0 4px 22px rgba(55, 214, 194, 0.22);
+  background: var(--cor-50);
+  border-color: var(--cor);
+  box-shadow: 0 0 0 3px var(--pri-ring);
 }
 
 .player-card.is-bankrupt {
@@ -4010,40 +4012,32 @@ html.high-contrast .glass-panel {
   position: relative;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
-  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--r-full);
+  background: var(--sunken);
+  border: 2px solid var(--ln-2);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   transition:
-    box-shadow 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
+    box-shadow var(--d-base) var(--e-std),
+    border-color var(--d-base) var(--e-std);
 }
 
 .player-card-avatar.tone-active {
-  border-color: rgba(232, 182, 74, 0.7);
-  box-shadow:
-    0 0 0 2px rgba(232, 182, 74, 0.18),
-    0 0 14px rgba(232, 182, 74, 0.4);
+  border-color: var(--pri);
 }
 
 .player-card.is-me .player-card-avatar.tone-active {
-  border-color: rgba(55, 214, 194, 0.8);
-  box-shadow:
-    0 0 0 2px rgba(55, 214, 194, 0.18),
-    0 0 14px rgba(55, 214, 194, 0.45);
+  border-color: var(--cor);
 }
 
 .player-card-avatar.tone-jail {
-  border-color: rgba(239, 68, 68, 0.65);
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+  border-color: var(--bad);
 }
 
 .player-card-avatar.tone-bankrupt {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: var(--ln);
 }
 
 .player-card-avatar-emoji {
@@ -4085,7 +4079,7 @@ html.high-contrast .glass-panel {
 .player-card-name {
   font-size: 0.92rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4097,7 +4091,7 @@ html.high-contrast .glass-panel {
   font-weight: 800;
   letter-spacing: 0.12em;
   background: rgba(55, 214, 194, 0.18);
-  color: #67e8f9;
+  color: var(--cor-7);
   padding: 1px 6px;
   border-radius: 999px;
   border: 1px solid rgba(55, 214, 194, 0.35);
@@ -4107,7 +4101,7 @@ html.high-contrast .glass-panel {
   font-size: 0.55rem;
   font-weight: 800;
   letter-spacing: 0.12em;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--sf-hover);
   color: var(--text-muted);
   padding: 1px 6px;
   border-radius: 999px;
@@ -4135,17 +4129,17 @@ html.high-contrast .glass-panel {
 }
 
 .player-card-status.status-waiting {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--sf-hover);
   color: var(--text-muted);
 }
 
 .player-card-status.status-jail {
-  background: rgba(239, 68, 68, 0.16);
+  background: var(--bad-bg);
   color: var(--color-danger);
 }
 
 .player-card-status.status-bankrupt {
-  background: rgba(239, 68, 68, 0.16);
+  background: var(--bad-bg);
   color: var(--color-danger);
   text-decoration: line-through;
 }
@@ -4153,7 +4147,7 @@ html.high-contrast .glass-panel {
 .player-card-chip {
   font-size: 0.62rem;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--sf-hover);
   color: var(--text-secondary);
   padding: 1px 7px;
   border-radius: 999px;
@@ -4198,28 +4192,28 @@ html.high-contrast .glass-panel {
 .player-card-wealthbar {
   margin-top: 0.5rem;
   height: 4px;
-  background: rgba(0, 0, 0, 0.45);
-  border-radius: 999px;
+  background: var(--sunken);
+  border-radius: var(--r-full);
   overflow: hidden;
 }
 
 .player-card-wealthbar-fill {
   height: 100%;
-  background: linear-gradient(90deg, rgba(232, 182, 74, 0.55) 0%, rgba(232, 182, 74, 0.9) 100%);
-  transition: width 0.35s ease;
-  border-radius: 999px;
+  background: var(--ln-3);
+  transition: width 0.35s var(--e-std);
+  border-radius: var(--r-full);
 }
 
 .player-card-wealthbar-fill.active {
-  background: linear-gradient(90deg, rgba(232, 182, 74, 0.9) 0%, rgba(252, 211, 77, 1) 100%);
+  background: var(--pri);
 }
 
 .player-card-wealthbar-fill.me {
-  background: linear-gradient(90deg, rgba(55, 214, 194, 0.55) 0%, rgba(55, 214, 194, 0.9) 100%);
+  background: var(--cor);
 }
 
 .player-card-wealthbar-fill.me.active {
-  background: linear-gradient(90deg, rgba(55, 214, 194, 0.9) 0%, rgba(125, 211, 252, 1) 100%);
+  background: var(--cor);
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -4245,8 +4239,8 @@ html.high-contrast .glass-panel {
   width: 100%;
   max-width: 720px;
   max-height: calc(100vh - 3rem);
-  background: linear-gradient(180deg, #11172a 0%, #0a0e1c 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--sf);
+  border: 1px solid var(--ln);
   border-radius: 16px;
   box-shadow:
     0 30px 80px rgba(0, 0, 0, 0.7),
@@ -4269,7 +4263,7 @@ html.high-contrast .glass-panel {
   align-items: center;
   justify-content: space-between;
   padding: 0.95rem 1.3rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid var(--ln);
   background: linear-gradient(135deg, rgba(232, 182, 74, 0.08) 0%, transparent 80%);
 }
 
@@ -4285,7 +4279,7 @@ html.high-contrast .glass-panel {
   align-items: center;
   gap: 0.55rem;
   letter-spacing: 0.02em;
-  color: #fff;
+  color: var(--ink);
 }
 
 .trade-card-title-icon {
@@ -4301,7 +4295,7 @@ html.high-contrast .glass-panel {
 
 .trade-card-premium.incoming .trade-card-title-icon {
   background: rgba(55, 214, 194, 0.2);
-  color: #67e8f9;
+  color: var(--cor-7);
 }
 
 .trade-card-close {
@@ -4322,8 +4316,8 @@ html.high-contrast .glass-panel {
 }
 
 .trade-card-close:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  background: var(--sf-hover);
+  color: var(--ink);
 }
 
 .trade-card-body {
@@ -4358,8 +4352,8 @@ html.high-contrast .glass-panel {
   align-items: center;
   gap: 0.6rem;
   padding: 0.55rem 0.7rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--sf-hover);
+  border: 1px solid var(--ln);
   border-radius: 10px;
   cursor: pointer;
   font-family: var(--font-sans);
@@ -4371,8 +4365,8 @@ html.high-contrast .glass-panel {
 }
 
 .trade-player-pick:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: var(--sf-hover);
+  border-color: var(--ln-2);
 }
 
 .trade-player-pick.selected {
@@ -4388,8 +4382,8 @@ html.high-contrast .glass-panel {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: var(--sunken);
+  border: 2px solid var(--ln);
   font-size: 1.3rem;
   flex-shrink: 0;
 }
@@ -4408,7 +4402,7 @@ html.high-contrast .glass-panel {
 .trade-player-pick-name {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4439,8 +4433,8 @@ html.high-contrast .glass-panel {
 }
 
 .trade-column {
-  background: rgba(0, 0, 0, 0.32);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--sunken);
+  border: 1px solid var(--ln);
   border-radius: 12px;
   padding: 0.7rem 0.75rem 0.85rem;
 }
@@ -4450,12 +4444,12 @@ html.high-contrast .glass-panel {
   align-items: center;
   gap: 0.55rem;
   padding-bottom: 0.55rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--ln);
   margin-bottom: 0.55rem;
 }
 
 .trade-column-head.you {
-  color: #67e8f9;
+  color: var(--cor-7);
 }
 
 .trade-column-head.them {
@@ -4469,8 +4463,8 @@ html.high-contrast .glass-panel {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  background: var(--sunken);
+  border: 1.5px solid var(--ln);
   font-size: 1.05rem;
 }
 
@@ -4517,10 +4511,10 @@ html.high-contrast .glass-panel {
   font-size: 0.95rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--sunken);
+  border: 1px solid var(--ln);
   border-radius: 8px;
-  color: #fff;
+  color: var(--ink);
   outline: none;
   font-family: var(--font-display);
 }
@@ -4541,9 +4535,9 @@ html.high-contrast .glass-panel {
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--sf-hover);
   color: var(--text-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--ln);
   cursor: pointer;
   font-family: var(--font-sans);
   transition:
@@ -4567,8 +4561,8 @@ html.high-contrast .glass-panel {
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 0.65rem;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--sunken);
+  border: 1px solid var(--ln);
   border-radius: 8px;
   font-size: 0.78rem;
   color: var(--text-secondary);
@@ -4598,8 +4592,8 @@ html.high-contrast .glass-panel {
   align-items: stretch;
   gap: 0.45rem;
   padding: 0;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--sf-hover);
+  border: 1px solid var(--ln);
   border-radius: 8px;
   cursor: pointer;
   overflow: hidden;
@@ -4611,8 +4605,8 @@ html.high-contrast .glass-panel {
 }
 
 .trade-tile-pick:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--sf-hover);
+  border-color: var(--ln-2);
 }
 
 .trade-tile-pick.selected {
@@ -4628,7 +4622,7 @@ html.high-contrast .glass-panel {
 .trade-tile-band {
   width: 6px;
   flex-shrink: 0;
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(0, 0, 0, 0.22));
+  background-image: none;
 }
 
 .trade-tile-info {
@@ -4642,7 +4636,7 @@ html.high-contrast .glass-panel {
 .trade-tile-name {
   font-size: 0.78rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--ink);
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -4676,8 +4670,8 @@ html.high-contrast .glass-panel {
   align-items: center;
   margin-top: 1rem;
   padding: 0.75rem 0.9rem;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--sf-hover);
+  border: 1px solid var(--ln);
   border-radius: 10px;
 }
 
@@ -4704,7 +4698,7 @@ html.high-contrast .glass-panel {
   font-family: var(--font-display);
   font-size: 1.15rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
   margin-top: 1px;
 }
@@ -4714,7 +4708,7 @@ html.high-contrast .glass-panel {
   align-items: center;
   gap: 0.7rem;
   padding: 0.7rem 0.85rem;
-  background: linear-gradient(135deg, rgba(55, 214, 194, 0.1) 0%, rgba(11, 16, 32, 0.4) 80%);
+  background: var(--cor-50);
   border: 1px solid rgba(55, 214, 194, 0.3);
   border-radius: 10px;
   margin-bottom: 0.9rem;
@@ -4727,7 +4721,7 @@ html.high-contrast .glass-panel {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--sunken);
   border: 2px solid rgba(55, 214, 194, 0.5);
   font-size: 1.5rem;
 }
@@ -4742,12 +4736,12 @@ html.high-contrast .glass-panel {
   font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--ink);
 }
 
 .trade-incoming-from-sub {
   font-size: 0.7rem;
-  color: #67e8f9;
+  color: var(--cor-7);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -4759,7 +4753,7 @@ html.high-contrast .glass-panel {
   border: 1px solid rgba(239, 68, 68, 0.35);
   border-radius: 8px;
   font-size: 0.75rem;
-  color: #fca5a5;
+  color: var(--bad);
   text-align: center;
 }
 
@@ -4768,8 +4762,8 @@ html.high-contrast .glass-panel {
   display: flex;
   gap: 0.65rem;
   padding: 0.9rem 1.3rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(0, 0, 0, 0.25);
+  border-top: 1px solid var(--ln);
+  background: var(--sunken);
 }
 
 .trade-action-btn {
@@ -4791,24 +4785,24 @@ html.high-contrast .glass-panel {
 }
 
 .trade-action-btn.cancel {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--sf-hover);
   color: var(--text-secondary);
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--ln-2);
 }
 
 .trade-action-btn.cancel:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--sf-hover);
+  color: var(--ink);
 }
 
 .trade-action-btn.cancel.danger:hover {
-  background: rgba(239, 68, 68, 0.16);
-  color: #fca5a5;
+  background: var(--bad-bg);
+  color: var(--bad);
   border-color: rgba(239, 68, 68, 0.3);
 }
 
 .trade-action-btn.propose {
-  background: linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%);
+  background: var(--pri);
   color: #fff;
   box-shadow: 0 6px 22px rgba(70, 199, 141, 0.35);
 }
@@ -4818,7 +4812,7 @@ html.high-contrast .glass-panel {
 }
 
 .trade-action-btn.propose:disabled {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--sf-hover);
   color: var(--text-muted);
   cursor: not-allowed;
   box-shadow: none;

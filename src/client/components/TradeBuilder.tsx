@@ -23,8 +23,8 @@ interface Props {
 
 function groupColorVar(tile: Tile): string {
   if (tile.type === "property") return `var(--color-${(tile as PropertyTile).group})`;
-  if (tile.type === "airport") return "#9ca3af";
-  if (tile.type === "utility") return "#64748b";
+  if (tile.type === "airport") return "var(--ink-3)";
+  if (tile.type === "utility") return "var(--ink-2)";
   return "var(--text-muted)";
 }
 

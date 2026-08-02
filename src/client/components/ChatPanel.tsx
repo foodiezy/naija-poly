@@ -79,9 +79,9 @@ export default function ChatPanel({
     <div
       className="console-panel glass-panel"
       style={{
-        background: "#1c1835",
-        border: "1px solid var(--border-subtle)",
-        borderRadius: "2px",
+        background: "var(--sf)",
+        border: "1px solid var(--ln)",
+        borderRadius: "var(--r-lg)",
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "150px" }}>
@@ -160,7 +160,7 @@ export default function ChatPanel({
                   {msg.toId && "🔒 "}
                   {tokenEmoji(msg.tokenId)} {msg.senderId === mySessionId ? "You" : msg.senderName}:
                 </strong>{" "}
-                <span style={{ color: "#fff" }}>{msg.text}</span>
+                <span style={{ color: "var(--ink)" }}>{msg.text}</span>
               </div>
             ))
           )}
@@ -189,7 +189,6 @@ export default function ChatPanel({
               flex: 1,
               padding: "0.4rem 0.6rem",
               fontSize: "0.8rem",
-              background: "rgba(0,0,0,0.4)",
             }}
           />
           <button

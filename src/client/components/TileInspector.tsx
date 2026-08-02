@@ -141,7 +141,7 @@ export default function TileInspector({
   };
 
   const renderPropertyDeed = (t: PropertyTile) => {
-    const groupColor = groupColorMap[t.group] || "#fff";
+    const groupColor = groupColorMap[t.group] || "var(--ln-3)";
     const houses = tileState?.houses ?? 0;
     const isMortgaged = tileState?.mortgaged ?? false;
 
@@ -238,9 +238,9 @@ export default function TileInspector({
                       fontSize: "0.7rem",
                       padding: "1px 6px",
                       borderRadius: "var(--radius-md)",
-                      background: gt.pos === tilePos ? "rgba(255,255,255,0.1)" : "transparent",
-                      border: `1px solid ${isOwned ? groupColor : "rgba(255,255,255,0.1)"}`,
-                      color: isOwned ? "#fff" : "var(--text-muted)",
+                      background: gt.pos === tilePos ? "var(--sunken)" : "transparent",
+                      border: `1px solid ${isOwned ? groupColor : "var(--ln)"}`,
+                      color: isOwned ? "var(--ink)" : "var(--text-muted)",
                       fontWeight: gt.pos === tilePos ? "bold" : "normal",
                     }}
                   >

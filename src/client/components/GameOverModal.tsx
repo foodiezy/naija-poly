@@ -164,7 +164,7 @@ export default function GameOverModal({
                     style={{
                       fontSize: "3.5rem",
                       color: "var(--color-gold)",
-                      textShadow: "0 0 20px rgba(232, 182, 74, 0.5)",
+                      textShadow: "none",
                       margin: "0.5rem 0",
                       textTransform: "uppercase",
                       fontWeight: "900",
@@ -323,7 +323,7 @@ export default function GameOverModal({
                   <div
                     key={award.id}
                     style={{
-                      background: "rgba(0,0,0,0.2)",
+                      background: "var(--sunken)",
                       padding: "0.75rem",
                       borderRadius: "var(--radius-md)",
                       borderLeft: "3px solid var(--color-gold)",

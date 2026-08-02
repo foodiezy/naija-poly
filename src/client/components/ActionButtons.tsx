@@ -144,7 +144,7 @@ export default function ActionButtons({
             gap: "0.4rem",
             borderRadius: "2px",
             background: "linear-gradient(135deg, #46c78d 0%, #2f9e6b 100%)",
-            boxShadow: "0 4px 12px rgba(70,199,141,0.25)",
+            boxShadow: "var(--sh-md)",
           }}
         >
           <IconRoll size={18} /> Roll Dice

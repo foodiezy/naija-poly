@@ -247,7 +247,7 @@ export default function App() {
 
       <ToastContainer
         position="top-right"
-        theme="dark"
+        theme="light"
         autoClose={3000}
         hideProgressBar={false}
         newestOnTop
