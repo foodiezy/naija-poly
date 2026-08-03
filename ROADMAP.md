@@ -94,6 +94,9 @@ Nigeria is Android-first and data-metered. This phase IS the product for the mar
 - [ ] Eliminated-player retention: spectate + side-bets, or fast rematch queue.
 - [ ] One deeply Nigerian mechanic per cycle (see differentiation) — chaos economy
       events: fuel scarcity, naira/dollar swing, EFCC probe, Owambe levy.
+      and auth and user accounts
+
+      
 
 ## Legal checkpoint — before any revenue
 
