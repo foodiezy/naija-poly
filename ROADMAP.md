@@ -21,7 +21,10 @@ Goal: every future decision is made with data and guarded by CI.
 - [ ] CI: GitHub Actions — typecheck + vitest on every push/PR. DoD: red X on GitHub
       when tests fail; local pre-push hook becomes a convenience, not the only gate.
 - [ ] Pin Node: `engines` in package.json + `.node-version` (Render reads it).
-- [ ] `npm audit` triage: fix the critical + high; document accepted moderates.
+- [x] `npm audit` triage: postcss high-severity path-traversal fixed (non-breaking,
+      2026-08-04). Remaining moderate/high (elliptic, esbuild, nanoid, uuid) all sit
+      behind a breaking Colyseus 0.17 / Vite 8 upgrade — accepted for now, revisit
+      when that upgrade happens (see Phase 5).
 - [ ] Infra config truth: render.yaml is not connected to the running service (it was
       dashboard-created). Either recreate the service from the blueprint or delete
       render.yaml and document dashboard settings in DEPLOY.md. One source of truth.
