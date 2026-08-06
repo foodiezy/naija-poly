@@ -2,7 +2,7 @@
 
 > **Buy the land. Become the Odogwu.**
 
-A pan-Nigerian, real-time **online multiplayer** property-trading board game — built
+A pan-Nigerian, real-time **online multiplayer** property-trading board game  built
 on an authoritative server with a pure, fully-tested game engine. Buy properties from
 Maiduguri to Ikoyi, charge rent in Naira, draw Pidgin-flavoured Chance / Hustle cards,
 and bankrupt your rivals.
