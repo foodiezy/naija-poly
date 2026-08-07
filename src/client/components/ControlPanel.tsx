@@ -171,9 +171,29 @@ export default function ControlPanel({
         onSendAction={onSendAction}
       />
 
+      <section className="v2-game-info-card" aria-label="Game info">
+        <h2>Game Info</h2>
+        <div className="v2-game-info-row">
+          <span>🏦 Bank</span>
+          <strong>₦{Math.abs(engineState.bank ?? 0).toLocaleString()}</strong>
+        </div>
+        <div className="v2-game-info-row">
+          <span>🕘 Turn</span>
+          <strong>
+            {engineState.currentTurn ?? 1}
+            {engineState.settings?.turnLimit > 0 ? ` / ${engineState.settings.turnLimit}` : " / ∞"}
+          </strong>
+        </div>
+        <div className="v2-game-info-row">
+          <span>⏳ Time Left</span>
+          <strong>{turnDeadline && turnDeadline > 0 ? `${turnSecsLeft}s` : "No timer"}</strong>
+        </div>
+      </section>
+
       {/* Per-turn AFK countdown */}
       {isMyTurn && !isBankrupt && !isAuctionActive && turnDeadline && turnDeadline > 0 && (
         <div
+          className="sidebar-turn-timer"
           style={{
             padding: "0.5rem 1rem",
             background: "var(--pri-50)",
@@ -339,6 +359,7 @@ export default function ControlPanel({
           while short on cash), which used to be invisible here. */}
       {me && inDebt && (
         <div
+          className="sidebar-debt-warning"
           style={{
             margin: "0.75rem",
             padding: "0.5rem",
@@ -387,6 +408,7 @@ export default function ControlPanel({
       {/* Trade pending notices */}
       {activeTrade && activeTrade.fromId === mySessionId && (
         <div
+          className="sidebar-trade-notice"
           style={{
             margin: "0.75rem",
             padding: "0.4rem",
@@ -418,6 +440,7 @@ export default function ControlPanel({
       )}
       {activeTrade && activeTrade.fromId !== mySessionId && activeTrade.toId !== mySessionId && (
         <div
+          className="sidebar-trade-notice"
           style={{
             margin: "0.75rem",
             padding: "0.4rem",
@@ -460,6 +483,7 @@ export default function ControlPanel({
       {!isBankrupt && (
         <>
           <div
+            className="sidebar-bankruptcy-action"
             style={{
               padding: "0.4rem 1rem",
               borderBottom: "1px solid var(--border-subtle)",
@@ -490,6 +514,7 @@ export default function ControlPanel({
             </button>
           </div>
           <div
+            className="sidebar-auto-end"
             style={{
               display: "flex",
               alignItems: "center",

@@ -1,4 +1,5 @@
 import type { Action, GameState } from "../../engine/types";
+import { DESKTOP_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
 import { buildPrimaryCtx, primaryAction } from "../lib/primaryAction";
 
 /**
@@ -35,7 +36,9 @@ export default function ActionBar({
   onOpenChat,
   onShowResults,
 }: Props) {
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const action = primaryAction(buildPrimaryCtx(engineState, mySessionId, myTokenWalking));
+  const canEndTurn = action.kind === "end-turn" && !action.disabled;
 
   const fire = () => {
     switch (action.kind) {
@@ -60,8 +63,14 @@ export default function ActionBar({
 
   return (
     <div className="v2-actbar">
-      <button className="v2-act-icon" onClick={onOpenActions} aria-label="More actions">
-        ⋯
+      <button
+        className="v2-act-icon v2-act-side v2-act-end"
+        onClick={canEndTurn ? () => onSendAction({ type: "END_TURN" }) : onOpenActions}
+        aria-label={canEndTurn ? "End turn" : "More actions"}
+        data-inactive={canEndTurn ? undefined : ""}
+      >
+        ↩
+        <span>End Turn</span>
       </button>
 
       <button
@@ -70,11 +79,16 @@ export default function ActionBar({
         disabled={action.disabled}
         data-kind={action.kind}
       >
-        {action.label}
+        {action.kind === "roll" ? "Roll Dice" : action.label}
       </button>
 
-      <button className="v2-act-icon" onClick={onOpenChat} aria-label="Open chat">
-        💬
+      <button
+        className="v2-act-icon v2-act-side v2-act-trade"
+        onClick={isDesktop ? onOpenActions : onOpenChat}
+        aria-label={isDesktop ? "Open trade actions" : "Open chat"}
+      >
+        🤝
+        <span>Trade</span>
         {unreadChat > 0 && <span className="v2-act-dot" aria-label={`${unreadChat} unread`} />}
       </button>
     </div>
