@@ -21,8 +21,6 @@ interface Props {
   onToggleMute: () => void;
   onCopyRoomCode: () => void;
   onOpenMenu: () => void;
-  onLeave: () => void;
-  onHowToPlay: () => void;
 }
 
 export default function ShellTopBar({
@@ -33,95 +31,52 @@ export default function ShellTopBar({
   onToggleMute,
   onCopyRoomCode,
   onOpenMenu,
-  onLeave,
-  onHowToPlay,
 }: Props) {
   const me = engineState.players?.find((p: Player) => p.id === mySessionId);
-  const playerCount = engineState.players?.filter((p: Player) => !p.bankrupt && !p.kicked).length ?? 0;
-  const maxPlayers = 6;
   const potOn = !!engineState.settings?.freeParkingJackpot;
   const pot = engineState.freeParkingPot ?? 0;
   const blackout = engineState.blackout;
 
   return (
     <header className="v2-gtop">
-      <button className="v2-gtop-brand" onClick={onOpenMenu} aria-label="Open game menu">
-        <span className="v2-gtop-brand-mark" aria-hidden="true">
-          👑
-        </span>
-        <span className="v2-gtop-brand-copy">
-          <b>Odogwu Empire</b>
-          <span>Buy the land. Become the Odogwu.</span>
-        </span>
+      <button className="v2-gtop-icon" onClick={onOpenMenu} aria-label="Game menu">
+        ≡
       </button>
 
-      <div className="v2-gtop-center">
-        <button
-          className="v2-gtop-room"
-          onClick={onCopyRoomCode}
-          title="Copy the invite link"
-          aria-label={`Room ${roomId} — copy the invite link`}
-        >
-          Room: {roomId}
-        </button>
+      <button
+        className="v2-gtop-room"
+        onClick={onCopyRoomCode}
+        title="Copy the invite link"
+        aria-label={`Room ${roomId} — copy the invite link`}
+      >
+        {roomId}
+      </button>
 
-        <button
-          className="v2-gtop-copy"
-          onClick={onCopyRoomCode}
-          title="Copy the invite link"
-          aria-label="Copy invite link"
-        >
-          ⧉ Copy Invite
-        </button>
-
-        <span className="v2-gtop-players" aria-label={`${playerCount} of ${maxPlayers} players`}>
-          👥 Players {playerCount} / {maxPlayers}
+      {potOn && pot > 0 && (
+        <span className="v2-gtop-chip v2-gtop-chip-pot" title="Mama Put pot">
+          🍲 {nairaShort(pot)}
         </span>
+      )}
 
-        {potOn && pot > 0 && (
-          <span className="v2-gtop-chip v2-gtop-chip-pot" title="Mama Put pot">
-            🍲 {nairaShort(pot)}
-          </span>
-        )}
+      {blackout && (
+        <span className="v2-gtop-chip v2-gtop-chip-nepa" title="NEPA don take light — rent frozen">
+          ⚡ NEPA
+        </span>
+      )}
 
-        {blackout && (
-          <span className="v2-gtop-chip v2-gtop-chip-nepa" title="NEPA don take light — rent frozen">
-            ⚡ NEPA
-          </span>
-        )}
-      </div>
+      {me && (
+        <span className="v2-gtop-cash" aria-label={`Your cash: ${naira(me.cash)}`}>
+          {naira(me.cash)}
+        </span>
+      )}
 
-      <div className="v2-gtop-meta">
-        {me && (
-          <span className="v2-gtop-cash" aria-label={`Your cash: ${naira(me.cash)}`}>
-            {naira(me.cash)}
-          </span>
-        )}
-
-        <button className="v2-gtop-leave" onClick={onLeave}>
-          ↪ Leave Game
-        </button>
-
-        <button
-          className="v2-gtop-icon v2-gtop-mute"
-          onClick={onToggleMute}
-          aria-label={muted ? "Unmute sounds" : "Mute sounds"}
-        >
-          {muted ? "🔇" : "🔊"}
-        </button>
-
-        <button className="v2-gtop-icon" onClick={onHowToPlay} aria-label="How to play">
-          ?
-        </button>
-
-        <button className="v2-gtop-icon" onClick={onOpenMenu} aria-label="Settings">
-          ⚙
-        </button>
-
-        <button className="v2-gtop-icon" onClick={onOpenMenu} aria-label="Profile">
-          👤
-        </button>
-      </div>
+      <button
+        className="v2-gtop-icon v2-gtop-mute"
+        onClick={onToggleMute}
+        aria-label={muted ? "Unmute sounds" : "Mute sounds"}
+      >
+        {muted ? "🔇" : "🔊"}
+      </button>
     </header>
   );
 }

@@ -110,16 +110,14 @@ export default function GameShell({
         onToggleMute={onToggleMute}
         onCopyRoomCode={onCopyRoomCode}
         onOpenMenu={() => setMenuOpen(true)}
-        onLeave={onLeave}
-        onHowToPlay={onHowToPlay}
       />
 
       <TurnStrip engineState={engineState} roomState={roomState} mySessionId={mySessionId} />
 
       {isDesktop && (
         <aside className="v2-shell-rail v2-shell-rail-left">
-          {chat}
           {feed}
+          {chat}
         </aside>
       )}
 
@@ -196,15 +194,17 @@ export default function GameShell({
         </div>
       </Sheet>
 
-      <Sheet
-        level="info"
-        open={actionsOpen}
-        onClose={() => setActionsOpen(false)}
-        title="Actions"
-        maxWidth={560}
-      >
-        <div className="v2-shell-sheet-panel">{sidebar}</div>
-      </Sheet>
+      {!isDesktop && (
+        <Sheet
+          level="info"
+          open={actionsOpen}
+          onClose={() => setActionsOpen(false)}
+          title="Your game"
+          maxWidth={560}
+        >
+          <div className="v2-shell-sheet-panel">{sidebar}</div>
+        </Sheet>
+      )}
 
       {!isDesktop && (
         <Sheet

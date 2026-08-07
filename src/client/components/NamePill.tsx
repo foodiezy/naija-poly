@@ -5,7 +5,7 @@ interface NamePillProps {
   name: string;
   onChange: (name: string) => void;
   /**
-   * "sm" — compact "Playing as **Fuad** ✎" pill.
+   * "sm" — landing: compact "Playing as **Chidi_84** ✎" pill.
    * "lg" — join gate: full-width row with a "change ✎" hint (mockup screen 2).
    */
   variant: "sm" | "lg";
