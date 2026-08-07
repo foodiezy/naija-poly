@@ -169,8 +169,8 @@ describe("Debt Ledger", () => {
       expect(debt!.creditorId).toBe("p1");
     });
 
-    it("tax payment while insolvent records debt to bank when Mama Put Pot is disabled, no money minted", () => {
-      const state = createGame(["p1", "p2"], { freeParkingJackpot: false });
+    it("tax payment while insolvent records debt to bank, no money minted", () => {
+      const state = createGame(["p1", "p2"]);
 
       // p2 has only ₦50,000 — cannot afford ₦200,000 FIRS Income Tax at pos 4
       state.players[1].cash = 50_000;

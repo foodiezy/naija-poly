@@ -855,19 +855,6 @@ describe("Game Engine", () => {
       expect(nextState.log[nextState.log.length - 1]).toContain("added to Mama Put Pot");
     });
 
-    it("redirects tax payments to Mama Put Pot by default", () => {
-      const state = createGame(["p1", "p2"]);
-      state.players[0].position = 2; // Hustle Box
-      state.currentPlayerIndex = 0;
-
-      const mockRng = MockRNG.makeRoll(1, 1); // roll 2 -> lands on pos 4 (FIRS Income Tax, 200k)
-      const nextState = applyAction(state, "p1", { type: "ROLL" }, mockRng.getRNG());
-
-      expect(nextState.freeParkingPot).toBe(200_000);
-      expect(nextState.players[0].cash).toBe(STARTING_CASH - 200_000);
-      expect(nextState.log[nextState.log.length - 1]).toContain("added to Mama Put Pot");
-    });
-
     it("pays out freeParkingPot on Mama Put Rest Stop landing", () => {
       const state = createGame(["p1", "p2"], { freeParkingJackpot: true });
       state.freeParkingPot = 350_000;

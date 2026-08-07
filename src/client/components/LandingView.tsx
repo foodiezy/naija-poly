@@ -1,7 +1,8 @@
 import React, { useState } from "react";
+import NamePill from "./NamePill";
 import { ScatterDecor } from "./decor";
 import { getStats } from "../utils/stats";
-import { loadPlayerName, MAX_NAME_LENGTH, savePlayerName } from "../utils/playerName";
+import { loadPlayerName, savePlayerName } from "../utils/playerName";
 
 interface LandingViewProps {
   onCreateRoom: (name: string) => Promise<void>;
@@ -119,18 +120,16 @@ export default function LandingView({ onCreateRoom, onJoinRoom, onQuickMatch }: 
   const [showRules, setShowRules] = useState(false);
   const [busy, setBusy] = useState<"create" | "join" | "quick" | null>(null);
   const stats = getStats();
-  const cleanName = name.trim();
 
   const handleNameChange = (next: string) => {
-    setName(next.slice(0, MAX_NAME_LENGTH));
+    setName(next);
+    savePlayerName(next);
   };
 
   const handleCreate = async () => {
-    if (!cleanName) return;
-    savePlayerName(cleanName);
     setBusy("create");
     try {
-      await onCreateRoom(cleanName);
+      await onCreateRoom(name);
     } finally {
       setBusy(null);
     }
@@ -138,22 +137,20 @@ export default function LandingView({ onCreateRoom, onJoinRoom, onQuickMatch }: 
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cleanName || !code.trim()) return;
-    savePlayerName(cleanName);
+    if (!code.trim()) return;
     setBusy("join");
     try {
-      await onJoinRoom(cleanName, code.trim());
+      await onJoinRoom(name, code.trim());
     } finally {
       setBusy(null);
     }
   };
 
   const handleQuickMatch = async () => {
-    if (!onQuickMatch || !cleanName) return;
-    savePlayerName(cleanName);
+    if (!onQuickMatch) return;
     setBusy("quick");
     try {
-      await onQuickMatch(cleanName);
+      await onQuickMatch(name);
     } finally {
       setBusy(null);
     }
@@ -172,27 +169,18 @@ export default function LandingView({ onCreateRoom, onJoinRoom, onQuickMatch }: 
         </h1>
         <p className="v2-tagline">Buy Naija land. Bankrupt your friends.</p>
 
-        <label className="v2-name-field">
-          <span>Enter your name</span>
-          <input
-            className="v2-input"
-            value={name}
-            maxLength={MAX_NAME_LENGTH}
-            placeholder="e.g. Fuad"
-            onChange={(e) => handleNameChange(e.target.value)}
-            autoComplete="nickname"
-          />
-          <small>This is the name other players will see.</small>
-        </label>
-
         <button
           type="button"
           className="v2-btn v2-btn-pri"
           onClick={handleCreate}
-          disabled={busy !== null || !cleanName}
+          disabled={busy !== null}
         >
           {busy === "create" ? "Connecting…" : "Start a game"}
         </button>
+
+        <div className="v2-pill-row">
+          <NamePill name={name} onChange={handleNameChange} variant="sm" />
+        </div>
 
         <div className="v2-landing-links">
           <button
@@ -225,7 +213,7 @@ export default function LandingView({ onCreateRoom, onJoinRoom, onQuickMatch }: 
             <button
               type="submit"
               className="v2-btn v2-btn-pri"
-              disabled={busy !== null || !cleanName || !code.trim()}
+              disabled={busy !== null || !code.trim()}
             >
               {busy === "join" ? "Joining…" : "Join room"}
             </button>
@@ -234,7 +222,7 @@ export default function LandingView({ onCreateRoom, onJoinRoom, onQuickMatch }: 
                 type="button"
                 className="v2-btn v2-btn-sec"
                 onClick={handleQuickMatch}
-                disabled={busy !== null || !cleanName}
+                disabled={busy !== null}
               >
                 {busy === "quick" ? "Searching…" : "Quick match"}
               </button>

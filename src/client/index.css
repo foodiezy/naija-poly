@@ -676,7 +676,7 @@ h6 {
        interior), so the short label fits comfortably without shrinking to
        the old floor; `break-word` (vs `anywhere`) avoids splitting short
        words mid-letter now that they mostly fit on one line. */
-    font-size: 0.58rem;
+    font-size: clamp(0.55rem, 2.1vw, 0.7rem);
     overflow-wrap: break-word;
   }
 
@@ -789,11 +789,11 @@ h6 {
 }
 
 .monopoly-board {
-  width: min(100%, var(--board-width, var(--board-size)));
-  max-width: var(--board-width, var(--board-size));
-  aspect-ratio: var(--board-aspect-ratio, 1 / 1);
-  height: var(--board-height, auto);
-  max-height: var(--board-height, var(--board-size));
+  width: 100%;
+  max-width: var(--board-size);
+  aspect-ratio: 1 / 1;
+  height: auto;
+  max-height: var(--board-size);
   display: grid;
   /* Corner + side columns/rows get more room than the interior; real Monopoly
      boards use oversized corner squares, and it also frees up width for the
@@ -807,14 +807,12 @@ h6 {
      to be squeezed here until step B6 takes the names off the board. */
   grid-template-columns: minmax(0, 1.5fr) repeat(9, minmax(0, 1fr)) minmax(0, 1.5fr);
   grid-template-rows: minmax(0, 1.5fr) repeat(9, minmax(0, 1fr)) minmax(0, 1.5fr);
-  background: #b9ac90;
-  border: 1px solid rgba(68, 61, 46, 0.28);
-  gap: 1px;
-  padding: 2px;
-  box-shadow:
-    0 18px 34px -22px rgba(20, 18, 14, 0.45),
-    0 1px 0 rgba(255, 255, 255, 0.78) inset;
-  border-radius: 8px;
+  background: var(--sunken);
+  border: 5px solid var(--sf);
+  gap: 1.5px;
+  padding: 5px;
+  box-shadow: var(--sh-lg);
+  border-radius: var(--r-lg);
   /* Authentic sharp tabletop boxes */
   position: relative;
   overflow: hidden;
@@ -828,198 +826,43 @@ h6 {
   overflow: hidden;
 }
 
-/* Middle of the board: decorative tabletop only. Gameplay status stays around
-   the board so players can read their route without a central blocker. */
+/* Middle of the board. B6 emptied it to dice + whose turn, so it stops being a
+   second dashboard competing with the shell and becomes what the middle of a
+   board should be: quiet, patterned, with the roll happening on it. */
 .board-center {
   grid-column: 2 / 11;
   grid-row: 2 / 11;
-  background:
-    radial-gradient(circle at 50% 58%, rgba(255, 255, 255, 0.42), transparent 34%),
-    linear-gradient(180deg, rgba(255, 251, 239, 0.96), rgba(239, 229, 205, 0.94));
+  background: var(--sf);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: clamp(0.45rem, 1.7vw, 0.9rem);
-  padding: calc(var(--s-4) + 2px);
+  gap: var(--s-4);
+  padding: var(--s-4);
   position: relative;
-  border: 1px solid rgba(86, 75, 52, 0.28);
-  border-radius: 3px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    inset 0 0 52px rgba(140, 111, 63, 0.14);
+  border: 1px solid var(--ln);
+  border-radius: var(--r-md);
   overflow: hidden;
 }
 
+/* Same adire motif as the landing and the shell, tuned down — the dice sit on
+   top of it and must stay the thing your eye lands on. */
 .board-center-adire {
   position: absolute;
   inset: 0;
-  opacity: 0.08;
+  opacity: 0.045;
   pointer-events: none;
   background:
-    linear-gradient(90deg, transparent 0 48%, rgba(22, 92, 59, 0.12) 48% 49%, transparent 49%),
-    repeating-linear-gradient(45deg, rgba(22, 92, 59, 0.16) 0 1px, transparent 1px 20px),
-    repeating-linear-gradient(-45deg, rgba(169, 128, 42, 0.12) 0 1px, transparent 1px 20px);
-}
-
-.board-center-skyline {
-  position: absolute;
-  left: 9%;
-  right: 9%;
-  bottom: 11%;
-  height: 31%;
-  pointer-events: none;
-  opacity: 0.24;
-  background:
-    linear-gradient(180deg, transparent 0 42%, rgba(22, 92, 59, 0.12) 42% 45%, transparent 45%),
-    linear-gradient(90deg, transparent 0 5%, rgba(31, 78, 57, 0.32) 5% 6%, transparent 6% 11%, rgba(31, 78, 57, 0.24) 11% 13%, transparent 13% 20%, rgba(31, 78, 57, 0.3) 20% 21%, transparent 21% 33%, rgba(31, 78, 57, 0.22) 33% 35%, transparent 35% 48%, rgba(31, 78, 57, 0.28) 48% 50%, transparent 50% 61%, rgba(31, 78, 57, 0.22) 61% 63%, transparent 63% 77%, rgba(31, 78, 57, 0.3) 77% 78%, transparent 78% 88%, rgba(31, 78, 57, 0.24) 88% 90%, transparent 90%),
-    radial-gradient(ellipse at 50% 100%, rgba(13, 70, 55, 0.28), transparent 58%);
-  filter: blur(0.2px);
-}
-
-.board-center-skyline::before,
-.board-center-skyline::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  pointer-events: none;
-}
-
-.board-center-skyline::before {
-  bottom: 31%;
-  height: 34%;
-  background:
-    linear-gradient(90deg, transparent 0 18%, rgba(31, 78, 57, 0.22) 18% 21%, transparent 21% 39%, rgba(31, 78, 57, 0.18) 39% 42%, transparent 42% 58%, rgba(31, 78, 57, 0.22) 58% 61%, transparent 61% 79%, rgba(31, 78, 57, 0.18) 79% 82%, transparent 82%),
-    radial-gradient(ellipse at 23% 100%, rgba(31, 78, 57, 0.3) 0 12%, transparent 13%),
-    radial-gradient(ellipse at 77% 100%, rgba(31, 78, 57, 0.3) 0 12%, transparent 13%);
-}
-
-.board-center-skyline::after {
-  bottom: 0;
-  height: 27%;
-  background:
-    repeating-linear-gradient(0deg, rgba(19, 82, 66, 0.1) 0 1px, transparent 1px 7px),
-    linear-gradient(180deg, rgba(24, 104, 90, 0.18), rgba(24, 104, 90, 0.06));
-  border-radius: 999px 999px 0 0;
-}
-
-.board-deck {
-  position: absolute;
-  z-index: 1;
-  width: clamp(70px, 16%, 126px);
-  aspect-ratio: 1.35 / 1;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(81, 72, 55, 0.24);
-  border-radius: 5px;
-  box-shadow:
-    7px 7px 0 rgba(67, 56, 38, 0.14),
-    13px 13px 20px rgba(35, 28, 16, 0.14);
-  color: rgba(255, 255, 255, 0.86);
-  font-size: clamp(0.52rem, 1.2vw, 0.78rem);
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.board-deck-face {
-  transform: rotate(-44deg);
-  display: grid;
-  place-items: center;
-  gap: 0.16rem;
-}
-
-.board-deck-face b {
-  font-size: clamp(0.44rem, 0.95vw, 0.64rem);
-  line-height: 1;
-}
-
-.board-deck-icon {
-  width: clamp(18px, 3.1vw, 28px);
-  height: clamp(18px, 3.1vw, 28px);
-  display: grid;
-  place-items: center;
-  font-style: normal;
-}
-
-.board-deck-icon-chance {
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff6c9, #e5a52f 62%, #a85f00);
-  color: #fff8d6;
-  font-family: var(--font-display);
-  font-size: clamp(1rem, 2vw, 1.55rem);
-  font-weight: 950;
-  text-shadow: 0 2px 0 rgba(88, 49, 0, 0.25);
-}
-
-.board-deck-icon-hustle {
-  position: relative;
-  border-radius: 5px;
-  background: linear-gradient(180deg, #f4cf61 0 22%, #165f72 23% 100%);
-  border: 2px solid rgba(255, 250, 224, 0.65);
-  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.14);
-}
-
-.board-deck-icon-hustle::before,
-.board-deck-icon-hustle::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.board-deck-icon-hustle::before {
-  top: -5px;
-  width: 42%;
-  height: 7px;
-  border: 2px solid rgba(255, 250, 224, 0.78);
-  border-bottom: 0;
-  border-radius: 7px 7px 0 0;
-}
-
-.board-deck-icon-hustle::after {
-  top: 43%;
-  width: 16%;
-  height: 16%;
-  border-radius: 2px;
-  background: #f7d86f;
-}
-
-.board-deck-chance {
-  left: 16%;
-  top: 29%;
-  transform: rotate(-33deg);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 34%),
-    linear-gradient(160deg, #9bbd82, #4e8452);
-}
-
-.board-deck-hustle {
-  right: 16%;
-  top: 29%;
-  transform: rotate(33deg);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 34%),
-    linear-gradient(160deg, #75bfd2, #247d96);
+    repeating-linear-gradient(45deg, var(--zone-borno-bar) 0 2px, transparent 2px 14px),
+    repeating-linear-gradient(-45deg, var(--pri) 0 2px, transparent 2px 14px);
 }
 
 .board-center-stage {
   position: relative;
-  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: min(48%, 330px);
-  min-width: 210px;
-  padding: clamp(0.55rem, 1.8vw, 0.95rem);
-  border-radius: 10px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(253, 250, 241, 0.98));
-  border: 1px solid rgba(105, 96, 75, 0.22);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.82) inset,
-    0 20px 34px -22px rgba(20, 18, 14, 0.48);
+  gap: var(--s-4);
 }
 
 .board-center-waiting {
@@ -1123,9 +966,9 @@ h6 {
    read who owns what across the whole board at a glance. --tile-zone /
    --tile-zone-tint are set per tile by GameBoard from lib/zones.ts. */
 .tile {
-  border: 1px solid rgba(75, 70, 58, 0.24);
-  background: #fbf7ea;
-  border-radius: 2px;
+  border: 1px solid var(--ln);
+  background: var(--sf);
+  border-radius: var(--r-xs);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -1135,19 +978,15 @@ h6 {
   cursor: pointer;
   transition:
     background-color var(--d-base) var(--e-std),
-    box-shadow var(--d-base) var(--e-std),
-    transform var(--d-base) var(--e-std);
+    box-shadow var(--d-base) var(--e-std);
   overflow: visible;
   min-width: 0;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
 }
 
 /* Owned: a wash of the tile's own zone. Falls back to a warm neutral for
    airports and utilities, which belong to no zone. */
 .tile[data-owned] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.5)),
-    var(--tile-zone-tint, var(--sf-tint));
+  background: var(--tile-zone-tint, var(--sf-tint));
 }
 
 /* Center area between the color band and the price stripe — name + icon
@@ -1169,23 +1008,16 @@ h6 {
 }
 
 .tile:hover {
-  background-color: #fffaf0;
-  box-shadow:
-    0 8px 16px -13px rgba(20, 18, 14, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  background-color: var(--sf-hover);
+  box-shadow: var(--sh-md);
   z-index: 30;
-  transform: translateY(-1px);
 }
 
 /* Corner Tiles are bigger */
 .tile-corner {
-  background:
-    linear-gradient(180deg, #fffaf0, #f5ecd8);
+  background: var(--sunken);
   font-weight: 700;
   padding: 4px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.82),
-    inset 0 0 0 1px rgba(169, 128, 42, 0.08);
 }
 
 /* Corner specials (START, Jail, Mama Put, Go-to-Jail) get a larger icon */
@@ -1216,7 +1048,7 @@ h6 {
    little more room to fit before it wraps at all. */
 .edge-left .tile-name,
 .edge-right .tile-name {
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
 }
 
 .tile-color-bar {
@@ -1224,7 +1056,7 @@ h6 {
      the tile's zone bar. Flat — the old painted sheen was there to lift the
      band off a near-black tile and just muddies it on white. */
   flex-shrink: 0;
-  background: var(--tile-zone);
+  background-color: var(--tile-zone);
 }
 
 .tile-type-icon {
@@ -1234,76 +1066,21 @@ h6 {
   user-select: none;
 }
 
-.tile-type-chance {
-  width: 1.25em;
-  height: 1.25em;
-  display: grid;
-  place-items: center;
-  align-self: center;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff3b0, #e59718 62%, #a75b00);
-  color: #fff7d1;
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 950;
-  text-shadow: 0 1px 0 rgba(88, 49, 0, 0.35);
-  box-shadow: 0 2px 5px rgba(126, 73, 0, 0.22);
-}
-
-.tile-type-hustle {
-  position: relative;
-  width: 1.28em;
-  height: 1em;
-  align-self: center;
-  margin-top: 1px;
-  border-radius: 3px;
-  background: linear-gradient(180deg, #f3ca57 0 25%, #1f879d 26% 100%);
-  border: 1px solid rgba(74, 63, 37, 0.28);
-  box-shadow:
-    inset 0 -3px 0 rgba(0, 0, 0, 0.1),
-    0 2px 4px rgba(37, 29, 16, 0.14);
-}
-
-.tile-type-hustle::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: -0.34em;
-  width: 0.48em;
-  height: 0.34em;
-  transform: translateX(-50%);
-  border: 1px solid rgba(74, 63, 37, 0.34);
-  border-bottom: 0;
-  border-radius: 0.28em 0.28em 0 0;
-}
-
-.tile-type-hustle::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 0.45em;
-  width: 0.22em;
-  height: 0.16em;
-  transform: translateX(-50%);
-  border-radius: 1px;
-  background: #f6d36f;
-}
-
 .tile-name {
   /* Capped at 0.70rem: a non-corner tile is ~46px wide at a 700px board, and
      at 0.78rem even a six-letter name like "Ekpoma" broke to "Ekpom / a". */
-  font-size: 0.62rem;
-  font-weight: 800;
+  font-size: clamp(0.54rem, 0.9vw, 0.7rem);
+  font-weight: 700;
   text-align: center;
-  line-height: 1.1;
-  letter-spacing: 0;
+  line-height: 1.08;
+  letter-spacing: 0.01em;
   color: var(--ink);
   word-break: normal;
   /* `anywhere` (unlike break-word) shrinks min-content width, so long names
      like "Kafanchan" wrap on narrow side tiles instead of clipping mid-word. */
   overflow-wrap: anywhere;
   max-width: 100%;
-  padding: 0 3px;
+  padding: 0 2px;
 }
 
 /* .tile-name is now a wrapper around two labels: the full name (default) and
@@ -1316,15 +1093,14 @@ h6 {
 
 /* Bottom price stripe. No fill on white — a hairline is enough separation. */
 .tile-price {
-  font-size: 0.58rem;
-  font-weight: 800;
-  color: var(--ink);
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
   width: 100%;
   text-align: center;
-  padding: 2px 0 3px;
-  border-top: 1px solid rgba(75, 70, 58, 0.12);
-  background: rgba(255, 255, 255, 0.44);
+  padding: 3px 0;
+  border-top: 1px solid var(--ln);
   margin-top: 1px;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -1335,9 +1111,7 @@ h6 {
    lock in the stripe rather than the word "Mortgaged" overflowing into its
    neighbours. */
 .tile-mortgaged {
-  background:
-    linear-gradient(180deg, rgba(248, 245, 238, 0.98), rgba(235, 231, 222, 0.98)),
-    var(--sunken);
+  background: var(--sunken);
 }
 
 .tile-mortgaged .tile-color-bar {
@@ -1353,13 +1127,13 @@ h6 {
   position: absolute;
   bottom: 2px;
   right: 2px;
-  font-size: 0.5rem;
+  font-size: 0.46rem;
   line-height: 1;
-  background: rgba(255, 255, 255, 0.94);
-  padding: 1px 4px;
+  background: var(--sf);
+  padding: 1px 3px;
   border-radius: var(--r-full);
-  border: 1px solid rgba(75, 70, 58, 0.18);
-  box-shadow: 0 1px 3px rgba(20, 18, 14, 0.14);
+  border: 1px solid var(--ln-2);
+  box-shadow: var(--sh-xs);
 }
 
 .tile-mortgaged .tile-owner-indicator {
@@ -1375,10 +1149,9 @@ h6 {
   transform: translateX(-50%);
   min-width: 130px;
   max-width: 190px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 246, 239, 0.98));
-  border: 1px solid rgba(123, 103, 64, 0.16);
-  border-radius: 8px;
+  background: var(--sf);
+  border: 1px solid var(--ln-2);
+  border-radius: var(--r-md);
   padding: 6px 9px;
   font-size: 0.62rem;
   line-height: 1.35;
@@ -1387,7 +1160,7 @@ h6 {
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--d-fast) var(--e-std);
-  box-shadow: 0 12px 26px -16px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--sh-lg);
   white-space: nowrap;
 }
 
@@ -1419,11 +1192,11 @@ h6 {
   align-items: center;
   justify-content: center;
   /* Compact white pill so the icon + ×N count read as one badge on the band. */
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(75, 70, 58, 0.18);
+  background: var(--sf);
+  border: 1px solid var(--ln-2);
   border-radius: var(--r-full);
   padding: 1px 3px;
-  box-shadow: 0 1px 3px rgba(37, 29, 16, 0.12);
+  box-shadow: var(--sh-xs);
 }
 
 /* ×N house count (richup.io style) */
@@ -1432,7 +1205,7 @@ h6 {
   font-weight: 800;
   line-height: 1;
   color: var(--ink);
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
 }
 
 /* Each edge centres the pip row/column on its 11px band (band centre ≈ 5.5px
@@ -1555,22 +1328,18 @@ h6 {
    is signalled with the border and a ring — never another background wash,
    which would fight the ownership read. */
 .tile-has-player {
-  border-color: rgba(123, 103, 64, 0.24);
+  border-color: var(--ln-3);
 }
 
 .tile-has-me {
   border-color: var(--cor) !important;
-  box-shadow:
-    0 0 0 2px var(--cor-50),
-    0 10px 18px -18px rgba(230, 55, 97, 0.65);
+  box-shadow: 0 0 0 2px var(--cor-50);
   z-index: 12;
 }
 
 .tile-active-player {
   border-color: var(--pri) !important;
-  box-shadow:
-    0 0 0 2px var(--pri-ring),
-    0 10px 18px -18px rgba(29, 111, 73, 0.62);
+  box-shadow: 0 0 0 2px var(--pri-ring);
   z-index: 12;
 }
 
@@ -1578,8 +1347,7 @@ h6 {
   border-color: var(--cor) !important;
   box-shadow:
     0 0 0 2px var(--cor-50),
-    0 0 0 4px var(--pri-ring),
-    0 12px 20px -20px rgba(230, 55, 97, 0.62);
+    0 0 0 4px var(--pri-ring);
   z-index: 14;
 }
 
@@ -1591,50 +1359,9 @@ h6 {
    the deed sheet carries everything else. Corners keep a short label because
    they are the landmarks you navigate by. */
 @media (max-width: 600px) {
-  .monopoly-board {
-    gap: 1px;
-    padding: 5px;
-  }
-
-  .board-center {
-    padding: 0.55rem;
-  }
-
-  .board-center-stage {
-    gap: var(--s-3);
-    padding: var(--s-3);
-  }
-
-  .dice-stage {
-    transform: scale(1.05);
-    margin: 0.15rem 0 0.75rem;
-  }
-
-  .active-player-hero {
-    padding: 0.4rem 0.65rem 0.4rem 0.45rem;
-  }
-
-  .active-player-hero-avatar {
-    width: 32px;
-    height: 32px;
-    font-size: 1.35rem;
-  }
-
-  .active-player-hero-name {
-    font-size: 0.92rem;
-  }
-
-  .tile:not(.tile-corner) .tile-name {
-    display: flex;
-    font-size: 0.46rem;
-    line-height: 1.02;
-    padding-inline: 1px;
-  }
-
+  .tile:not(.tile-corner) .tile-name,
   .tile:not(.tile-corner) .tile-price {
-    display: block;
-    font-size: 0.46rem;
-    padding-block: 1px;
+    display: none;
   }
 
   .tile-corner .tile-name {
@@ -2859,18 +2586,17 @@ html.high-contrast .glass-panel {
    Board-center upgrades — premium centerpiece
    ────────────────────────────────────────────────────────────────────── */
 
+/* Bigger dice for the board center */
 .dice-stage {
-  position: relative;
-  z-index: 2;
   display: flex;
-  gap: 0.5rem;
+  gap: 1.2rem;
   align-items: center;
   justify-content: center;
   perspective: 800px;
-  transform: scale(0.72);
+  transform: scale(1.55);
   transform-origin: center;
-  margin: -0.35rem 0 0;
-  filter: drop-shadow(0 7px 7px rgba(20, 18, 14, 0.18));
+  margin: 0.5rem 0 1.6rem;
+  filter: drop-shadow(0 10px 14px rgba(23, 20, 16, 0.18));
 }
 
 @keyframes diceShake {
@@ -2900,147 +2626,41 @@ html.high-contrast .glass-panel {
   animation: diceShake 0.18s linear infinite;
 }
 
+/* Active-player hero card — replaces the plain "X is playing..." text */
 .active-player-hero {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: clamp(0.35rem, 1.1vw, 0.55rem);
-  width: 100%;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  color: #11150f;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.5rem 1rem 0.5rem 0.55rem;
+  background: var(--sf);
+  border: 1.5px solid var(--ln-2);
+  border-radius: var(--r-full);
+  box-shadow: var(--sh-sm);
+  max-width: 100%;
 }
 
 .active-player-hero.is-me {
-  box-shadow: none;
-}
-
-.active-player-hero-kicker {
-  font-family: var(--font-display);
-  font-size: clamp(0.92rem, 2vw, 1.28rem);
-  font-weight: 900;
-  line-height: 1.1;
-  text-align: center;
-  color: #063f2b;
-}
-
-.active-player-hero-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.16rem;
-  padding: clamp(0.5rem, 1.5vw, 0.8rem);
-  border: 1px solid rgba(105, 96, 75, 0.13);
-  border-radius: 10px;
-  background: #fffdf8;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-
-.active-player-hero-panel span {
-  font-size: clamp(0.6rem, 1.2vw, 0.75rem);
-  color: #24251f;
-  line-height: 1.1;
-}
-
-.active-player-hero-panel strong {
-  font-family: var(--font-display);
-  font-size: clamp(1rem, 2.4vw, 1.55rem);
-  font-weight: 950;
-  line-height: 1;
-  text-align: center;
-  text-transform: uppercase;
-  color: #0c1110;
-}
-
-.active-player-hero-panel em {
-  font-style: normal;
-  font-size: clamp(0.78rem, 1.6vw, 1.05rem);
-  font-weight: 900;
-  color: #0c1110;
-  font-variant-numeric: tabular-nums;
-}
-
-.active-player-hero-scene {
-  position: relative;
-  height: clamp(44px, 8vw, 82px);
-  overflow: hidden;
-  border: 1px solid rgba(105, 96, 75, 0.16);
-  border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(244, 232, 189, 0.26), rgba(243, 233, 206, 0.2) 45%, rgba(74, 140, 128, 0.18) 46%),
-    linear-gradient(90deg, rgba(195, 151, 72, 0.16), rgba(22, 92, 59, 0.12));
-}
-
-.scene-sun {
-  position: absolute;
-  left: 9%;
-  top: 10%;
-  width: 16%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: rgba(214, 155, 43, 0.26);
-  filter: blur(0.2px);
-}
-
-.scene-city {
-  position: absolute;
-  left: 16%;
-  right: 16%;
-  bottom: 33%;
-  height: 38%;
-  background:
-    linear-gradient(90deg, transparent 0 6%, #7a917a 6% 9%, transparent 9% 15%, #6f8c79 15% 19%, transparent 19% 26%, #5b8278 26% 31%, transparent 31% 39%, #789577 39% 41%, transparent 41% 49%, #496f67 49% 53%, transparent 53% 61%, #738d78 61% 65%, transparent 65% 73%, #587d70 73% 76%, transparent 76% 86%, #7d967b 86% 89%, transparent 89%);
-  opacity: 0.72;
-}
-
-.scene-palms {
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: 30%;
-  height: 48%;
-  background:
-    radial-gradient(ellipse at 8% 16%, rgba(31, 94, 54, 0.72) 0 8%, transparent 9%),
-    linear-gradient(90deg, transparent 0 7%, rgba(95, 73, 43, 0.7) 7% 8%, transparent 8% 91%, rgba(95, 73, 43, 0.7) 91% 92%, transparent 92%),
-    radial-gradient(ellipse at 92% 16%, rgba(31, 94, 54, 0.72) 0 8%, transparent 9%);
-}
-
-.scene-water {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 34%;
-  background:
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.28) 0 1px, transparent 1px 6px),
-    linear-gradient(180deg, rgba(58, 134, 129, 0.32), rgba(43, 100, 95, 0.2));
-}
-
-.active-player-hero-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
+  border-color: var(--cor);
+  box-shadow:
+    var(--sh-sm),
+    0 0 0 3px var(--cor-50);
 }
 
 .active-player-hero-avatar {
-  width: clamp(34px, 6vw, 48px);
-  height: clamp(34px, 6vw, 48px);
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(1.25rem, 3vw, 1.8rem);
-  border-radius: 8px;
-  background: linear-gradient(180deg, #f5ecd8, #eadfc7);
-  border: 1px solid rgba(105, 96, 75, 0.18);
+  font-size: 1.9rem;
+  border-radius: var(--r-full);
+  background: var(--sunken);
+  border: 2px solid var(--ln-2);
   flex-shrink: 0;
 }
 
 .active-player-hero.is-me .active-player-hero-avatar {
-  border-color: rgba(6, 63, 43, 0.28);
+  border-color: var(--cor);
 }
 
 .active-player-hero-meta {
@@ -3051,118 +2671,22 @@ html.high-contrast .glass-panel {
 
 .active-player-hero-name {
   font-family: var(--font-display);
-  font-size: clamp(0.84rem, 1.8vw, 1.05rem);
+  font-size: 1.15rem;
   font-weight: 800;
-  color: #063f2b;
-  letter-spacing: 0;
+  color: var(--ink);
+  letter-spacing: 0.01em;
 }
 
 .active-player-hero-sub {
-  align-self: flex-start;
-  margin-top: 0.2rem;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(6, 63, 43, 0.1);
-  font-size: clamp(0.56rem, 1.1vw, 0.66rem);
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0;
-  color: #063f2b;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
   font-weight: 700;
 }
 
 .active-player-hero.is-me .active-player-hero-sub {
-  color: #063f2b;
-}
-
-@media (min-width: 1024px) {
-  .board-center-stage {
-    width: min(34%, 240px);
-    min-width: 170px;
-    padding: 0.45rem 0.55rem;
-  }
-
-  .board-deck {
-    width: clamp(54px, 12%, 92px);
-  }
-
-  .active-player-hero {
-    gap: 0.28rem;
-  }
-
-  .active-player-hero-kicker {
-    font-size: clamp(0.72rem, 1.1vw, 0.95rem);
-  }
-
-  .active-player-hero-panel {
-    gap: 0.08rem;
-    padding: 0.38rem 0.45rem;
-    border-radius: 8px;
-  }
-
-  .active-player-hero-panel span {
-    font-size: 0.56rem;
-  }
-
-  .active-player-hero-panel strong {
-    font-size: clamp(0.82rem, 1.35vw, 1.1rem);
-  }
-
-  .active-player-hero-panel em {
-    font-size: 0.72rem;
-  }
-
-  .active-player-hero-scene,
-  .active-player-hero-footer {
-    display: none;
-  }
-
-  .dice-stage {
-    transform: scale(0.58);
-    margin-top: -0.25rem;
-  }
-}
-
-@media (max-width: 600px) {
-  .board-center-stage {
-    width: min(56%, 190px);
-    min-width: 130px;
-    padding: 0.35rem;
-  }
-
-  .active-player-hero {
-    gap: 0.22rem;
-  }
-
-  .active-player-hero-kicker {
-    font-size: 0.68rem;
-  }
-
-  .active-player-hero-panel {
-    gap: 0.06rem;
-    padding: 0.28rem 0.34rem;
-  }
-
-  .active-player-hero-panel span {
-    font-size: 0.52rem;
-  }
-
-  .active-player-hero-panel strong {
-    font-size: 0.82rem;
-  }
-
-  .active-player-hero-panel em {
-    font-size: 0.62rem;
-  }
-
-  .active-player-hero-scene,
-  .active-player-hero-footer {
-    display: none;
-  }
-
-  .dice-stage {
-    transform: scale(0.52);
-    margin: -0.4rem 0 0;
-  }
+  color: var(--cor-7);
 }
 
 /* ──────────────────────────────────────────────────────────────────────

@@ -40,7 +40,7 @@ export default function GameFeed({ engineState }: { engineState: GameState }) {
 
   return (
     <section className="v2-feed" aria-label="Game events">
-      <h2 className="v2-feed-title">Game Log</h2>
+      <h2 className="v2-feed-title">What don happen</h2>
       <div className="v2-feed-logs" role="log" aria-live="polite">
         {log.length === 0 && <p className="v2-feed-empty">Nothing don happen yet.</p>}
         {log.map((line, i) => (

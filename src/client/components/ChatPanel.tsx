@@ -97,7 +97,7 @@ export default function ChatPanel({
             paddingBottom: "0.5rem",
           }}
         >
-          Activity Feed
+          💬 Room Chat
         </div>
 
         {/* Channel switcher: General (everyone) + a private channel per player */}
