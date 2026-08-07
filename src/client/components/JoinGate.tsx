@@ -1,6 +1,5 @@
 import { useState } from "react";
-import NamePill from "./NamePill";
-import { loadPlayerName, savePlayerName } from "../utils/playerName";
+import { loadPlayerName, MAX_NAME_LENGTH, savePlayerName } from "../utils/playerName";
 
 interface JoinGateProps {
   /** The invite code from ?room=CODE. */
@@ -25,15 +24,17 @@ export default function JoinGate({ roomCode, onJoin, onStartOwn }: JoinGateProps
   const [name, setName] = useState(loadPlayerName);
   const [joining, setJoining] = useState(false);
   const [failed, setFailed] = useState(false);
+  const cleanName = name.trim();
 
   const handleNameChange = (next: string) => {
-    setName(next);
-    savePlayerName(next);
+    setName(next.slice(0, MAX_NAME_LENGTH));
   };
 
   const handleJoin = async () => {
+    if (!cleanName) return;
+    savePlayerName(cleanName);
     setJoining(true);
-    await onJoin(name, roomCode);
+    await onJoin(cleanName, roomCode);
     // Only reachable in a render that matters when the join failed (see above).
     setJoining(false);
     setFailed(true);
@@ -50,14 +51,25 @@ export default function JoinGate({ roomCode, onJoin, onStartOwn }: JoinGateProps
             <p className="v2-join-sub">
               Room <b>{roomCode.toUpperCase()}</b>
             </p>
-            <NamePill name={name} onChange={handleNameChange} variant="lg" />
+            <label className="v2-name-field v2-name-field-lg">
+              <span>Enter your name</span>
+              <input
+                className="v2-input"
+                value={name}
+                maxLength={MAX_NAME_LENGTH}
+                placeholder="e.g. Fuad"
+                onChange={(e) => handleNameChange(e.target.value)}
+                autoComplete="nickname"
+              />
+              <small>This is the name other players will see.</small>
+            </label>
             <button
               type="button"
               className="v2-btn v2-btn-pri"
               onClick={handleJoin}
-              disabled={joining}
+              disabled={joining || !cleanName}
             >
-              {joining ? "Joining…" : `Join as ${name}`}
+              {joining ? "Joining…" : cleanName ? `Join as ${cleanName}` : "Enter name to join"}
             </button>
           </>
         ) : (

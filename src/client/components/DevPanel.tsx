@@ -22,7 +22,7 @@ const FORCE_BUTTONS: { label: string; cardId: string; hint: string }[] = [
 ];
 
 export default function DevPanel({ status, onStartChaosGame, onForceChaos }: Props) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <div

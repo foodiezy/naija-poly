@@ -1,5 +1,4 @@
-import { useRef, useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { BOARD, Tile, PropertyTile } from "../../data/board";
 import { getDevelopmentName, getRent } from "../../engine/engine";
 import { tokenEmoji } from "../../data/tokens";
@@ -44,9 +43,9 @@ function getColorBarStyle(pos: number): React.CSSProperties {
       top: 0,
       left: 0,
       right: 0,
-      height: "11px",
+      height: "9px",
       width: "auto",
-      borderRadius: "2px 2px 0 0",
+      borderRadius: "1px 1px 0 0",
     };
   // left col: bar on right (facing center)
   if (pos <= 20)
@@ -55,9 +54,9 @@ function getColorBarStyle(pos: number): React.CSSProperties {
       top: 0,
       right: 0,
       bottom: 0,
-      width: "11px",
+      width: "9px",
       height: "auto",
-      borderRadius: "0 2px 2px 0",
+      borderRadius: "0 1px 1px 0",
     };
   // top row: bar on bottom (facing center)
   if (pos <= 30)
@@ -66,9 +65,9 @@ function getColorBarStyle(pos: number): React.CSSProperties {
       bottom: 0,
       left: 0,
       right: 0,
-      height: "11px",
+      height: "9px",
       width: "auto",
-      borderRadius: "0 0 2px 2px",
+      borderRadius: "0 0 1px 1px",
     };
   // right col: bar on left (facing center)
   return {
@@ -76,19 +75,19 @@ function getColorBarStyle(pos: number): React.CSSProperties {
     top: 0,
     left: 0,
     bottom: 0,
-    width: "11px",
+    width: "9px",
     height: "auto",
-    borderRadius: "2px 0 0 2px",
+    borderRadius: "1px 0 0 1px",
   };
 }
 
 // Padding on tile content to clear the absolutely-positioned color bar
 function getColorBarPadding(pos: number, hasBar: boolean, isCorner: boolean): React.CSSProperties {
   if (!hasBar || isCorner) return {};
-  if (pos <= 10) return { paddingTop: "13px" };
-  if (pos <= 20) return { paddingRight: "13px" };
-  if (pos <= 30) return { paddingBottom: "13px" };
-  return { paddingLeft: "13px" };
+  if (pos <= 10) return { paddingTop: "11px" };
+  if (pos <= 20) return { paddingRight: "11px" };
+  if (pos <= 30) return { paddingBottom: "11px" };
+  return { paddingLeft: "11px" };
 }
 
 // Icon for non-property tile types
@@ -103,9 +102,9 @@ function getSpecialTileIcon(tile: Tile): string {
     case "gotojail":
       return "👮";
     case "chance":
-      return "❓";
+      return "?";
     case "hustle":
-      return "💼";
+      return "";
     case "airport":
       return "✈️";
     case "utility":
@@ -169,228 +168,28 @@ export default function GameBoard({
   const activePlayerIndex = engineState.currentPlayerIndex ?? -1;
   const activePlayer = activePlayerIndex >= 0 ? players[activePlayerIndex] : undefined;
   const activePlayerId = activePlayer ? activePlayer.id : null;
-  // True once the active player's piece has finished walking — used to hold the
-  // drawn-card banner until arrival so the token walk isn't spoiled.
-  const activeArrived = !activePlayer || getDisplayedPos(activePlayer) === activePlayer.position;
-
-  // Whether the drawn-card banner is currently shown (auto-dismisses).
-  const [cardVisible, setCardVisible] = useState(false);
-  // Shake the dice briefly when a new roll comes in, then settle.
-  const [diceShaking, setDiceShaking] = useState(false);
-  const prevDiceKey = useRef<string>("");
-  // The dice element PERSISTS across rolls (never unmounts) and just spins to
-  // its new value. diceSpins accumulates a full extra turn per roll so the spin
-  // is always visible — even when the same value is rolled twice.
-  const diceSpins = useRef(0);
-  const lastDiceSig = useRef<string>("");
-  // Trigger dice shake when the dice values change
-  useEffect(() => {
-    const key = engineState.dice
-      ? `${engineState.dice[0]}-${engineState.dice[1]}-${engineState.currentTurn}`
-      : "";
-    if (key && key !== prevDiceKey.current) {
-      prevDiceKey.current = key;
-      setDiceShaking(true);
-      const t = setTimeout(() => setDiceShaking(false), 380);
-      return () => clearTimeout(t);
-    }
-    return undefined;
-  }, [engineState.dice, engineState.currentTurn]);
 
   const getTokenEmoji = (playerId: string) => tokenEmoji(lobbyPlayers.get(playerId)?.tokenId);
 
-  // Render a die that STAYS mounted (stable key) and simply rotates its cube to
-  // the requested value. The `.cube` CSS `transition: transform` animates that
-  // rotation, so the die spins to its new face in place instead of vanishing
-  // and popping back. `spinTurns` adds full 360° turns for the tumble feel.
-  const renderDie3D = (value: number, key: string, spinTurns: number) => {
-    let faceX = 0;
-    let faceY = 0;
-    switch (value) {
-      case 6:
-        faceX = 180;
-        break;
-      case 2:
-        faceX = -90;
-        break;
-      case 5:
-        faceX = 90;
-        break;
-      case 3:
-        faceY = 90;
-        break;
-      case 4:
-        faceY = -90;
-        break;
-      case 1:
-      default:
-        break;
-    }
-    // Slight isometric resting tilt so the value face plus two side faces show —
-    // reads as a real 3D die. Extra full turns per roll drive the visible spin.
-    const rotation = `rotateX(${-18 + faceX}deg) rotateY(${22 + faceY + spinTurns * 360}deg)`;
-
-    return (
-      <div key={key} className="die-3d-wrapper">
-        <div className="die-3d">
-          <div className="cube" style={{ transform: rotation }}>
-            <div className="face front" data-value="1">
-              <span className="pip"></span>
-            </div>
-            <div className="face back" data-value="6">
-              <span className="pip"></span>
-              <span className="pip"></span>
-              <span className="pip"></span>
-              <span className="pip"></span>
-              <span className="pip"></span>
-              <span className="pip"></span>
-            </div>
-            <div className="face top" data-value="2">
-              <span className="pip"></span>
-              <span className="pip"></span>
-            </div>
-            <div className="face bottom" data-value="5">
-              <span className="pip"></span>
-              <span className="pip"></span>
-              <span className="pip"></span>
-              <span className="pip"></span>
-              <span className="pip"></span>
-            </div>
-            <div className="face left" data-value="3">
-              <span className="pip"></span>
-              <span className="pip"></span>
-              <span className="pip"></span>
-            </div>
-            <div className="face right" data-value="4">
-              <span className="pip"></span>
-              <span className="pip"></span>
-              <span className="pip"></span>
-              <span className="pip"></span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Helper to extract the last card draw text from logs
-  const lastLog =
-    engineState.log && engineState.log.length > 0
-      ? engineState.log[engineState.log.length - 1]
-      : "";
-  const cardDrawMatch = lastLog.match(/(.+) drew (Chance|Hustle): "(.+)"/);
-
-  const activeCardDraw = cardDrawMatch
-    ? {
-        player: cardDrawMatch[1],
-        type: cardDrawMatch[2].toLowerCase(),
-        text: cardDrawMatch[3],
-      }
-    : null;
-
-  // Show the drawn-card banner briefly, then auto-dismiss so it stops covering
-  // the game feed and doesn't linger until the next log line.
-  useEffect(() => {
-    if (!cardDrawMatch) {
-      setCardVisible(false);
-      return;
-    }
-    // Wait for the drawer's token to land before revealing the card, so the
-    // walk animation keeps its suspense.
-    if (!activeArrived) return;
-    setCardVisible(true);
-    const t = setTimeout(() => setCardVisible(false), 4000);
-    return () => clearTimeout(t);
-  }, [lastLog, activeArrived]);
-
-  // Rolling and ending a turn are the action bar's job now (B5 · spec §2):
-  // one primary under the thumb, never two copies of it competing.
-
-  // Dice stay on the board at all times: before the first roll (or at the top
-  // of a turn) they rest showing a neutral pair rather than vanishing.
-  const hasRolled = !!engineState.dice;
-  const displayDice: [number, number] = engineState.dice
-    ? [engineState.dice[0], engineState.dice[1]]
-    : [1, 1];
-
-  // Bump the spin counter in the SAME render the dice change (guarded by the
-  // last signature so React StrictMode's double-invoke doesn't double-count),
-  // keeping the spin in sync with the new value.
-  const diceSig = hasRolled
-    ? `${displayDice[0]}-${displayDice[1]}-${engineState.currentTurn}`
-    : "idle";
-  if (diceSig !== lastDiceSig.current) {
-    lastDiceSig.current = diceSig;
-    if (hasRolled) diceSpins.current += 1;
-  }
-  const diceSpin = diceSpins.current;
-
   return (
     <div className="monopoly-board">
-      {/* Board centre — dice, whose turn, and nothing else (spec §2).
-          B6 emptied it. The wordmark, the Mama Put pot, the NEPA banner and
-          the phase/round HUD were status, not board: pot and NEPA are chips
-          in the shell top bar now. Roll and End Turn were duplicates of the
-          action bar's single primary. The trivia box filled space the centre
-          no longer has to fill, and the feed moved to the desktop left rail
-          (mobile reads it in the ticker and the history sheet). */}
+      {/* Board centre stays decorative only; gameplay status belongs around the board,
+          not covering the route players need to read. */}
       <div className="board-center">
-        {/* Adire crosshatch, the same motif the landing and the shell use. */}
         <div className="board-center-adire" aria-hidden="true" />
-
-        <div className="board-center-stage">
-          {/* Dice — permanently on the stage. Stable keys mean the dice never
-              unmount: on each roll the cubes spin to their new value in place
-              (a brief shake adds tumble). They rest on a neutral pair before
-              the first roll of a turn. */}
-          <div
-            className={`dice-stage${diceShaking ? " shaking" : ""}${hasRolled ? "" : " dice-idle"}`}
-          >
-            {renderDie3D(displayDice[0], "die0", diceSpin)}
-            {renderDie3D(displayDice[1], "die1", diceSpin)}
-          </div>
-
-          {/* Active Player Hero card */}
-          {activePlayerId ? (
-            <motion.div
-              key={activePlayerId}
-              className={`active-player-hero${activePlayerId === mySessionId ? " is-me" : ""}`}
-              initial={{ opacity: 0, y: 8, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: "spring", stiffness: 260, damping: 22 }}
-            >
-              <div className="active-player-hero-avatar">{getTokenEmoji(activePlayerId)}</div>
-              <div className="active-player-hero-meta">
-                <div className="active-player-hero-name">{players[activePlayerIndex]?.name}</div>
-                <div className="active-player-hero-sub">
-                  {activePlayerId === mySessionId ? "Your turn" : "Now playing"}
-                </div>
-              </div>
-            </motion.div>
-          ) : (
-            <div className="board-center-waiting">Waiting for players…</div>
-          )}
+        <div className="board-center-skyline" aria-hidden="true" />
+        <div className="board-deck board-deck-chance" aria-hidden="true">
+          <span className="board-deck-face">
+            <i className="board-deck-icon board-deck-icon-chance">?</i>
+            <b>Chance</b>
+          </span>
         </div>
-
-        {/* Drawn card — the one thing besides dice and whose-turn that still
-            belongs in the middle of the board: it is a transient reveal, not
-            a control or a status readout. */}
-        <AnimatePresence>
-          {activeCardDraw && cardVisible && (
-            <motion.div
-              className={`card-draw-overlay ${activeCardDraw.type}`}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.25 }}
-            >
-              <div className="card-deck-title">
-                {activeCardDraw.type} DRAWN BY {activeCardDraw.player.toUpperCase()}
-              </div>
-              <div className="card-text">"{activeCardDraw.text}"</div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <div className="board-deck board-deck-hustle" aria-hidden="true">
+          <span className="board-deck-face">
+            <i className="board-deck-icon board-deck-icon-hustle" />
+            <b>Hustle Box</b>
+          </span>
+        </div>
       </div>
 
       {/* Render 40 tiles */}
@@ -515,7 +314,9 @@ export default function GameBoard({
             )}
 
             {/* Special tile icon */}
-            {tileIcon && <span className="tile-type-icon">{tileIcon}</span>}
+            {tileIcon || tile.type === "hustle" ? (
+              <span className={`tile-type-icon tile-type-${tile.type}`}>{tileIcon}</span>
+            ) : null}
 
             {/* Tile Name — the short label only shows on narrow phones (CSS
                 media query), where side tiles are too tight for the full

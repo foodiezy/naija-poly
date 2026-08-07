@@ -70,7 +70,7 @@ export class GameRoomState extends Schema {
   @type("string") hostId: string = "";
   @type("number") startingCash: number = 1500000;
   @type("number") turnLimit: number = 0; // 0 = unlimited
-  @type("boolean") freeParkingJackpot: boolean = false;
+  @type("boolean") freeParkingJackpot: boolean = true;
   @type("boolean") chaosMode: boolean = false; // NEPA blackout & other chaos cards
   @type("boolean") secretObjectives: boolean = false; // Hidden objectives for bonuses
   @type("boolean") turnTimerEnabled: boolean = false;
@@ -814,7 +814,7 @@ export class GameRoom extends Room<GameRoomState> {
     }
 
     const rawName = (typeof options?.name === "string" ? options.name : "").trim().substring(0, 20);
-    const name = rawName || `Player_${client.sessionId.substring(0, 4)}`;
+    const name = rawName || "Player";
 
     const player = new LobbyPlayer();
     player.id = client.sessionId;
