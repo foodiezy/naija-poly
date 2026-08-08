@@ -462,7 +462,7 @@ export function defaultChaosResolution(state: GameState): Action | null {
 const DEFAULT_SETTINGS: GameSettings = {
   startingCash: STARTING_CASH,
   turnLimit: 0,
-  freeParkingJackpot: false,
+  freeParkingJackpot: true,
   chaosMode: false,
 };
 
