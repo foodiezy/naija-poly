@@ -1,5 +1,4 @@
 import type { Action, GameState } from "../../engine/types";
-import { DESKTOP_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
 import { buildPrimaryCtx, primaryAction } from "../lib/primaryAction";
 
 /**
@@ -22,7 +21,6 @@ interface Props {
   unreadChat: number;
   onSendAction: (action: Action) => void;
   onOpenActions: () => void;
-  onOpenChat: () => void;
   onShowResults: () => void;
 }
 
@@ -33,10 +31,8 @@ export default function ActionBar({
   unreadChat,
   onSendAction,
   onOpenActions,
-  onOpenChat,
   onShowResults,
 }: Props) {
-  const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const action = primaryAction(buildPrimaryCtx(engineState, mySessionId, myTokenWalking));
   const canEndTurn = action.kind === "end-turn" && !action.disabled;
 
@@ -84,8 +80,8 @@ export default function ActionBar({
 
       <button
         className="v2-act-icon v2-act-side v2-act-trade"
-        onClick={isDesktop ? onOpenActions : onOpenChat}
-        aria-label={isDesktop ? "Open trade actions" : "Open chat"}
+        onClick={onOpenActions}
+        aria-label="Open trade actions"
       >
         🤝
         <span>Trade</span>
