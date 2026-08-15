@@ -148,7 +148,6 @@ export default function GameShell({
         unreadChat={unreadChat}
         onSendAction={onSendAction}
         onOpenActions={() => setActionsOpen(true)}
-        onOpenChat={() => setChatOpen(true)}
         onShowResults={onShowResults}
       />
 
