@@ -179,16 +179,12 @@ export default function GameBoard({
         <div className="board-center-adire" aria-hidden="true" />
         <div className="board-center-skyline" aria-hidden="true" />
         <div className="board-deck board-deck-chance" aria-hidden="true">
-          <span className="board-deck-face">
-            <i className="board-deck-icon board-deck-icon-chance">?</i>
-            <b>Chance</b>
-          </span>
+          <span className="board-deck-icon board-deck-icon-chance">?</span>
+          <b>Chance</b>
         </div>
         <div className="board-deck board-deck-hustle" aria-hidden="true">
-          <span className="board-deck-face">
-            <i className="board-deck-icon board-deck-icon-hustle" />
-            <b>Hustle Box</b>
-          </span>
+          <span className="board-deck-icon board-deck-icon-hustle" />
+          <b>Hustle Box</b>
         </div>
       </div>
 
@@ -318,9 +314,8 @@ export default function GameBoard({
               <span className={`tile-type-icon tile-type-${tile.type}`}>{tileIcon}</span>
             ) : null}
 
-            {/* Tile Name — the short label only shows on narrow phones (CSS
-                media query), where side tiles are too tight for the full
-                name to read without collapsing into a vertical letter-stack. */}
+            {/* Side tiles use compact names; phone tiles rely on the location
+                ticker and deed sheet instead of squeezing text into the map. */}
             <span className="tile-name">
               <span className="tile-name-full">{boardLabel(tile)}</span>
               <span className="tile-name-short">{tile.shortName ?? boardLabel(tile)}</span>
