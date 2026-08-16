@@ -662,30 +662,6 @@ h6 {
     border-width: 4px;
   }
 
-  .tile-name {
-    /* Side tiles now get ~45% more track width (1.5fr corners vs 1fr
-       interior), so the short label fits comfortably without shrinking to
-       the old floor; `break-word` (vs `anywhere`) avoids splitting short
-       words mid-letter now that they mostly fit on one line. */
-    font-size: 0.58rem;
-    overflow-wrap: break-word;
-  }
-
-  /* Must out-rank the later base `.tile-name-short { display: none }` rule
-     (same-specificity source order would let the base hide win, blanking
-     both labels on phones), so these use the parent-qualified selector. */
-  .tile-name .tile-name-full {
-    display: none;
-  }
-
-  .tile-name .tile-name-short {
-    display: block;
-  }
-
-  .tile-price {
-    font-size: 0.58rem;
-  }
-
   .player-token {
     width: 18px;
     height: 18px;
@@ -867,40 +843,36 @@ h6 {
 .board-deck {
   position: absolute;
   z-index: 1;
-  width: clamp(70px, 16%, 126px);
-  aspect-ratio: 1.35 / 1;
+  top: 28%;
+  width: clamp(62px, 17%, 108px);
+  aspect-ratio: 1.3 / 1;
   display: grid;
   place-items: center;
+  align-content: center;
+  gap: 0.2rem;
   border: 1px solid rgba(81, 72, 55, 0.24);
-  border-radius: 5px;
+  border-radius: 6px;
   box-shadow:
-    7px 7px 0 rgba(67, 56, 38, 0.14),
-    13px 13px 20px rgba(35, 28, 16, 0.14);
-  color: rgba(255, 255, 255, 0.86);
-  font-size: clamp(0.52rem, 1.2vw, 0.78rem);
+    5px 5px 0 rgba(67, 56, 38, 0.12),
+    9px 10px 18px rgba(35, 28, 16, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: clamp(0.46rem, 1vw, 0.68rem);
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-align: center;
   text-transform: uppercase;
 }
 
-.board-deck-face {
-  transform: rotate(-44deg);
-  display: grid;
-  place-items: center;
-  gap: 0.16rem;
-}
-
-.board-deck-face b {
-  font-size: clamp(0.44rem, 0.95vw, 0.64rem);
-  line-height: 1;
+.board-deck b {
+  white-space: nowrap;
 }
 
 .board-deck-icon {
-  width: clamp(18px, 3.1vw, 28px);
-  height: clamp(18px, 3.1vw, 28px);
+  width: clamp(18px, 3vw, 27px);
+  height: clamp(18px, 3vw, 27px);
   display: grid;
   place-items: center;
-  font-style: normal;
 }
 
 .board-deck-icon-chance {
@@ -908,57 +880,40 @@ h6 {
   background: radial-gradient(circle at 35% 30%, #fff6c9, #e5a52f 62%, #a85f00);
   color: #fff8d6;
   font-family: var(--font-display);
-  font-size: clamp(1rem, 2vw, 1.55rem);
-  font-weight: 950;
+  font-size: clamp(1rem, 2vw, 1.45rem);
   text-shadow: 0 2px 0 rgba(88, 49, 0, 0.25);
 }
 
 .board-deck-icon-hustle {
   position: relative;
+  border: 2px solid rgba(255, 250, 224, 0.68);
   border-radius: 5px;
   background: linear-gradient(180deg, #f4cf61 0 22%, #165f72 23% 100%);
-  border: 2px solid rgba(255, 250, 224, 0.65);
-  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.14);
-}
-
-.board-deck-icon-hustle::before,
-.board-deck-icon-hustle::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.13);
 }
 
 .board-deck-icon-hustle::before {
+  content: "";
+  position: absolute;
   top: -5px;
+  left: 50%;
   width: 42%;
-  height: 7px;
+  height: 6px;
+  transform: translateX(-50%);
   border: 2px solid rgba(255, 250, 224, 0.78);
   border-bottom: 0;
   border-radius: 7px 7px 0 0;
 }
 
-.board-deck-icon-hustle::after {
-  top: 43%;
-  width: 16%;
-  height: 16%;
-  border-radius: 2px;
-  background: #f7d86f;
-}
-
 .board-deck-chance {
-  left: 16%;
-  top: 29%;
-  transform: rotate(-33deg);
+  left: 17%;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 34%),
     linear-gradient(160deg, #9bbd82, #4e8452);
 }
 
 .board-deck-hustle {
-  right: 16%;
-  top: 29%;
-  transform: rotate(33deg);
+  right: 17%;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 34%),
     linear-gradient(160deg, #75bfd2, #247d96);
@@ -1234,24 +1189,30 @@ h6 {
 .tile-name {
   /* Capped at 0.70rem: a non-corner tile is ~46px wide at a 700px board, and
      at 0.78rem even a six-letter name like "Ekpoma" broke to "Ekpom / a". */
-  font-size: 0.62rem;
+  font-size: clamp(0.5rem, 1vw, 0.62rem);
   font-weight: 800;
   text-align: center;
   line-height: 1.1;
   letter-spacing: 0;
   color: var(--ink);
   word-break: normal;
-  /* `anywhere` (unlike break-word) shrinks min-content width, so long names
-     like "Kafanchan" wrap on narrow side tiles instead of clipping mid-word. */
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  hyphens: none;
   max-width: 100%;
   padding: 0 3px;
 }
 
-/* .tile-name is now a wrapper around two labels: the full name (default) and
-   a shortened one that only appears on narrow phones, where side tiles are
-   too tight for the full name to read without collapsing into a letter
-   stack. Both spans inherit the sizing/colour rules above. */
+.tile-name-full,
+.tile-name-short {
+  max-width: 100%;
+  max-height: 2.2em;
+  overflow: hidden;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+/* Compact labels are used on narrow side columns and board landmarks. */
 .tile-name-short {
   display: none;
 }
@@ -1293,7 +1254,7 @@ h6 {
 
 .tile-owner-indicator {
   position: absolute;
-  bottom: 2px;
+  top: 2px;
   right: 2px;
   font-size: 0.5rem;
   line-height: 1;
@@ -1302,6 +1263,22 @@ h6 {
   border-radius: var(--r-full);
   border: 1px solid rgba(75, 70, 58, 0.18);
   box-shadow: 0 1px 3px rgba(20, 18, 14, 0.14);
+  z-index: 11;
+}
+
+/* Keep ownership clear of the zone band and the permanent price stripe. */
+.edge-bottom .tile-owner-indicator {
+  top: 11px;
+}
+
+.edge-left .tile-owner-indicator {
+  left: 2px;
+  right: auto;
+}
+
+.edge-right .tile-owner-indicator {
+  left: auto;
+  right: 2px;
 }
 
 .tile-mortgaged .tile-owner-indicator {
@@ -1440,8 +1417,10 @@ h6 {
   justify-content: center;
   align-items: center;
   position: absolute;
-  bottom: 4px;
-  width: 80%;
+  top: 50%;
+  left: 50%;
+  width: calc(100% - 6px);
+  transform: translate(-50%, -50%);
   z-index: 10;
 }
 
@@ -1544,15 +1523,21 @@ h6 {
 
   .tile:not(.tile-corner) .tile-name {
     display: flex;
-    font-size: 0.46rem;
-    line-height: 1.02;
-    padding-inline: 1px;
+    padding: 1px;
+    font-size: 0.42rem;
+    line-height: 1.05;
+  }
+
+  .tile:not(.tile-corner) .tile-name-full {
+    display: none;
+  }
+
+  .tile:not(.tile-corner) .tile-name-short {
+    display: block;
   }
 
   .tile:not(.tile-corner) .tile-price {
-    display: block;
-    font-size: 0.46rem;
-    padding-block: 1px;
+    display: none;
   }
 
   .tile-corner .tile-name {
@@ -1567,8 +1552,6 @@ h6 {
   /* Ownership is now carried by two small marks, so give them room to read. */
   .tile .tile-owner-indicator {
     font-size: 0.55rem;
-    bottom: 1px;
-    right: 1px;
   }
 
   .tile .tile-type-icon {
@@ -2771,15 +2754,6 @@ html.high-contrast .glass-panel {
 
 .panel-tab-btn.active:hover {
   background: var(--sf-hover) !important;
-}
-
-@media (min-width: 1024px) {
-  .board-deck {
-    width: clamp(54px, 12%, 92px);
-  }
-}
-
-@media (max-width: 600px) {
 }
 
 /* ──────────────────────────────────────────────────────────────────────
