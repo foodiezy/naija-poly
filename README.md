@@ -35,7 +35,7 @@ and bankrupt your rivals.
   `applyAction(state, playerId, action) => newState` — no mutation, no I/O, randomness
   only via an injected RNG. That purity is what makes the whole rulebook exhaustively
   testable headless.
-- **198 passing tests**, including a full 2-player game simulated end-to-end
+- **205 passing tests**, including a full 2-player game simulated end-to-end
   (roll → rent → building → auctions → bankruptcy → winner). Strict TypeScript, no `any`.
 - **Real-time multiplayer** over Colyseus/WebSockets: lobbies, invite links, AI bots,
   turn & auction timers, room-lock on start, and **60s reconnection grace** so a dropped
@@ -101,7 +101,9 @@ npm install            # installs deps and builds the client (postinstall)
 npm run dev:server     # Colyseus + Express on the API port
 npm run dev:client     # Vite dev server for the UI
 
-npm test               # run the vitest suite (198 tests)
+npm test               # run the vitest suite (205 tests)
+npm run verify         # formatting + types + tokens + tests + production build
+npm run test:bot        # real-server bot smoke test (server must be running)
 npm run typecheck      # strict tsc --noEmit
 npm run build          # production client build
 ```
@@ -131,7 +133,9 @@ The UI was rebuilt in 2026 from a dark, desktop-first layout into a light,
 The engine is designed to be tested without a server or a browser. Every rule that clones
 commonly get wrong has focused coverage, and `playground.test.ts` drives a complete game to
 a winner from a fixed seed — so the full rulebook is exercised deterministically on every
-run. CI (`.github/workflows/ci.yml`) typechecks and runs the suite on every push and PR.
+run. CI (`.github/workflows/ci.yml`) checks formatting, types and design tokens, runs the
+suite, builds the production client, then starts the real multiplayer server and proves a
+bot can join and complete a turn.
 
 ## Deploy
 

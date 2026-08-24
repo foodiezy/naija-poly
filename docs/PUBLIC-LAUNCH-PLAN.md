@@ -16,13 +16,13 @@ The launch sequence is:
 
 **Target:** 2-3 days
 
-- [ ] Complete the mobile trade, chat, and debt-rescue interaction work.
-- [ ] Add focused tests for incoming trades, counter-offers, and debt-rescue visibility.
-- [ ] Add the real-server bot smoke test to the automated release checks.
-- [ ] Fix formatting in touched files and make formatting a CI gate.
-- [ ] Ensure tests, typecheck, production build, design-token checks, formatting, and
+- [x] Complete the mobile trade, chat, and debt-rescue interaction work.
+- [x] Add focused tests for incoming trades, counter-offers, and debt-rescue visibility.
+- [x] Add the real-server bot smoke test to the automated release checks.
+- [x] Fix formatting in touched files and make formatting a CI gate.
+- [x] Ensure tests, typecheck, production build, design-token checks, formatting, and
       the bot playthrough all pass.
-- [ ] Update README, roadmap, and documented test counts.
+- [x] Update README, roadmap, and documented test counts.
 - [ ] Merge the release into `main` and tag it `v0.1.0-beta`.
 
 Do not begin another major game feature until this phase is complete.
