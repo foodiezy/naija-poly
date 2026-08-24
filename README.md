@@ -142,7 +142,7 @@ bot can join and complete a turn.
 One Render web service: the same Node process serves the built Vite client as static files
 **and** hosts the Colyseus WebSocket server, so client and server share an origin.
 `NODE_ENV=production` disables all dev tooling; set `ALLOWED_ORIGINS` if the client is ever
-served from a different origin.plans for moving to another service are there
+served from a different origin.
 
 Full settings, the SIGTERM drain, and the reason the build tools live in `dependencies`:
 **[DEPLOY.md](DEPLOY.md)**.

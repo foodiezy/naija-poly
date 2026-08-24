@@ -8,20 +8,22 @@ services:
   - type: web
     name: odogwu-empire-server
     runtime: node
-    buildCommand: npm install --legacy-peer-deps && npm run build
+    buildCommand: npm ci --legacy-peer-deps && npm run build
     startCommand: npm run start
     healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 30
     envVars:
       - key: NODE_ENV
         value: production
       # Comma-separated exact origins allowed to make credentialed requests.
-      # Set this to your deployed URL, e.g. https://odogwu-empire-server.onrender.com
-      # (localhost is always allowed). Leave unset if the client is served
-      # same-origin from this service — same-origin requests don't need it.
+      # Browser origins must match this list exactly. Localhost is allowed by
+      # the server only outside production.
       - key: ALLOWED_ORIGINS
-        sync: false
+        value: https://odogwu-empire-server.onrender.com
       # Dev tools (DEV_FORCE_CHAOS, etc.) are OFF unless this is explicitly
       # "true".  Never set this in production.
       - key: ENABLE_DEV_TOOLS
-        sync: false
-
+        value: "false"
+      - key: SHUTDOWN_DRAIN_MS
+        value: "3000"
