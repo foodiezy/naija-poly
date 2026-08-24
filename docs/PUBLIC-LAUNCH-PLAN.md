@@ -23,7 +23,7 @@ The launch sequence is:
 - [x] Ensure tests, typecheck, production build, design-token checks, formatting, and
       the bot playthrough all pass.
 - [x] Update README, roadmap, and documented test counts.
-- [ ] Merge the release into `main` and tag it `v0.1.0-beta`.
+- [x] Merge the release into `main` and tag it `v0.1.0-beta`.
 
 Do not begin another major game feature until this phase is complete.
 
