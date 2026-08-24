@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
 import { Room } from "colyseus.js";
-import { GameState, Action, TradeOffer } from "../../engine/types";
+import { GameState, Action } from "../../engine/types";
 import { tokenEmoji } from "../../data/tokens";
 import { tokenName } from "../../data/tokens";
 import { RoomState } from "../../shared/room";
@@ -11,9 +10,6 @@ import PlayerList from "./PlayerList";
 import ChaosStandingPanel from "./ChaosStandingPanel";
 import ActionButtons from "./ActionButtons";
 import PropertyList from "./PropertyList";
-import TradeOverlay from "./TradeOverlay";
-import TradeBuilder from "./TradeBuilder";
-import DebtRescueModal from "./DebtRescueModal";
 
 interface ControlPanelProps {
   room: Room;
@@ -24,8 +20,8 @@ interface ControlPanelProps {
   turnDeadline?: number;
   turnTimeoutSecs?: number;
   onOpenTile?: (pos: number) => void;
-  // Reports when a trade/debt composer is open so App can pause auto-end-turn.
-  onComposerOpenChange?: (open: boolean) => void;
+  onOpenTrade: () => void;
+  onOpenDebtRescue: () => void;
   myTokenWalking?: boolean;
 }
 
@@ -38,15 +34,10 @@ export default function ControlPanel({
   turnDeadline,
   turnTimeoutSecs,
   onOpenTile,
-  onComposerOpenChange,
+  onOpenTrade,
+  onOpenDebtRescue,
   myTokenWalking,
 }: ControlPanelProps) {
-  const [showTradeBuilder, setShowTradeBuilder] = useState(false);
-  const [initialTradeOffer, setInitialTradeOffer] = useState<TradeOffer | undefined>(undefined);
-  // When set, the builder was opened to counter this incoming trade: sending
-  // goes through RESPOND_TRADE{counter} instead of PROPOSE_TRADE.
-  const [counterMode, setCounterMode] = useState(false);
-  const [showDebtRescue, setShowDebtRescue] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   const mySessionId = room.sessionId;
@@ -73,33 +64,6 @@ export default function ControlPanel({
     return () => clearInterval(t);
   }, [turnDeadline]);
 
-  // Close a normal (proposing) builder when the turn moves on. A counter
-  // composer survives turn changes — the offer it answers does too — and
-  // closes only when that offer disappears (cancelled/resolved elsewhere).
-  useEffect(() => {
-    if (!counterMode) {
-      setShowTradeBuilder(false);
-      setInitialTradeOffer(undefined);
-    }
-  }, [currentPlayerIndex, counterMode]);
-  useEffect(() => {
-    if (counterMode && !activeTrade) {
-      setShowTradeBuilder(false);
-      setInitialTradeOffer(undefined);
-      setCounterMode(false);
-    }
-  }, [activeTrade, counterMode]);
-
-  // Debt rescue is done when the debt is gone (auto-settled or paid).
-  useEffect(() => {
-    if (showDebtRescue && !inDebt) setShowDebtRescue(false);
-  }, [showDebtRescue, inDebt]);
-
-  // Let App pause auto-end-turn while any composer is open.
-  useEffect(() => {
-    onComposerOpenChange?.(showTradeBuilder || showDebtRescue);
-  }, [showTradeBuilder, showDebtRescue, onComposerOpenChange]);
-
   const turnMsLeft = turnDeadline && turnDeadline > 0 ? Math.max(0, turnDeadline - now) : 0;
   const turnSecsLeft = Math.ceil(turnMsLeft / 1000);
   const turnPct =
@@ -112,57 +76,6 @@ export default function ControlPanel({
 
   return (
     <div className="console-panel glass-panel" style={{ padding: 0, overflow: "hidden" }}>
-      {/* Decision sheets. These portal to <body> and queue against the auction
-          / chaos / buy sheets rendered up in App, so only one is ever on
-          screen; the rest wait behind a "N waiting" chip. */}
-      {activeTrade && !showTradeBuilder && (
-        <TradeOverlay
-          activeTrade={activeTrade}
-          players={players}
-          tiles={engineState.tiles}
-          mySessionId={mySessionId}
-          onSendAction={onSendAction}
-          liveState={liveState}
-          onCounterOffer={(reversedTrade) => {
-            // The original offer stays on the table while the counter is
-            // composed; sending the counter answers it in one engine action.
-            setInitialTradeOffer(reversedTrade);
-            setCounterMode(true);
-            setShowTradeBuilder(true);
-          }}
-        />
-      )}
-      {showDebtRescue && me && (
-        <DebtRescueModal
-          engineState={engineState}
-          me={me}
-          ledgerDebt={myLedgerDebt}
-          onSendAction={onSendAction}
-          onClose={() => setShowDebtRescue(false)}
-          onOpenTrade={() => setShowTradeBuilder(true)}
-        />
-      )}
-
-      {/* The trade builder is still a legacy framer-motion modal (step B4b). */}
-      <AnimatePresence>
-        {showTradeBuilder && (
-          <TradeBuilder
-            key="trade-builder"
-            engineState={engineState}
-            mySessionId={mySessionId}
-            onSendAction={onSendAction}
-            onClose={() => {
-              setShowTradeBuilder(false);
-              setInitialTradeOffer(undefined);
-              setCounterMode(false);
-            }}
-            liveState={liveState}
-            initialOffer={initialTradeOffer}
-            counterMode={counterMode}
-          />
-        )}
-      </AnimatePresence>
-
       {/* 1. Player roster */}
       <PlayerList
         engineState={engineState}
@@ -398,7 +311,7 @@ export default function ControlPanel({
               gap: "0.4rem",
               borderRadius: "2px",
             }}
-            onClick={() => setShowDebtRescue(true)}
+            onClick={onOpenDebtRescue}
           >
             Settle Debt <IconBankrupt size={16} />
           </button>
@@ -473,7 +386,7 @@ export default function ControlPanel({
             canManage={canManage}
             activeTrade={activeTrade ?? null}
             onSendAction={onSendAction}
-            onShowTradeBuilder={() => setShowTradeBuilder(true)}
+            onShowTradeBuilder={onOpenTrade}
             tokenWalking={!!myTokenWalking}
           />
         )}

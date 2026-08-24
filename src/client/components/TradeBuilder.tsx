@@ -154,6 +154,7 @@ export default function TradeBuilder({
   return createPortal(
     <motion.div
       className="trade-overlay"
+      role="presentation"
       initial={{ opacity: 0, y: 60 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 40 }}
@@ -161,6 +162,9 @@ export default function TradeBuilder({
     >
       <motion.div
         className="trade-card-premium"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="trade-builder-title"
         initial={{ scale: 0.94 }}
         animate={{ scale: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 26 }}
@@ -170,7 +174,7 @@ export default function TradeBuilder({
             <span className="trade-card-title-icon">
               <IconTrade size={20} />
             </span>
-            <span>{counterMode ? "Counter Offer" : "Propose a Deal"}</span>
+            <span id="trade-builder-title">{counterMode ? "Counter Offer" : "Propose a Deal"}</span>
           </div>
           <button className="trade-card-close" onClick={onClose} aria-label="Close">
             ×

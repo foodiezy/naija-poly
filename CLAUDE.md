@@ -61,9 +61,9 @@ richest player. All routed through pending-decision state in the pure engine
 lobby/settings/AI bots/turn & auction
 timers, reconnection (60s grace), room lock on start, per-client rate
 limiting, redacted state sync (deck order hidden from clients), CORS pinned
-via ALLOWED_ORIGINS. Client: full board UI with real place photos, deed cards
+via ALLOWED_ORIGINS. Client: full CSS-rendered board UI, deed cards
 with owner management (upgrade/sell/mortgage from the card), trading, chat
 (+DMs), invite links (?room=CODE), onboarding, sounds, error boundary, vendor
 bundle splitting. Deploys as ONE Render web service (render.yaml): Express
-serves the built client + WebSockets same-origin. 76 passing vitest tests,
+serves the built client + WebSockets same-origin. 205 passing vitest tests,
 strict typecheck.

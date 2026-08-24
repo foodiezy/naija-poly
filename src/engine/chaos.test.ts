@@ -72,7 +72,10 @@ describe("Chaos Mode redesign — core five (C1–C5)", () => {
       const s = drawChaos(state, "cx01");
       expect(s.phase).toBe("awaiting-blackout-target");
       expect(s.pendingBlackout?.drawerId).toBe("p1");
-      expect([...(s.pendingBlackout?.selectableZones ?? [])].sort()).toEqual(["brown", "lightblue"]);
+      expect([...(s.pendingBlackout?.selectableZones ?? [])].sort()).toEqual([
+        "brown",
+        "lightblue",
+      ]);
       expect(s.blackout).toBeNull(); // dark only after a zone is chosen
     });
 
@@ -173,12 +176,7 @@ describe("Chaos Mode redesign — core five (C1–C5)", () => {
       const withGen = createGame(["p1", "p2"], { chaosMode: true });
       own(withGen, 3, "p1");
       withGen.blackout = { untilRound: 2, zone: "brown", generatorOwners: [] };
-      const lit = landFromStart(
-        applyAction(withGen, "p1", { type: "BUY_GENERATOR" }),
-        "p2",
-        1,
-        2,
-      );
+      const lit = landFromStart(applyAction(withGen, "p1", { type: "BUY_GENERATOR" }), "p2", 1, 2);
       expect(lit.players[1].position).toBe(3);
       expect(lit.players[1].cash).toBe(STARTING_CASH - rent);
       expect(lit.players[0].cash).toBe(STARTING_CASH - GENERATOR_COST + rent);

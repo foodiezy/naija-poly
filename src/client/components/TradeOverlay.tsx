@@ -5,6 +5,7 @@ import { tokenEmoji } from "../../data/tokens";
 import { tileValue } from "../lib/holdings";
 import { mortgageTransferFee } from "../../engine/queries";
 import { RoomState } from "../../shared/room";
+import { counterOfferFrom } from "../lib/gameInteractions";
 import { useDecisionSlot } from "../lib/decisionQueue";
 import { zoneOfGroup } from "../lib/zones";
 import Sheet from "./Sheet";
@@ -102,17 +103,7 @@ export default function TradeOverlay({
           {onCounterOffer && (
             <button
               className="v2-btn v2-btn-sec"
-              onClick={() => {
-                onSendAction({ type: "RESPOND_TRADE", accept: false });
-                onCounterOffer({
-                  fromId: mySessionId,
-                  toId: activeTrade.fromId,
-                  giveCash: activeTrade.getCash,
-                  getCash: activeTrade.giveCash,
-                  giveTiles: activeTrade.getTiles,
-                  getTiles: activeTrade.giveTiles,
-                });
-              }}
+              onClick={() => onCounterOffer(counterOfferFrom(activeTrade, mySessionId))}
             >
               Counter
             </button>

@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-test:
-    name: Typecheck & test
+    name: Release gate
     runs-on: ubuntu-latest
 
     steps:
@@ -27,8 +27,38 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Formatting
+        run: npm run format:check
+
       - name: Design tokens (no raw colours in components)
         run: npm run check:colors
 
       - name: Test
         run: npm test
+
+      - name: Build production client
+        run: npm run build
+
+      - name: Real-server bot smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run start > server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:2567/health > /dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              cat server.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          if ! npm run test:bot; then
+            cat server.log
+            exit 1
+          fi

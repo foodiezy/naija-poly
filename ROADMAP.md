@@ -18,9 +18,10 @@ Goal: every future decision is made with data and guarded by CI.
       `game_started(humans, bots)`, `game_finished(turns, duration, completion)`,
       `player_left_midgame`. DoD: a week of funnel data answering "what % of created
       rooms ever see a second human".
-- [ ] CI: GitHub Actions — typecheck + vitest on every push/PR. DoD: red X on GitHub
+- [x] CI: GitHub Actions — formatting, typecheck, design tokens, vitest, production
+      build, and a real-server bot smoke test on every push/PR. DoD: red X on GitHub
       when tests fail; local pre-push hook becomes a convenience, not the only gate.
-- [ ] Pin Node: `engines` in package.json + `.node-version` (Render reads it).
+- [x] Pin Node: `engines` in package.json + `.node-version` (Render reads it).
 - [x] `npm audit` triage: postcss high-severity path-traversal fixed (non-breaking,
       2026-08-04). Remaining moderate/high (elliptic, esbuild, nanoid, uuid) all sit
       behind a breaking Colyseus 0.17 / Vite 8 upgrade — accepted for now, revisit
@@ -28,7 +29,7 @@ Goal: every future decision is made with data and guarded by CI.
 - [ ] Infra config truth: render.yaml is not connected to the running service (it was
       dashboard-created). Either recreate the service from the blueprint or delete
       render.yaml and document dashboard settings in DEPLOY.md. One source of truth.
-- [ ] Real health check: `/health` should verify the Colyseus matchmaker responds,
+- [x] Real health check: `/health` verifies the Colyseus matchmaker responds,
       not return a static string.
 
 ## Phase 1 — Identity & persistence (1–2 weeks)
@@ -48,7 +49,7 @@ Goal: players exist; things accumulate; retention becomes possible.
 
 Goal: pushing to main stops destroying live games.
 
-- [ ] Graceful shutdown: SIGTERM handler → broadcast "server dey restart" notice →
+- [x] Graceful shutdown: SIGTERM handler → broadcast "server dey restart" notice →
       block new rooms → allow N minutes drain (Render gives a grace window).
 - [ ] Room state snapshot: serialize engine GameState (it is already a pure JSON-able
       object) to Redis/Postgres on every turn end; on boot, offer "resume game" via
@@ -67,9 +68,9 @@ Goal: pushing to main stops destroying live games.
 
 Nigeria is Android-first and data-metered. This phase IS the product for the market.
 
-- [ ] Self-host the 22 board photos: license audit → compress to WebP (<30KB each) →
-      serve from /public behind Render CDN. Kill all hotlinks (tileImages.ts).
-- [ ] Self-host + subset fonts (Nunito, Yanone Kaffeesatz); drop Google Fonts dep.
+- [x] Remove the 22 hotlinked board photos; the CSS board and inline illustrations now
+      make zero third-party requests.
+- [x] Self-host and subset Figtree; no Google Fonts dependency remains.
 - [ ] Bundle diet: audit 181KB main chunk; lazy-load modals/overlays.
 - [ ] PWA: manifest + service worker shell so revisits cost ~zero data.
 - [ ] Touch/responsive pass on real low-end Android (360px, 3G throttled).
@@ -82,8 +83,8 @@ Nigeria is Android-first and data-metered. This phase IS the product for the mar
       trade, debt, cards. Pure re-export from engine.ts; tests unchanged.
 - [ ] Server test harness: @colyseus/testing; cover join/lock, timers, disconnect
       during auction, trade-accept vs bankruptcy races.
-- [ ] CSS: extract design tokens (spacing/color/radius) — the palette swap proved the
-      cost of smeared styling; consolidate repeated inline gradients into classes.
+- [ ] CSS: the colour-token gate is complete; consolidate remaining spacing/radius
+      values and repeated inline gradients into the v2 token system.
 - [ ] Colyseus upgrade path: align server/client versions, delete patchClientForV017.
 - [ ] Compile server for prod (esbuild) instead of tsx runtime interpretation.
 
