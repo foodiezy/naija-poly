@@ -37,7 +37,8 @@ export default function ShellTopBar({
   onHowToPlay,
 }: Props) {
   const me = engineState.players?.find((p: Player) => p.id === mySessionId);
-  const playerCount = engineState.players?.filter((p: Player) => !p.bankrupt && !p.kicked).length ?? 0;
+  const playerCount =
+    engineState.players?.filter((p: Player) => !p.bankrupt && !p.kicked).length ?? 0;
   const maxPlayers = 6;
   const potOn = !!engineState.settings?.freeParkingJackpot;
   const pot = engineState.freeParkingPot ?? 0;
@@ -85,7 +86,10 @@ export default function ShellTopBar({
         )}
 
         {blackout && (
-          <span className="v2-gtop-chip v2-gtop-chip-nepa" title="NEPA don take light — rent frozen">
+          <span
+            className="v2-gtop-chip v2-gtop-chip-nepa"
+            title="NEPA don take light — rent frozen"
+          >
             ⚡ NEPA
           </span>
         )}

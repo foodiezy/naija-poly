@@ -30,6 +30,8 @@ describe("censorProfanity", () => {
   });
 
   it("returns clean text unchanged", () => {
-    expect(censorProfanity("good game everyone, buy Ikoyi!")).toBe("good game everyone, buy Ikoyi!");
+    expect(censorProfanity("good game everyone, buy Ikoyi!")).toBe(
+      "good game everyone, buy Ikoyi!",
+    );
   });
 });

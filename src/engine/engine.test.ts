@@ -712,9 +712,9 @@ describe("Game Engine", () => {
         giveTiles: [1],
         getTiles: [3],
       };
-      expect(() =>
-        applyAction(state, "p1", { type: "PROPOSE_TRADE", trade: offer }),
-      ).toThrow("Cannot propose trade in phase auction");
+      expect(() => applyAction(state, "p1", { type: "PROPOSE_TRADE", trade: offer })).toThrow(
+        "Cannot propose trade in phase auction",
+      );
     });
 
     it("rejects trade offers with non-integer or NaN cash (wire poisoning)", () => {

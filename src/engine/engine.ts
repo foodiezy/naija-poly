@@ -1158,7 +1158,9 @@ function applyBuy(nextState: GameState, currentPlayer: Player): void {
   }
 
   if (currentPlayer.cash < tile.price) {
-    throw new Error(`Insufficient cash (₦${currentPlayer.cash}) to buy ${tile.name} (₦${tile.price})`);
+    throw new Error(
+      `Insufficient cash (₦${currentPlayer.cash}) to buy ${tile.name} (₦${tile.price})`,
+    );
   }
 
   currentPlayer.cash -= tile.price;
@@ -1534,7 +1536,10 @@ function applyEndTurn(nextState: GameState, currentPlayer: Player): void {
     // Did we complete a round?
     if (nextIndex < nextState.currentPlayerIndex) {
       // Yes, we wrapped around. Check turn limit BEFORE incrementing round count to limit current round play
-      if (nextState.settings.turnLimit > 0 && nextState.currentTurn >= nextState.settings.turnLimit) {
+      if (
+        nextState.settings.turnLimit > 0 &&
+        nextState.currentTurn >= nextState.settings.turnLimit
+      ) {
         // Game over! Pay out any secret objective completed at this
         // boundary FIRST — the bonus is part of the final net worth.
         evaluateObjectivesAtBoundary(nextState);
@@ -2197,7 +2202,9 @@ function applyChooseFiresaleTile(
   const cost = Math.floor((listPrice * (100 - pending.discountPct)) / 100);
   // Drawer is the current player (the card resolved on their turn).
   if (currentPlayer.cash < cost) {
-    throw new Error(`Insufficient cash (₦${currentPlayer.cash}) for the fire sale price (₦${cost})`);
+    throw new Error(
+      `Insufficient cash (₦${currentPlayer.cash}) for the fire sale price (₦${cost})`,
+    );
   }
   currentPlayer.cash -= cost;
   nextState.bank += cost;
@@ -2210,7 +2217,11 @@ function applyChooseFiresaleTile(
   );
 }
 
-function applyDeclineFiresale(nextState: GameState, playerId: PlayerId, currentPlayer: Player): void {
+function applyDeclineFiresale(
+  nextState: GameState,
+  playerId: PlayerId,
+  currentPlayer: Player,
+): void {
   if (nextState.phase !== "awaiting-firesale-pick" || !nextState.pendingFireSale) {
     throw new Error("No fire sale is pending");
   }
