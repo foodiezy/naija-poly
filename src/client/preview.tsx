@@ -150,6 +150,8 @@ function PreviewApp() {
             onSendAction={(action) => console.log("Action dispatched in preview:", action)}
             autoEndTurn={autoEndTurn}
             onToggleAutoEndTurn={() => setAutoEndTurn(!autoEndTurn)}
+            onOpenTrade={() => {}}
+            onOpenDebtRescue={() => {}}
           />
         </div>
       </div>

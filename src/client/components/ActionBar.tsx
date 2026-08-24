@@ -1,10 +1,12 @@
 import type { Action, GameState } from "../../engine/types";
+import { playerInteractionState } from "../lib/gameInteractions";
 import { buildPrimaryCtx, primaryAction } from "../lib/primaryAction";
 
 /**
  * Band 5 of the in-game shell (spec §2, 72px + safe area).
  *
- * `⋯` · ONE full-width contextual primary · `💬`.
+ * Mobile: `⋯` · ONE full-width contextual primary · chat.
+ * Desktop: `⋯` · ONE full-width contextual primary · trade.
  *
  * The old UI scattered Roll / Buy / Auction / End Turn between the board centre
  * and a sidebar that dropped below the fold under 980px — on a phone the button
@@ -21,6 +23,9 @@ interface Props {
   unreadChat: number;
   onSendAction: (action: Action) => void;
   onOpenActions: () => void;
+  onOpenTrade: () => void;
+  onOpenDebtRescue: () => void;
+  onOpenChat: () => void;
   onShowResults: () => void;
 }
 
@@ -31,10 +36,13 @@ export default function ActionBar({
   unreadChat,
   onSendAction,
   onOpenActions,
+  onOpenTrade,
+  onOpenDebtRescue,
+  onOpenChat,
   onShowResults,
 }: Props) {
   const action = primaryAction(buildPrimaryCtx(engineState, mySessionId, myTokenWalking));
-  const canEndTurn = action.kind === "end-turn" && !action.disabled;
+  const { canProposeTrade: canTrade } = playerInteractionState(engineState, mySessionId);
 
   const fire = () => {
     switch (action.kind) {
@@ -49,9 +57,9 @@ export default function ActionBar({
       case "results":
         return onShowResults();
       // Settling a debt is a whole composer (sell, mortgage, trade your way
-      // out), so the button opens the actions sheet that owns it.
+      // out), so the button opens it directly.
       case "settle-debt":
-        return onOpenActions();
+        return onOpenDebtRescue();
       default:
         return undefined;
     }
@@ -61,12 +69,10 @@ export default function ActionBar({
     <div className="v2-actbar">
       <button
         className="v2-act-icon v2-act-side v2-act-end"
-        onClick={canEndTurn ? () => onSendAction({ type: "END_TURN" }) : onOpenActions}
-        aria-label={canEndTurn ? "End turn" : "More actions"}
-        data-inactive={canEndTurn ? undefined : ""}
+        onClick={onOpenActions}
+        aria-label="More actions"
       >
-        ↩
-        <span>End Turn</span>
+        ⋯<span>More</span>
       </button>
 
       <button
@@ -80,11 +86,22 @@ export default function ActionBar({
 
       <button
         className="v2-act-icon v2-act-side v2-act-trade"
-        onClick={onOpenActions}
-        aria-label="Open trade actions"
+        onClick={onOpenTrade}
+        disabled={!canTrade}
+        aria-label={canTrade ? "Propose a trade" : "Trade unavailable right now"}
+        title={canTrade ? "Propose a trade" : "Finish the current decision first"}
       >
         🤝
         <span>Trade</span>
+      </button>
+
+      <button
+        className="v2-act-icon v2-act-side v2-act-chat"
+        onClick={onOpenChat}
+        aria-label={unreadChat > 0 ? `Open chat, ${unreadChat} unread` : "Open chat"}
+      >
+        💬
+        <span>Chat</span>
         {unreadChat > 0 && <span className="v2-act-dot" aria-label={`${unreadChat} unread`} />}
       </button>
     </div>

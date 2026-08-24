@@ -32,6 +32,8 @@ interface Props {
   roomId: string;
   muted: boolean;
   myTokenWalking: boolean;
+  /** Close informational sheets before a trade/debt decision takes focus. */
+  interactionOverlayOpen: boolean;
   /** Total chat messages, for the unread dot while the chat sheet is closed. */
   chatMessageCount: number;
   onToggleMute: () => void;
@@ -39,6 +41,8 @@ interface Props {
   onLeave: () => void;
   onHowToPlay: () => void;
   onSendAction: (action: Action) => void;
+  onOpenTrade: () => void;
+  onOpenDebtRescue: () => void;
   onShowResults: () => void;
   /** The board. */
   board: ReactNode;
@@ -60,12 +64,15 @@ export default function GameShell({
   roomId,
   muted,
   myTokenWalking,
+  interactionOverlayOpen,
   chatMessageCount,
   onToggleMute,
   onCopyRoomCode,
   onLeave,
   onHowToPlay,
   onSendAction,
+  onOpenTrade,
+  onOpenDebtRescue,
   onShowResults,
   board,
   sidebar,
@@ -97,6 +104,16 @@ export default function GameShell({
       setChatOpen(false);
     }
   }, [isDesktop]);
+
+  // A composer or forced decision must never stack on top of an informational
+  // sheet. Close the sheet first so mobile has one focusable surface.
+  useEffect(() => {
+    if (!interactionOverlayOpen) return;
+    setMenuOpen(false);
+    setActionsOpen(false);
+    setChatOpen(false);
+    setLogOpen(false);
+  }, [interactionOverlayOpen]);
 
   const log = engineState.log ?? [];
 
@@ -148,6 +165,9 @@ export default function GameShell({
         unreadChat={unreadChat}
         onSendAction={onSendAction}
         onOpenActions={() => setActionsOpen(true)}
+        onOpenTrade={onOpenTrade}
+        onOpenDebtRescue={onOpenDebtRescue}
+        onOpenChat={() => setChatOpen(true)}
         onShowResults={onShowResults}
       />
 

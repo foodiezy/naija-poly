@@ -23,6 +23,9 @@ import AuctionPanel from "./components/AuctionPanel";
 import ChaosDecisionPanel from "./components/ChaosDecisionPanel";
 import OnboardingModal from "./components/OnboardingModal";
 import DevPanel from "./components/DevPanel";
+import TradeOverlay from "./components/TradeOverlay";
+import TradeBuilder from "./components/TradeBuilder";
+import DebtRescueModal from "./components/DebtRescueModal";
 import { DecisionQueueProvider } from "./lib/decisionQueue";
 
 // Hooks & Utilities
@@ -33,7 +36,8 @@ import { useTokenWalker } from "./hooks/useTokenWalker";
 import * as sound from "./utils/sound";
 import { recordGameResult } from "./utils/stats";
 import { BOARD } from "../data/board";
-import { Player } from "../engine/types";
+import { Player, TradeOffer } from "../engine/types";
+import { playerInteractionState } from "./lib/gameInteractions";
 
 export default function App() {
   const {
@@ -65,9 +69,10 @@ export default function App() {
   const [autoEndTurn, setAutoEndTurn] = useState(true);
   const [gameResultRecorded, setGameResultRecorded] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  // True while the player is composing a trade or working the debt-rescue
-  // modal — auto end turn must never yank the turn away mid-composition.
-  const [composerOpen, setComposerOpen] = useState(false);
+  const [tradeBuilderOpen, setTradeBuilderOpen] = useState(false);
+  const [initialTradeOffer, setInitialTradeOffer] = useState<TradeOffer | undefined>();
+  const [counterMode, setCounterMode] = useState(false);
+  const [debtRescueOpen, setDebtRescueOpen] = useState(false);
 
   // Room code from an invite link (?room=CODE), read once on load. While set,
   // the pre-room router shows ONLY the JoinGate sheet; "Start your own game"
@@ -104,6 +109,49 @@ export default function App() {
       return shown !== undefined && shown !== me.position;
     })();
 
+  const {
+    player: me,
+    ledgerDebt: myLedgerDebt,
+    inDebt,
+    incomingTrade,
+    canProposeTrade,
+  } = playerInteractionState(engineState, mySessionId);
+
+  const closeTradeBuilder = useCallback(() => {
+    setTradeBuilderOpen(false);
+    setInitialTradeOffer(undefined);
+    setCounterMode(false);
+  }, []);
+
+  const openTradeBuilder = useCallback(() => {
+    if (!engineState || !me || me.bankrupt || me.kicked) return;
+    if (engineState.activeTrade) {
+      toast.info("Finish the trade already on the table first.", { toastId: "trade-pending" });
+      return;
+    }
+    if (!canProposeTrade) {
+      toast.info("Trading is unavailable during this decision.", { toastId: "trade-blocked" });
+      return;
+    }
+    setInitialTradeOffer(undefined);
+    setCounterMode(false);
+    setTradeBuilderOpen(true);
+  }, [canProposeTrade, engineState, me]);
+
+  // A normal offer composer belongs to the current turn. Counter-offers are
+  // tied to the pending deal instead and can remain open across a turn change.
+  useEffect(() => {
+    if (!counterMode) closeTradeBuilder();
+  }, [closeTradeBuilder, counterMode, engineState?.currentPlayerIndex]);
+
+  useEffect(() => {
+    if (counterMode && !engineState?.activeTrade) closeTradeBuilder();
+  }, [counterMode, engineState?.activeTrade, closeTradeBuilder]);
+
+  useEffect(() => {
+    setDebtRescueOpen(inDebt);
+  }, [inDebt]);
+
   // v2: the tutorial no longer auto-opens on landing — rules are on-demand
   // ("How to play" on the landing screen, or the footer link once in a room).
 
@@ -122,7 +170,7 @@ export default function App() {
     engineState,
     room,
     mySessionId,
-    autoEndTurn && !composerOpen && selectedTilePos === null,
+    autoEndTurn && !tradeBuilderOpen && !debtRescueOpen && selectedTilePos === null,
   );
 
   // Reset showGameOverModal when phase changes to game-over; re-arm the
@@ -309,10 +357,9 @@ export default function App() {
             />
           </div>
         ) : engineState ? (
-          // The queue spans the whole game view because its five members do
-          // not share a parent: buy/auction/chaos render here, incoming trade
-          // and debt rescue render inside ControlPanel. Only one gets the
-          // screen (spec §2).
+          // The queue spans the whole game view so every forced decision is
+          // reachable even when the mobile actions sheet is closed. Only one
+          // decision gets the screen at a time (spec §2).
           <DecisionQueueProvider suspended={engineState.phase === "game-over"}>
             <GameShell
               engineState={engineState}
@@ -321,6 +368,7 @@ export default function App() {
               roomId={room.roomId}
               muted={muted}
               myTokenWalking={myTokenWalking}
+              interactionOverlayOpen={tradeBuilderOpen || debtRescueOpen || !!incomingTrade}
               chatMessageCount={chatMessages.length}
               onToggleMute={() => {
                 const nextMute = !muted;
@@ -331,6 +379,8 @@ export default function App() {
               onLeave={leaveRoom}
               onHowToPlay={() => setShowOnboarding(true)}
               onSendAction={sendAction}
+              onOpenTrade={openTradeBuilder}
+              onOpenDebtRescue={() => setDebtRescueOpen(true)}
               onShowResults={() => setShowGameOverModal(true)}
               board={
                 <GameBoard
@@ -351,7 +401,8 @@ export default function App() {
                   turnDeadline={roomState?.turnDeadline}
                   turnTimeoutSecs={roomState?.turnTimeoutSecs}
                   onOpenTile={(pos) => setSelectedTilePos(pos)}
-                  onComposerOpenChange={setComposerOpen}
+                  onOpenTrade={openTradeBuilder}
+                  onOpenDebtRescue={() => setDebtRescueOpen(true)}
                   myTokenWalking={myTokenWalking}
                 />
               }
@@ -366,6 +417,51 @@ export default function App() {
               feed={<GameFeed engineState={engineState} />}
               overlays={
                 <>
+                  {/* These decisions live at the game layer, not inside the
+                      optional mobile actions sheet. Incoming deals and debt
+                      rescue therefore surface immediately on every viewport. */}
+                  {incomingTrade && !tradeBuilderOpen && (
+                    <TradeOverlay
+                      activeTrade={incomingTrade}
+                      players={engineState.players}
+                      tiles={engineState.tiles}
+                      mySessionId={mySessionId ?? ""}
+                      onSendAction={sendAction}
+                      liveState={roomState ?? undefined}
+                      onCounterOffer={(reversedTrade) => {
+                        setInitialTradeOffer(reversedTrade);
+                        setCounterMode(true);
+                        setTradeBuilderOpen(true);
+                      }}
+                    />
+                  )}
+
+                  {debtRescueOpen && me && (
+                    <DebtRescueModal
+                      engineState={engineState}
+                      me={me}
+                      ledgerDebt={myLedgerDebt}
+                      onSendAction={sendAction}
+                      onClose={() => setDebtRescueOpen(false)}
+                      onOpenTrade={openTradeBuilder}
+                    />
+                  )}
+
+                  <AnimatePresence>
+                    {tradeBuilderOpen && mySessionId && (
+                      <TradeBuilder
+                        key="trade-builder"
+                        engineState={engineState}
+                        mySessionId={mySessionId}
+                        onSendAction={sendAction}
+                        onClose={closeTradeBuilder}
+                        liveState={roomState ?? undefined}
+                        initialOffer={initialTradeOffer}
+                        counterMode={counterMode}
+                      />
+                    )}
+                  </AnimatePresence>
+
                   {reconnecting && (
                     <div className="reconnect-overlay">
                       <div className="reconnect-spinner"></div>
