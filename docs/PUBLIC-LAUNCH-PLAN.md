@@ -36,7 +36,7 @@ Do not begin another major game feature until this phase is complete.
 - [ ] Provision a paid Postgres database for durable data.
 - [ ] Create a separate staging deployment.
 - [ ] Configure `NODE_ENV=production` and exact `ALLOWED_ORIGINS` values.
-- [ ] Keep `/health` as the deployment health check.
+- [x] Keep `/health` as the deployment health check.
 - [ ] Allow production deployment only after CI passes.
 - [ ] Purchase and connect a short product domain.
 - [ ] Verify HTTPS, WebSockets, room creation, invite links, and rollback.

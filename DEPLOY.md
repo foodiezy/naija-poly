@@ -11,7 +11,7 @@ share an origin and no CORS is needed in the normal case.
 > warning and make `render.yaml` the source of truth instead. Do not maintain
 > both as if either works.
 
-## Current settings (mirror these in the dashboard)
+## Current service
 
 | Setting           | Value                                                                                    |
 | ----------------- | ---------------------------------------------------------------------------------------- |
@@ -21,14 +21,28 @@ share an origin and no CORS is needed in the normal case.
 | Start command     | `npm run start`                                                                          |
 | Health check path | `/health`                                                                                |
 
+The checked-in Phase 2 baseline uses a repeatable clean install and waits for CI
+before deploying. Mirror these changes in the Render dashboard before promoting
+the public beta:
+
+| Setting                    | Phase 2 value                                          |
+| -------------------------- | ------------------------------------------------------ |
+| Plan                       | An always-on paid web-service plan                     |
+| Build command              | `npm ci --legacy-peer-deps && npm run build`           |
+| Start command              | `npm run start`                                        |
+| Health check path          | `/health`                                              |
+| Auto-deploy                | After CI checks pass                                   |
+| Maximum shutdown delay     | 30 seconds                                             |
+| Number of server instances | One, while active room state remains in process memory |
+
 ### Environment variables
 
-| Var                 | Value                 | Notes                                                                                                                                |
-| ------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `NODE_ENV`          | `production`          | Also disables all dev tooling (the dev panel is stripped from the build)                                                             |
-| `ALLOWED_ORIGINS`   | the service's own URL | Comma-separated exact origins. Only needed if the client is ever served from a _different_ origin; same-origin play works without it |
-| `ENABLE_DEV_TOOLS`  | unset                 | Must stay unset in production. The guard fails closed (`=== "true"`)                                                                 |
-| `SHUTDOWN_DRAIN_MS` | unset → `3000`        | How long players see the restart notice before rooms are disposed. Keep well under Render's ~30s SIGTERM grace                       |
+| Var                 | Value                                       | Notes                                                                                                    |
+| ------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`          | `production`                                | Also disables all dev tooling (the dev panel is stripped from the build)                                 |
+| `ALLOWED_ORIGINS`   | `https://odogwu-empire-server.onrender.com` | Comma-separated exact browser origins. Local origins are rejected in production                          |
+| `ENABLE_DEV_TOOLS`  | `false`                                     | Keep dev-only game commands disabled in production                                                       |
+| `SHUTDOWN_DRAIN_MS` | `3000`                                      | How long players see the restart notice before rooms are disposed. Keep well under the 30-second maximum |
 
 ## Why the build tools live in `dependencies`
 
@@ -39,7 +53,7 @@ the build command at the same time.
 Render sets `NODE_ENV=production` for the build step, which makes npm skip
 `devDependencies`. Move the build tools and the build fails with a missing
 `vite`. If you want them in `devDependencies` where they belong, the build
-command must become `npm install --include=dev --legacy-peer-deps` **in the
+command must become `npm ci --include=dev --legacy-peer-deps` **in the
 dashboard** — and since the dashboard is authoritative, changing `render.yaml`
 alone will not do it.
 
@@ -60,7 +74,20 @@ cleanly` in the logs — if you only ever see the first line, the drain is not
    served.
 
 Live games do **not** survive a deploy — players are told and must rejoin. Game
-state is in memory only; there is no persistence yet (see `ROADMAP.md` Phase 1).
+state is in memory only; there is no persistence yet (see the public launch plan,
+Phase 3).
+
+## Remaining Phase 2 dashboard work
+
+- Upgrade the production web service to an always-on plan.
+- Create a separate staging service using the same release checks.
+- Provision paid Postgres for the recovery work in Phase 3.
+- Connect the chosen custom domain and add it to `ALLOWED_ORIGINS`.
+- Verify HTTPS, WebSockets, room creation, invite joining, and rollback on staging
+  before changing production.
+
+These steps create or change paid resources, so they are intentionally not
+performed by the repository configuration alone.
 
 ## Observability
 
