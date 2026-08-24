@@ -12,6 +12,13 @@ The launch sequence is:
 > Finish the release -> move to reliable hosting -> make games recoverable -> add
 > telemetry and safety -> run a closed beta -> launch publicly.
 
+## Current product decision - playability first
+
+Paid hosting, Postgres, staging, and a custom domain are paused until the free
+public demo passes [`PLAYABILITY-CHECKLIST.md`](PLAYABILITY-CHECKLIST.md) and the
+owner confirms the game meets the desired standard. No paid resource should be
+created before that sign-off.
+
 ## Phase 1 - Finish the current release
 
 **Target:** 2-3 days
@@ -30,6 +37,8 @@ Do not begin another major game feature until this phase is complete.
 ## Phase 2 - Use production-grade hosting
 
 **Target:** 1 day
+
+**Status:** Deferred until the playability gate is signed off.
 
 - [ ] Move the game server from a sleeping free instance to an always-on service.
 - [ ] Keep one server instance initially while rooms are held in memory.
