@@ -2,53 +2,13 @@ import React, { useState } from "react";
 import { ScatterDecor } from "./decor";
 import { getStats } from "../utils/stats";
 import { loadPlayerName, MAX_NAME_LENGTH, savePlayerName } from "../utils/playerName";
+import { GAME_GUIDE, markGameGuideSeen } from "../lib/gameGuide";
 
 interface LandingViewProps {
   onCreateRoom: (name: string) => Promise<void>;
   onJoinRoom: (name: string, roomId: string) => Promise<void>;
   onQuickMatch?: (name: string) => Promise<void>;
 }
-
-// Written for people who have NEVER played Monopoly. Each step says exactly
-// what you tap and what happens next — no board-game jargon assumed.
-// (Moved from the retired Lobby.tsx; shown on demand behind "How to play".)
-const HOW_TO_PLAY = [
-  {
-    emoji: "🚗",
-    title: "Pick your token — that's you",
-    desc: "Your token is your playing piece (danfo bus, keke, agbada man…). It's how the board shows where you are. Choose one in the room, then watch it move around the board as you play.",
-  },
-  {
-    emoji: "🎲",
-    title: "Tap ROLL to move",
-    desc: "On your turn, tap ROLL. Two dice decide how many steps your token waka forward around the board. Roll the same number on both dice (doubles)? You get to roll again!",
-  },
-  {
-    emoji: "🏘️",
-    title: "Land on land → buy it",
-    desc: "Wherever your token stops, if that property has no owner, you can buy it with your Naira. Own it and it's yours for the rest of the game. Say no? It goes to auction for everyone to bid.",
-  },
-  {
-    emoji: "💸",
-    title: "Owning land earns you rent",
-    desc: "When another player's token lands on YOUR property, they must pay you rent automatically. Collect a full colour group (all properties of one colour) and the rent multiplies — that's how you get rich.",
-  },
-  {
-    emoji: "🏗️",
-    title: "Build to charge more",
-    desc: "Once you own a whole colour group, spend cash to build on it: Bungalow → Duplex → Mansion → Hotel. Each upgrade makes opponents pay far more when they land there.",
-  },
-  {
-    emoji: "🤝",
-    title: "Trade & make deals",
-    desc: "Anytime, you can offer other players a swap — cash, properties, jail cards — to complete a colour group. Both sides must agree for the deal to go through.",
-  },
-  {
-    emoji: "🏆",
-    title: "Bankrupt everyone to win",
-    desc: "If a player can't pay what they owe, they're out. The last player left with money standing is the Odogwu. E get level!",
-  },
-];
 
 // 3-step strip icons — inline SVG from the approved mockup, recolored via
 // currentColor so the CSS owns the tone (--pri).
@@ -283,7 +243,7 @@ export default function LandingView({ onCreateRoom, onJoinRoom, onQuickMatch }: 
               </button>
             </header>
             <div className="v2-overlay-body">
-              {HOW_TO_PLAY.map((step) => (
+              {GAME_GUIDE.map((step) => (
                 <div className="v2-rule" key={step.title}>
                   <span className="v2-rule-emoji" aria-hidden="true">
                     {step.emoji}
@@ -299,7 +259,10 @@ export default function LandingView({ onCreateRoom, onJoinRoom, onQuickMatch }: 
               <button
                 type="button"
                 className="v2-btn v2-btn-pri"
-                onClick={() => setShowRules(false)}
+                onClick={() => {
+                  markGameGuideSeen();
+                  setShowRules(false);
+                }}
               >
                 Make we go!
               </button>

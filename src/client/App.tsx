@@ -38,6 +38,7 @@ import { recordGameResult } from "./utils/stats";
 import { BOARD } from "../data/board";
 import { Player, TradeOffer } from "../engine/types";
 import { playerInteractionState } from "./lib/gameInteractions";
+import { hasSeenGameGuide, markGameGuideSeen } from "./lib/gameGuide";
 
 export default function App() {
   const {
@@ -152,8 +153,14 @@ export default function App() {
     setDebtRescueOpen(inDebt);
   }, [inDebt]);
 
-  // v2: the tutorial no longer auto-opens on landing — rules are on-demand
-  // ("How to play" on the landing screen, or the footer link once in a room).
+  // Give a first-time player the complete turn flow once, at the moment it
+  // becomes relevant. Returning players go straight to the board, and the
+  // guide remains available from the top bar at any time.
+  useEffect(() => {
+    if (roomState?.status !== "in_progress") return;
+    if (hasSeenGameGuide()) return;
+    setShowOnboarding(true);
+  }, [roomState?.status]);
 
   // Preload any sample SFX files once (synth fallback covers missing files).
   useEffect(() => {
@@ -553,9 +560,7 @@ export default function App() {
           <OnboardingModal
             onClose={() => {
               setShowOnboarding(false);
-              if (typeof localStorage !== "undefined") {
-                localStorage.setItem("odogwu-tutorial-seen", "1");
-              }
+              markGameGuideSeen();
             }}
           />
         )}
