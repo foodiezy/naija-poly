@@ -182,14 +182,6 @@ export default function GameBoard({
         <div className="board-center-adire" aria-hidden="true" />
         <div className="board-center-skyline" aria-hidden="true" />
         <Dice values={engineState.dice} rolling={diceAnimating} />
-        <div className="board-deck board-deck-chance" aria-hidden="true">
-          <span className="board-deck-icon board-deck-icon-chance">?</span>
-          <b>Chance</b>
-        </div>
-        <div className="board-deck board-deck-hustle" aria-hidden="true">
-          <span className="board-deck-icon board-deck-icon-hustle" />
-          <b>Hustle Box</b>
-        </div>
       </div>
 
       {/* Render 40 tiles */}
