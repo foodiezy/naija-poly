@@ -16,15 +16,14 @@
 
 .codepen-dice-pair {
   display: flex;
-  gap: 18px;
+  gap: 22px;
 }
 
 .codepen-die-wrapper {
-  --codepen-scale: 0.36;
+  --codepen-scale: 0.44;
   position: relative;
-  width: 72px;
-  height: 72px;
-  perspective: 1200px;
+  width: 88px;
+  height: 88px;
 }
 
 .codepen-die-scale {
@@ -34,6 +33,7 @@
   transform: scale(var(--codepen-scale));
   transform-origin: top left;
   transform-style: preserve-3d;
+  perspective: 1200px;
 }
 
 .codepen-die-platform,
@@ -62,7 +62,7 @@
 }
 
 .codepen-die-wrapper.is-settled .codepen-die-platform {
-  transform: rotateX(-16deg) rotateY(24deg) rotateZ(2deg);
+  transform: rotateX(22deg) rotateY(26deg);
 }
 
 .codepen-side {
@@ -262,9 +262,9 @@
   }
 
   .codepen-die-wrapper {
-    --codepen-scale: 0.26;
-    width: 52px;
-    height: 52px;
+    --codepen-scale: 0.3;
+    width: 60px;
+    height: 60px;
   }
 }
 
@@ -276,6 +276,6 @@
   }
 
   .codepen-die-platform {
-    transform: rotateX(-16deg) rotateY(24deg) rotateZ(2deg);
+    transform: rotateX(22deg) rotateY(26deg);
   }
 }
