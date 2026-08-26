@@ -17,7 +17,7 @@
 }
 
 .codepen-die-wrapper {
-  --codepen-die-size: clamp(36px, 6.2vw, 62px);
+  --codepen-die-size: clamp(42px, 7.2vw, 74px);
   position: relative;
   width: var(--codepen-die-size);
   height: var(--codepen-die-size);
@@ -32,6 +32,10 @@
   width: var(--codepen-die-size);
   height: var(--codepen-die-size);
   transform-style: preserve-3d;
+}
+
+.codepen-die-platform {
+  transform: rotateX(-16deg) rotateY(24deg) rotateZ(2deg);
 }
 
 .codepen-die-result {
