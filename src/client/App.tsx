@@ -445,6 +445,7 @@ export default function App() {
                   mySessionId={mySessionId || undefined}
                   onTileClick={(pos) => setSelectedTilePos(pos)}
                   displayedPositions={displayedPositions}
+                  diceAnimating={diceAnimating}
                 />
               }
               sidebar={

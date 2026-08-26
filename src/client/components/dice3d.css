@@ -1,0 +1,68 @@
+.dice-wrapper {
+  --dice-size: 100px;
+  --dot-size: calc(var(--dice-size) * 0.23);
+  --gap: calc(var(--dice-size) * 0.10);
+  --far: calc(var(--dice-size) - var(--dot-size) - var(--gap));
+  --center: calc((var(--dice-size) - var(--dot-size)) / 2);
+  --half: calc(var(--dice-size) / 2);
+
+  width: var(--dice-size);
+  height: var(--dice-size);
+  perspective: calc(var(--dice-size) * 6);
+  display: inline-block;
+}
+
+.dice-cube {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 1.1s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dice-cube {
+    transition-duration: 1.1s !important;
+  }
+  .dice-cube.is-rolling {
+    transition-duration: 1.1s !important;
+  }
+}
+
+.dice-cube.is-rolling {
+  transition-timing-function: cubic-bezier(0.3, 0.0, 0.2, 1);
+}
+
+.dice-side {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  box-shadow: inset 0 0 calc(var(--dice-size) * 0.08) #ccc;
+  border-radius: calc(var(--dice-size) * 0.2);
+  backface-visibility: hidden;
+}
+
+.dice-side.front { transform: translateZ(var(--half)); }
+.dice-side.back { transform: rotateX(-180deg) translateZ(var(--half)); }
+.dice-side.right { transform: rotateY(90deg) translateZ(var(--half)); }
+.dice-side.left { transform: rotateY(-90deg) translateZ(var(--half)); }
+.dice-side.top { transform: rotateX(90deg) translateZ(var(--half)); }
+.dice-side.bottom { transform: rotateX(-90deg) translateZ(var(--half)); }
+
+.dice-dot {
+  position: absolute;
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-radius: 50%;
+  background: #444;
+  box-shadow: inset 5px 0 10px #000;
+}
+
+.dice-dot.center { margin: var(--center) 0 0 var(--center); }
+.dice-dot.dtop { margin-top: var(--gap); }
+.dice-dot.dleft { margin-left: var(--far); }
+.dice-dot.dright { margin-left: var(--gap); }
+.dice-dot.dbottom { margin-top: var(--far); }
+.dice-dot.center.dleft { margin: var(--center) 0 0 var(--gap); }
+.dice-dot.center.dright { margin: var(--center) 0 0 var(--far); }

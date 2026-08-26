@@ -1,119 +1,19 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
+import Dice3D from "./Dice3D";
 
 type DiceValues = [number, number] | null;
 
-const RESULT_ROTATION: Record<number, [number, number]> = {
-  1: [0, 0],
-  2: [-90, 0],
-  3: [0, -90],
-  4: [0, 90],
-  5: [90, 0],
-  6: [180, 0],
-};
-
-type ResultStyle = CSSProperties & {
-  "--codepen-result-x": string;
-  "--codepen-result-y": string;
-};
-
-function CodePenDie({
-  value,
-  rolling,
-  settled,
-}: {
-  value: number;
-  rolling: boolean;
-  settled: boolean;
-}) {
-  const [rotateX, rotateY] = RESULT_ROTATION[value] ?? RESULT_ROTATION[1];
-  const style: ResultStyle = {
-    "--codepen-result-x": `${rotateX}deg`,
-    "--codepen-result-y": `${rotateY}deg`,
-  };
-
-  return (
-    <div
-      className={`codepen-die-wrapper${rolling ? " is-rolling" : ""}${settled ? " is-settled" : " is-idle"}`}
-      aria-hidden="true"
-    >
-      <div className="codepen-die-scale">
-        <div className="codepen-die-platform">
-          <div className="codepen-die-result" style={style}>
-            {/*
-            Face structure and rolling motion adapted from “CSS3 Rolling Dice”
-            by Tamer Aydın: https://codepen.io/tameraydin/pen/kMYreE
-          */}
-            <div className="codepen-die">
-              <div className="codepen-side codepen-front">
-                <div className="codepen-dot codepen-center" />
-              </div>
-              <div className="codepen-side codepen-front codepen-inner" />
-
-              <div className="codepen-side codepen-top">
-                <div className="codepen-dot codepen-dtop codepen-dleft" />
-                <div className="codepen-dot codepen-dbottom codepen-dright" />
-              </div>
-              <div className="codepen-side codepen-top codepen-inner" />
-
-              <div className="codepen-side codepen-right">
-                <div className="codepen-dot codepen-dtop codepen-dleft" />
-                <div className="codepen-dot codepen-center" />
-                <div className="codepen-dot codepen-dbottom codepen-dright" />
-              </div>
-              <div className="codepen-side codepen-right codepen-inner" />
-
-              <div className="codepen-side codepen-left">
-                <div className="codepen-dot codepen-dtop codepen-dleft" />
-                <div className="codepen-dot codepen-dtop codepen-dright" />
-                <div className="codepen-dot codepen-dbottom codepen-dleft" />
-                <div className="codepen-dot codepen-dbottom codepen-dright" />
-              </div>
-              <div className="codepen-side codepen-left codepen-inner" />
-
-              <div className="codepen-side codepen-bottom">
-                <div className="codepen-dot codepen-center" />
-                <div className="codepen-dot codepen-dtop codepen-dleft" />
-                <div className="codepen-dot codepen-dtop codepen-dright" />
-                <div className="codepen-dot codepen-dbottom codepen-dleft" />
-                <div className="codepen-dot codepen-dbottom codepen-dright" />
-              </div>
-              <div className="codepen-side codepen-bottom codepen-inner" />
-
-              <div className="codepen-side codepen-back">
-                <div className="codepen-dot codepen-dtop codepen-dleft" />
-                <div className="codepen-dot codepen-dtop codepen-dright" />
-                <div className="codepen-dot codepen-dbottom codepen-dleft" />
-                <div className="codepen-dot codepen-dbottom codepen-dright" />
-                <div className="codepen-dot codepen-center codepen-dleft" />
-                <div className="codepen-dot codepen-center codepen-dright" />
-              </div>
-              <div className="codepen-side codepen-back codepen-inner" />
-
-              <div className="codepen-side codepen-cover codepen-x" />
-              <div className="codepen-side codepen-cover codepen-y" />
-              <div className="codepen-side codepen-cover codepen-z" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+interface DiceProps {
+  values: DiceValues;
+  rolling?: boolean;
 }
 
-export default function Dice({ values }: { values: DiceValues }) {
-  const visibleValues: [number, number] = values ?? [1, 1];
-  const [rolling, setRolling] = useState(false);
+export default function Dice({ values, rolling = false }: DiceProps) {
+  const [lastValues, setLastValues] = useState<[number, number]>([1, 1]);
 
   useEffect(() => {
-    if (!values) {
-      setRolling(false);
-      return;
-    }
-
-    setRolling(true);
-    const stopTimer = window.setTimeout(() => setRolling(false), 2000);
-    return () => window.clearTimeout(stopTimer);
-  }, [values?.[0], values?.[1], values === null]);
+    if (values) setLastValues(values);
+  }, [values]);
 
   const label = values
     ? `Dice rolled ${values[0]} and ${values[1]}, total ${values[0] + values[1]}`
@@ -121,9 +21,20 @@ export default function Dice({ values }: { values: DiceValues }) {
 
   return (
     <div className="codepen-dice-stage" role="img" aria-label={label}>
-      <div className="codepen-dice-pair" key={`${visibleValues.join("-")}-${rolling}`}>
-        <CodePenDie value={visibleValues[0]} rolling={rolling} settled={values !== null} />
-        <CodePenDie value={visibleValues[1]} rolling={rolling} settled={values !== null} />
+      <div
+        className="codepen-dice-pair"
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: "16px",
+          width: "100%",
+          margin: 0,
+          padding: 0,
+        }}
+      >
+        <Dice3D value={lastValues[0] as 1 | 2 | 3 | 4 | 5 | 6} rolling={rolling} size={90} />
+        <Dice3D value={lastValues[1] as 1 | 2 | 3 | 4 | 5 | 6} rolling={rolling} size={90} />
       </div>
     </div>
   );
