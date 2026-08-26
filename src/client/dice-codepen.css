@@ -1,0 +1,281 @@
+/* Pasted reference: “CSS3 Rolling Dice” by Tamer Aydın.
+   https://codepen.io/tameraydin/pen/kMYreE
+
+   The cube below keeps the reference's exact 200px geometry, face depths,
+   pips, shadows and keyframe coordinates. Only the outer scale and selector
+   names are adapted so two copies can live safely inside the React board. */
+
+.codepen-dice-stage {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 61%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.codepen-dice-pair {
+  display: flex;
+  gap: 22px;
+}
+
+.codepen-die-wrapper {
+  --codepen-scale: 0.44;
+  position: relative;
+  width: 88px;
+  height: 88px;
+}
+
+.codepen-die-scale {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  transform: scale(var(--codepen-scale));
+  transform-origin: top left;
+  transform-style: preserve-3d;
+  perspective: 1200px;
+}
+
+.codepen-die-platform,
+.codepen-die-result,
+.codepen-die {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  transform-style: preserve-3d;
+}
+
+.codepen-die-result {
+  transform: rotateX(var(--codepen-result-x)) rotateY(var(--codepen-result-y));
+}
+
+.codepen-die-wrapper.is-idle .codepen-die {
+  animation: codepenSpin 50s infinite linear;
+}
+
+.codepen-die-wrapper.is-rolling .codepen-die {
+  animation: codepenSpinDuplicate 2s infinite linear;
+}
+
+.codepen-die-wrapper.is-rolling .codepen-die-platform {
+  animation: codepenRoll 1.6s infinite linear;
+}
+
+.codepen-die-wrapper.is-settled .codepen-die-platform {
+  transform: rotateX(22deg) rotateY(26deg);
+}
+
+.codepen-side {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  background: #fff;
+  box-shadow: inset 0 0 40px #ccc;
+  border-radius: 40px;
+}
+
+.codepen-die .codepen-cover,
+.codepen-die .codepen-inner {
+  background: #e0e0e0;
+  box-shadow: none;
+}
+
+.codepen-die .codepen-cover {
+  border-radius: 0;
+  transform: translateZ(0);
+}
+
+.codepen-die .codepen-cover.codepen-x {
+  transform: rotateY(90deg);
+}
+
+.codepen-die .codepen-cover.codepen-z {
+  transform: rotateX(90deg);
+}
+
+.codepen-die .codepen-front {
+  transform: translateZ(100px);
+}
+
+.codepen-die .codepen-front.codepen-inner {
+  transform: translateZ(98px);
+}
+
+.codepen-die .codepen-back {
+  transform: rotateX(-180deg) translateZ(100px);
+}
+
+.codepen-die .codepen-back.codepen-inner {
+  transform: rotateX(-180deg) translateZ(98px);
+}
+
+.codepen-die .codepen-right {
+  transform: rotateY(90deg) translateZ(100px);
+}
+
+.codepen-die .codepen-right.codepen-inner {
+  transform: rotateY(90deg) translateZ(98px);
+}
+
+.codepen-die .codepen-left {
+  transform: rotateY(-90deg) translateZ(100px);
+}
+
+.codepen-die .codepen-left.codepen-inner {
+  transform: rotateY(-90deg) translateZ(98px);
+}
+
+.codepen-die .codepen-top {
+  transform: rotateX(90deg) translateZ(100px);
+}
+
+.codepen-die .codepen-top.codepen-inner {
+  transform: rotateX(90deg) translateZ(98px);
+}
+
+.codepen-die .codepen-bottom {
+  transform: rotateX(-90deg) translateZ(100px);
+}
+
+.codepen-die .codepen-bottom.codepen-inner {
+  transform: rotateX(-90deg) translateZ(98px);
+}
+
+.codepen-dot {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  border-radius: 23px;
+  background: #444;
+  box-shadow: inset 5px 0 10px #000;
+}
+
+.codepen-dot.codepen-center {
+  margin: 77px 0 0 77px;
+}
+
+.codepen-dot.codepen-dtop {
+  margin-top: 20px;
+}
+
+.codepen-dot.codepen-dleft {
+  margin-left: 134px;
+}
+
+.codepen-dot.codepen-dright {
+  margin-left: 20px;
+}
+
+.codepen-dot.codepen-dbottom {
+  margin-top: 134px;
+}
+
+.codepen-dot.codepen-center.codepen-dleft {
+  margin: 77px 0 0 20px;
+}
+
+.codepen-dot.codepen-center.codepen-dright {
+  margin: 77px 0 0 134px;
+}
+
+@keyframes codepenSpin {
+  0% {
+    transform: translateZ(-100px) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+  }
+  16% {
+    transform: translateZ(-100px) rotateX(180deg) rotateY(180deg) rotateZ(0deg);
+  }
+  33% {
+    transform: translateZ(-100px) rotateX(360deg) rotateY(90deg) rotateZ(180deg);
+  }
+  50% {
+    transform: translateZ(-100px) rotateX(360deg) rotateY(360deg) rotateZ(360deg);
+  }
+  66% {
+    transform: translateZ(-100px) rotateX(180deg) rotateY(360deg) rotateZ(270deg);
+  }
+  83% {
+    transform: translateZ(-100px) rotateX(270deg) rotateY(180deg) rotateZ(180deg);
+  }
+  100% {
+    transform: translateZ(-100px) rotateX(360deg) rotateY(360deg) rotateZ(360deg);
+  }
+}
+
+@keyframes codepenSpinDuplicate {
+  0% {
+    transform: translateZ(-100px) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+  }
+  16% {
+    transform: translateZ(-100px) rotateX(180deg) rotateY(180deg) rotateZ(0deg);
+  }
+  33% {
+    transform: translateZ(-100px) rotateX(360deg) rotateY(90deg) rotateZ(180deg);
+  }
+  50% {
+    transform: translateZ(-100px) rotateX(360deg) rotateY(360deg) rotateZ(360deg);
+  }
+  66% {
+    transform: translateZ(-100px) rotateX(180deg) rotateY(360deg) rotateZ(270deg);
+  }
+  83% {
+    transform: translateZ(-100px) rotateX(270deg) rotateY(180deg) rotateZ(180deg);
+  }
+  100% {
+    transform: translateZ(-100px) rotateX(360deg) rotateY(360deg) rotateZ(360deg);
+  }
+}
+
+@keyframes codepenRoll {
+  0% {
+    transform: translate3d(-200px, -50px, -400px);
+  }
+  12% {
+    transform: translate3d(0, 0, -100px);
+  }
+  25% {
+    transform: translate3d(200px, -50px, -400px);
+  }
+  37% {
+    transform: translate3d(0, -100px, -800px);
+  }
+  50% {
+    transform: translate3d(-200px, -50px, -400px);
+  }
+  62% {
+    transform: translate3d(0, 0, -100px);
+  }
+  75% {
+    transform: translate3d(200px, -50px, -400px);
+  }
+  87% {
+    transform: translate3d(0, -100px, -800px);
+  }
+  100% {
+    transform: translate3d(-200px, -50px, -400px);
+  }
+}
+
+@media (max-width: 600px) {
+  .codepen-dice-pair {
+    gap: 12px;
+  }
+
+  .codepen-die-wrapper {
+    --codepen-scale: 0.3;
+    width: 60px;
+    height: 60px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .codepen-die-wrapper.is-idle .codepen-die,
+  .codepen-die-wrapper.is-rolling .codepen-die,
+  .codepen-die-wrapper.is-rolling .codepen-die-platform {
+    animation: none;
+  }
+
+  .codepen-die-platform {
+    transform: rotateX(22deg) rotateY(26deg);
+  }
+}

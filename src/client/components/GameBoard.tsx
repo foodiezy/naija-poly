@@ -6,6 +6,7 @@ import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
 import { zoneOfGroup } from "../lib/zones";
 import { IconHouse, IconHotel } from "./icons";
+import Dice from "./Dice";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
 // type, so drop the redundant "Airport"/"Corporation" suffix; the full name
@@ -24,6 +25,7 @@ interface GameBoardProps {
   // Animated token positions from the shared walker (owned by App so the buy
   // card can wait for the token to arrive). Falls back to static positions.
   displayedPositions?: Map<string, number>;
+  diceAnimating?: boolean;
 }
 
 // Which edge a tile sits on — determines color-bar side
@@ -141,6 +143,7 @@ export default function GameBoard({
   mySessionId,
   onTileClick,
   displayedPositions: displayedPositionsProp,
+  diceAnimating = false,
 }: GameBoardProps) {
   if (!engineState) {
     return (
@@ -178,6 +181,7 @@ export default function GameBoard({
       <div className="board-center">
         <div className="board-center-adire" aria-hidden="true" />
         <div className="board-center-skyline" aria-hidden="true" />
+        <Dice values={engineState.dice} rolling={diceAnimating} />
         <div className="board-deck board-deck-chance" aria-hidden="true">
           <span className="board-deck-icon board-deck-icon-chance">?</span>
           <b>Chance</b>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -36,9 +36,11 @@ import { useTokenWalker } from "./hooks/useTokenWalker";
 import * as sound from "./utils/sound";
 import { recordGameResult } from "./utils/stats";
 import { BOARD } from "../data/board";
-import { Player, TradeOffer } from "../engine/types";
+import { Action, Player, TradeOffer } from "../engine/types";
 import { playerInteractionState } from "./lib/gameInteractions";
 import { hasSeenGameGuide, markGameGuideSeen } from "./lib/gameGuide";
+
+const DICE_PRESENTATION_MS = 2050;
 
 export default function App() {
   const {
@@ -53,7 +55,7 @@ export default function App() {
     joinRoom,
     quickMatch,
     leaveRoom,
-    sendAction,
+    sendAction: sendRoomAction,
     selectToken,
     addAI,
     updateSettings,
@@ -74,6 +76,48 @@ export default function App() {
   const [initialTradeOffer, setInitialTradeOffer] = useState<TradeOffer | undefined>();
   const [counterMode, setCounterMode] = useState(false);
   const [debtRescueOpen, setDebtRescueOpen] = useState(false);
+  const [diceAnimating, setDiceAnimating] = useState(false);
+  const diceAnimationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const diceWasPresentRef = useRef(false);
+
+  const startDiceAnimation = useCallback(() => {
+    if (diceAnimationTimerRef.current) {
+      clearTimeout(diceAnimationTimerRef.current);
+    }
+
+    setDiceAnimating(true);
+    diceAnimationTimerRef.current = setTimeout(() => {
+      setDiceAnimating(false);
+      diceAnimationTimerRef.current = null;
+    }, DICE_PRESENTATION_MS);
+  }, []);
+
+  const sendAction = useCallback(
+    (action: Action) => {
+      if (action.type === "ROLL") startDiceAnimation();
+      sendRoomAction(action);
+    },
+    [sendRoomAction, startDiceAnimation],
+  );
+
+  const dicePresent = !!engineState?.dice;
+  useEffect(() => {
+    if (dicePresent && !diceWasPresentRef.current) {
+      // Start again when the server result arrives. This keeps the decision
+      // gate aligned with Dice's full two-second CodePen animation.
+      startDiceAnimation();
+    }
+    diceWasPresentRef.current = dicePresent;
+  }, [dicePresent, startDiceAnimation]);
+
+  useEffect(
+    () => () => {
+      if (diceAnimationTimerRef.current) {
+        clearTimeout(diceAnimationTimerRef.current);
+      }
+    },
+    [],
+  );
 
   // Room code from an invite link (?room=CODE), read once on load. While set,
   // the pre-room router shows ONLY the JoinGate sheet; "Start your own game"
@@ -109,6 +153,7 @@ export default function App() {
       const shown = displayedPositions.get(mySessionId);
       return shown !== undefined && shown !== me.position;
     })();
+  const presentationBusy = myTokenWalking || diceAnimating;
 
   const {
     player: me,
@@ -177,7 +222,11 @@ export default function App() {
     engineState,
     room,
     mySessionId,
-    autoEndTurn && !tradeBuilderOpen && !debtRescueOpen && selectedTilePos === null,
+    autoEndTurn &&
+      !tradeBuilderOpen &&
+      !debtRescueOpen &&
+      selectedTilePos === null &&
+      !diceAnimating,
   );
 
   // Reset showGameOverModal when phase changes to game-over; re-arm the
@@ -374,7 +423,7 @@ export default function App() {
               mySessionId={mySessionId ?? ""}
               roomId={room.roomId}
               muted={muted}
-              myTokenWalking={myTokenWalking}
+              myTokenWalking={presentationBusy}
               interactionOverlayOpen={tradeBuilderOpen || debtRescueOpen || !!incomingTrade}
               chatMessageCount={chatMessages.length}
               onToggleMute={() => {
@@ -396,6 +445,7 @@ export default function App() {
                   mySessionId={mySessionId || undefined}
                   onTileClick={(pos) => setSelectedTilePos(pos)}
                   displayedPositions={displayedPositions}
+                  diceAnimating={diceAnimating}
                 />
               }
               sidebar={
@@ -410,7 +460,7 @@ export default function App() {
                   onOpenTile={(pos) => setSelectedTilePos(pos)}
                   onOpenTrade={openTradeBuilder}
                   onOpenDebtRescue={() => setDebtRescueOpen(true)}
-                  myTokenWalking={myTokenWalking}
+                  myTokenWalking={presentationBusy}
                 />
               }
               chat={
@@ -500,7 +550,7 @@ export default function App() {
                     decisions were promoted out of ControlPanel in step B4a:
                     that sidebar drops below the board under 980px, so these
                     two timed decisions were rendering off-screen on phones. */}
-                  {mySessionId && !myTokenWalking && (
+                  {mySessionId && !presentationBusy && (
                     <BuyDeedModal
                       engineState={engineState}
                       mySessionId={mySessionId}
@@ -508,19 +558,22 @@ export default function App() {
                     />
                   )}
 
-                  {mySessionId && engineState.phase === "auction" && engineState.auctionState && (
-                    <AuctionPanel
-                      auction={engineState.auctionState}
-                      players={engineState.players}
-                      mySessionId={mySessionId}
-                      myCash={
-                        engineState.players?.find((p: Player) => p.id === mySessionId)?.cash ?? 0
-                      }
-                      onSendAction={sendAction}
-                    />
-                  )}
+                  {mySessionId &&
+                    !diceAnimating &&
+                    engineState.phase === "auction" &&
+                    engineState.auctionState && (
+                      <AuctionPanel
+                        auction={engineState.auctionState}
+                        players={engineState.players}
+                        mySessionId={mySessionId}
+                        myCash={
+                          engineState.players?.find((p: Player) => p.id === mySessionId)?.cash ?? 0
+                        }
+                        onSendAction={sendAction}
+                      />
+                    )}
 
-                  {mySessionId && (
+                  {mySessionId && !diceAnimating && (
                     <ChaosDecisionPanel
                       engineState={engineState}
                       mySessionId={mySessionId}

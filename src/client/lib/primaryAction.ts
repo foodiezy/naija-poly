@@ -49,7 +49,7 @@ export interface PrimaryCtx {
   me: Player | undefined;
   /** Name of whoever's turn it is, for the "waiting" readout. */
   activePlayerName: string;
-  /** True while my piece is still walking to its landing tile. */
+  /** True while the roll presentation or my piece movement is still in progress. */
   tokenWalking: boolean;
   /** Cash shortfall plus outstanding ledger debt. */
   debt: number;
@@ -131,6 +131,10 @@ export function primaryAction(ctx: PrimaryCtx): PrimaryAction {
     };
   }
 
+  if (ctx.tokenWalking) {
+    return { kind: "hold", label: "Dice dey roll…", disabled: true, tone: "quiet" };
+  }
+
   if (phase === "awaiting-roll") {
     return {
       kind: "roll",
@@ -141,9 +145,6 @@ export function primaryAction(ctx: PrimaryCtx): PrimaryAction {
   }
 
   if (phase === "awaiting-buy-decision") {
-    if (ctx.tokenWalking) {
-      return { kind: "hold", label: "Your piece still dey waka…", disabled: true, tone: "quiet" };
-    }
     const price = ctx.landedPrice ?? 0;
     if (price > 0 && me.cash >= price) {
       const name = ctx.landedName ? `${ctx.landedName} · ` : "";

@@ -115,6 +115,13 @@ describe("primaryAction on-turn", () => {
     expect(primaryAction(ctx({ me: player({ inJail: true }) })).label).toContain("jail");
   });
 
+  it("holds the action bar while a roll is still being presented", () => {
+    const a = primaryAction(ctx({ tokenWalking: true }));
+    expect(a.kind).toBe("hold");
+    expect(a.label).toContain("roll");
+    expect(a.disabled).toBe(true);
+  });
+
   it("offers a buy when the tile is affordable", () => {
     const a = primaryAction(
       ctx({ phase: "awaiting-buy-decision", landedPrice: 120_000, landedName: "Ilorin" }),

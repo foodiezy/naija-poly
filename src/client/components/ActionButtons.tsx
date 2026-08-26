@@ -13,9 +13,8 @@ interface Props {
   activeTrade: TradeOffer | null;
   onSendAction: (action: Action) => void;
   onShowTradeBuilder: () => void;
-  // True while this player's piece is still animating to its landing tile —
-  // Buy/Auction must wait until the reveal so a mis-click can't buy a tile the
-  // player hasn't seen.
+  // True while the dice presentation or this player's piece movement is in
+  // progress. Turn actions wait until the complete reveal is visible.
   tokenWalking?: boolean;
 }
 
@@ -97,7 +96,7 @@ export default function ActionButtons({
           <button
             className="sidebar-action-btn sidebar-action-btn-primary"
             onClick={() => sendOnce({ type: "ROLL" })}
-            disabled={busy}
+            disabled={busy || tokenWalking}
             style={{
               display: "flex",
               alignItems: "center",
@@ -135,7 +134,7 @@ export default function ActionButtons({
         <motion.button
           className="sidebar-action-btn sidebar-action-btn-primary"
           onClick={() => sendOnce({ type: "ROLL" })}
-          disabled={busy}
+          disabled={busy || tokenWalking}
           whileTap={{ scale: 0.94 }}
           style={{
             display: "flex",
