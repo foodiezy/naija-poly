@@ -52,6 +52,8 @@
 
 .dice-dot {
   position: absolute;
+  top: 0;
+  left: 0;
   width: var(--dot-size);
   height: var(--dot-size);
   border-radius: 50%;
