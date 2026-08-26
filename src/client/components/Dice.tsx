@@ -1,102 +1,117 @@
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 type DiceValues = [number, number] | null;
 
-const FACE_PIPS: Record<number, number[]> = {
-  1: [5],
-  2: [1, 9],
-  3: [1, 5, 9],
-  4: [1, 3, 7, 9],
-  5: [1, 3, 5, 7, 9],
-  6: [1, 3, 4, 6, 7, 9],
-};
-
-const FACE_VALUES = {
-  front: 1,
-  back: 6,
-  right: 3,
-  left: 4,
-  top: 2,
-  bottom: 5,
-} as const;
-
-const FACE_ROTATION: Record<number, [number, number]> = {
+const RESULT_ROTATION: Record<number, [number, number]> = {
   1: [0, 0],
   2: [-90, 0],
   3: [0, -90],
   4: [0, 90],
   5: [90, 0],
-  6: [0, 180],
+  6: [180, 0],
 };
 
-type DieStyle = CSSProperties & {
-  "--die-final-x": string;
-  "--die-final-y": string;
-  "--die-direction": number;
+type ResultStyle = CSSProperties & {
+  "--codepen-result-x": string;
+  "--codepen-result-y": string;
 };
 
-function DieFace({ side, value }: { side: keyof typeof FACE_VALUES; value: number }) {
-  return (
-    <div className={`od-die-face od-die-face-${side}`}>
-      {FACE_PIPS[value].map((position) => (
-        <span key={position} className={`od-die-pip od-die-pip-${position}`} />
-      ))}
-    </div>
-  );
-}
-
-function Die({
-  value,
-  rolling,
-  direction,
-}: {
-  value: number;
-  rolling: boolean;
-  direction: 1 | -1;
-}) {
-  const [rotateX, rotateY] = FACE_ROTATION[value] ?? FACE_ROTATION[1];
-  const style: DieStyle = {
-    "--die-final-x": `${rotateX}deg`,
-    "--die-final-y": `${rotateY}deg`,
-    "--die-direction": direction,
+function CodePenDie({ value, rolling }: { value: number; rolling: boolean }) {
+  const [rotateX, rotateY] = RESULT_ROTATION[value] ?? RESULT_ROTATION[1];
+  const style: ResultStyle = {
+    "--codepen-result-x": `${rotateX}deg`,
+    "--codepen-result-y": `${rotateY}deg`,
   };
 
   return (
-    <div className={`od-die-scene${rolling ? " is-rolling" : ""}`} aria-hidden="true">
-      <div className="od-die-cube" style={style}>
-        {Object.entries(FACE_VALUES).map(([side, faceValue]) => (
-          <DieFace key={side} side={side as keyof typeof FACE_VALUES} value={faceValue} />
-        ))}
+    <div className={`codepen-die-wrapper${rolling ? " is-rolling" : ""}`} aria-hidden="true">
+      <div className="codepen-die-platform">
+        <div className="codepen-die-result" style={style}>
+          {/*
+            Face structure and rolling motion adapted from “CSS3 Rolling Dice”
+            by Tamer Aydın: https://codepen.io/tameraydin/pen/kMYreE
+          */}
+          <div className="codepen-die">
+            <div className="codepen-side codepen-front">
+              <div className="codepen-dot codepen-center" />
+            </div>
+            <div className="codepen-side codepen-front codepen-inner" />
+
+            <div className="codepen-side codepen-top">
+              <div className="codepen-dot codepen-dtop codepen-dleft" />
+              <div className="codepen-dot codepen-dbottom codepen-dright" />
+            </div>
+            <div className="codepen-side codepen-top codepen-inner" />
+
+            <div className="codepen-side codepen-right">
+              <div className="codepen-dot codepen-dtop codepen-dleft" />
+              <div className="codepen-dot codepen-center" />
+              <div className="codepen-dot codepen-dbottom codepen-dright" />
+            </div>
+            <div className="codepen-side codepen-right codepen-inner" />
+
+            <div className="codepen-side codepen-left">
+              <div className="codepen-dot codepen-dtop codepen-dleft" />
+              <div className="codepen-dot codepen-dtop codepen-dright" />
+              <div className="codepen-dot codepen-dbottom codepen-dleft" />
+              <div className="codepen-dot codepen-dbottom codepen-dright" />
+            </div>
+            <div className="codepen-side codepen-left codepen-inner" />
+
+            <div className="codepen-side codepen-bottom">
+              <div className="codepen-dot codepen-center" />
+              <div className="codepen-dot codepen-dtop codepen-dleft" />
+              <div className="codepen-dot codepen-dtop codepen-dright" />
+              <div className="codepen-dot codepen-dbottom codepen-dleft" />
+              <div className="codepen-dot codepen-dbottom codepen-dright" />
+            </div>
+            <div className="codepen-side codepen-bottom codepen-inner" />
+
+            <div className="codepen-side codepen-back">
+              <div className="codepen-dot codepen-dtop codepen-dleft" />
+              <div className="codepen-dot codepen-dtop codepen-dright" />
+              <div className="codepen-dot codepen-dbottom codepen-dleft" />
+              <div className="codepen-dot codepen-dbottom codepen-dright" />
+              <div className="codepen-dot codepen-center codepen-dleft" />
+              <div className="codepen-dot codepen-center codepen-dright" />
+            </div>
+            <div className="codepen-side codepen-back codepen-inner" />
+
+            <div className="codepen-side codepen-cover codepen-x" />
+            <div className="codepen-side codepen-cover codepen-y" />
+            <div className="codepen-side codepen-cover codepen-z" />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-export default function Dice({ values, rollKey }: { values: DiceValues; rollKey: string }) {
+export default function Dice({ values }: { values: DiceValues }) {
   const visibleValues: [number, number] = values ?? [1, 1];
+  const [rolling, setRolling] = useState(false);
+
+  useEffect(() => {
+    if (!values) {
+      setRolling(false);
+      return;
+    }
+
+    setRolling(true);
+    const stopTimer = window.setTimeout(() => setRolling(false), 2000);
+    return () => window.clearTimeout(stopTimer);
+  }, [values?.[0], values?.[1], values === null]);
+
   const label = values
     ? `Dice rolled ${values[0]} and ${values[1]}, total ${values[0] + values[1]}`
     : "Dice waiting to be rolled";
 
   return (
-    <div
-      className={`od-dice-stage${values ? " has-result" : " is-idle"}`}
-      role="img"
-      aria-label={label}
-    >
-      <div className="od-dice-pair" key={rollKey}>
-        <Die value={visibleValues[0]} rolling={values !== null} direction={1} />
-        <Die value={visibleValues[1]} rolling={values !== null} direction={-1} />
+    <div className="codepen-dice-stage" role="img" aria-label={label}>
+      <div className="codepen-dice-pair" key={`${visibleValues.join("-")}-${rolling}`}>
+        <CodePenDie value={visibleValues[0]} rolling={rolling} />
+        <CodePenDie value={visibleValues[1]} rolling={rolling} />
       </div>
-      <span className="od-dice-caption">
-        {values ? (
-          <>
-            <strong>{values[0] + values[1]}</strong> total
-          </>
-        ) : (
-          "Roll the dice"
-        )}
-      </span>
     </div>
   );
 }

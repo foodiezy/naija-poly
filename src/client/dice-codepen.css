@@ -1,0 +1,257 @@
+/* “CSS3 Rolling Dice” by Tamer Aydın:
+   https://codepen.io/tameraydin/pen/kMYreE
+   The original face construction and animation path are retained. Its 200px
+   measurements are expressed proportionally so two dice fit the game board. */
+.codepen-dice-stage {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 61%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.codepen-dice-pair {
+  display: flex;
+  gap: clamp(0.65rem, 2vw, 1.2rem);
+}
+
+.codepen-die-wrapper {
+  --codepen-die-size: clamp(36px, 6.2vw, 62px);
+  position: relative;
+  width: var(--codepen-die-size);
+  height: var(--codepen-die-size);
+  perspective: calc(var(--codepen-die-size) * 6);
+}
+
+.codepen-die-platform,
+.codepen-die-result,
+.codepen-die {
+  position: absolute;
+  inset: 0;
+  width: var(--codepen-die-size);
+  height: var(--codepen-die-size);
+  transform-style: preserve-3d;
+}
+
+.codepen-die-result {
+  transform: rotateX(var(--codepen-result-x)) rotateY(var(--codepen-result-y));
+}
+
+.codepen-die-wrapper.is-rolling .codepen-die-platform {
+  animation: codepenRoll 1.6s infinite linear;
+}
+
+.codepen-die-wrapper.is-rolling .codepen-die {
+  animation: codepenSpin 2s infinite linear;
+}
+
+.codepen-side {
+  position: absolute;
+  width: var(--codepen-die-size);
+  height: var(--codepen-die-size);
+  background: #fff;
+  box-shadow: inset 0 0 calc(var(--codepen-die-size) * 0.2) #ccc;
+  border-radius: calc(var(--codepen-die-size) * 0.2);
+}
+
+.codepen-die .codepen-cover,
+.codepen-die .codepen-inner {
+  background: #e0e0e0;
+  box-shadow: none;
+}
+
+.codepen-die .codepen-cover {
+  border-radius: 0;
+  transform: translateZ(0);
+}
+
+.codepen-die .codepen-cover.codepen-x {
+  transform: rotateY(90deg);
+}
+
+.codepen-die .codepen-cover.codepen-z {
+  transform: rotateX(90deg);
+}
+
+.codepen-die .codepen-front {
+  transform: translateZ(calc(var(--codepen-die-size) * 0.5));
+}
+
+.codepen-die .codepen-front.codepen-inner {
+  transform: translateZ(calc(var(--codepen-die-size) * 0.49));
+}
+
+.codepen-die .codepen-back {
+  transform: rotateX(-180deg) translateZ(calc(var(--codepen-die-size) * 0.5));
+}
+
+.codepen-die .codepen-back.codepen-inner {
+  transform: rotateX(-180deg) translateZ(calc(var(--codepen-die-size) * 0.49));
+}
+
+.codepen-die .codepen-right {
+  transform: rotateY(90deg) translateZ(calc(var(--codepen-die-size) * 0.5));
+}
+
+.codepen-die .codepen-right.codepen-inner {
+  transform: rotateY(90deg) translateZ(calc(var(--codepen-die-size) * 0.49));
+}
+
+.codepen-die .codepen-left {
+  transform: rotateY(-90deg) translateZ(calc(var(--codepen-die-size) * 0.5));
+}
+
+.codepen-die .codepen-left.codepen-inner {
+  transform: rotateY(-90deg) translateZ(calc(var(--codepen-die-size) * 0.49));
+}
+
+.codepen-die .codepen-top {
+  transform: rotateX(90deg) translateZ(calc(var(--codepen-die-size) * 0.5));
+}
+
+.codepen-die .codepen-top.codepen-inner {
+  transform: rotateX(90deg) translateZ(calc(var(--codepen-die-size) * 0.49));
+}
+
+.codepen-die .codepen-bottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--codepen-die-size) * 0.5));
+}
+
+.codepen-die .codepen-bottom.codepen-inner {
+  transform: rotateX(-90deg) translateZ(calc(var(--codepen-die-size) * 0.49));
+}
+
+.codepen-dot {
+  position: absolute;
+  width: calc(var(--codepen-die-size) * 0.23);
+  height: calc(var(--codepen-die-size) * 0.23);
+  border-radius: 50%;
+  background: #444;
+  box-shadow: inset calc(var(--codepen-die-size) * 0.025) 0 calc(var(--codepen-die-size) * 0.05)
+    #000;
+}
+
+.codepen-dot.codepen-center {
+  margin: 38.5% 0 0 38.5%;
+}
+
+.codepen-dot.codepen-dtop {
+  margin-top: 10%;
+}
+
+.codepen-dot.codepen-dleft {
+  margin-left: 67%;
+}
+
+.codepen-dot.codepen-dright {
+  margin-left: 10%;
+}
+
+.codepen-dot.codepen-dbottom {
+  margin-top: 67%;
+}
+
+.codepen-dot.codepen-center.codepen-dleft {
+  margin: 38.5% 0 0 10%;
+}
+
+.codepen-dot.codepen-center.codepen-dright {
+  margin: 38.5% 0 0 67%;
+}
+
+@keyframes codepenSpin {
+  0% {
+    transform: translateZ(calc(var(--codepen-die-size) * -0.5)) rotateX(0deg) rotateY(0deg)
+      rotateZ(0deg);
+  }
+  16% {
+    transform: translateZ(calc(var(--codepen-die-size) * -0.5)) rotateX(180deg) rotateY(180deg)
+      rotateZ(0deg);
+  }
+  33% {
+    transform: translateZ(calc(var(--codepen-die-size) * -0.5)) rotateX(360deg) rotateY(90deg)
+      rotateZ(180deg);
+  }
+  50% {
+    transform: translateZ(calc(var(--codepen-die-size) * -0.5)) rotateX(360deg) rotateY(360deg)
+      rotateZ(360deg);
+  }
+  66% {
+    transform: translateZ(calc(var(--codepen-die-size) * -0.5)) rotateX(180deg) rotateY(360deg)
+      rotateZ(270deg);
+  }
+  83% {
+    transform: translateZ(calc(var(--codepen-die-size) * -0.5)) rotateX(270deg) rotateY(180deg)
+      rotateZ(180deg);
+  }
+  100% {
+    transform: translateZ(calc(var(--codepen-die-size) * -0.5)) rotateX(360deg) rotateY(360deg)
+      rotateZ(360deg);
+  }
+}
+
+@keyframes codepenRoll {
+  0% {
+    transform: translate3d(
+      calc(var(--codepen-die-size) * -1),
+      calc(var(--codepen-die-size) * -0.25),
+      calc(var(--codepen-die-size) * -2)
+    );
+  }
+  12% {
+    transform: translate3d(0, 0, calc(var(--codepen-die-size) * -0.5));
+  }
+  25% {
+    transform: translate3d(
+      var(--codepen-die-size),
+      calc(var(--codepen-die-size) * -0.25),
+      calc(var(--codepen-die-size) * -2)
+    );
+  }
+  37% {
+    transform: translate3d(
+      0,
+      calc(var(--codepen-die-size) * -0.5),
+      calc(var(--codepen-die-size) * -4)
+    );
+  }
+  50% {
+    transform: translate3d(
+      calc(var(--codepen-die-size) * -1),
+      calc(var(--codepen-die-size) * -0.25),
+      calc(var(--codepen-die-size) * -2)
+    );
+  }
+  62% {
+    transform: translate3d(0, 0, calc(var(--codepen-die-size) * -0.5));
+  }
+  75% {
+    transform: translate3d(
+      var(--codepen-die-size),
+      calc(var(--codepen-die-size) * -0.25),
+      calc(var(--codepen-die-size) * -2)
+    );
+  }
+  87% {
+    transform: translate3d(
+      0,
+      calc(var(--codepen-die-size) * -0.5),
+      calc(var(--codepen-die-size) * -4)
+    );
+  }
+  100% {
+    transform: translate3d(
+      calc(var(--codepen-die-size) * -1),
+      calc(var(--codepen-die-size) * -0.25),
+      calc(var(--codepen-die-size) * -2)
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .codepen-die-wrapper.is-rolling .codepen-die-platform,
+  .codepen-die-wrapper.is-rolling .codepen-die {
+    animation: none;
+  }
+}

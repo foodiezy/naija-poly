@@ -14,6 +14,7 @@ import { BOARD } from "../data/board";
 import { TOKENS } from "../data/tokens";
 import { RoomState } from "../shared/room";
 import "./index.css";
+import "./dice-codepen.css";
 
 const players = [
   { id: "p1", name: "Chidi", cash: 1_240_000 },

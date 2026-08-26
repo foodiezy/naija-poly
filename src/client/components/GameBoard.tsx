@@ -179,10 +179,7 @@ export default function GameBoard({
       <div className="board-center">
         <div className="board-center-adire" aria-hidden="true" />
         <div className="board-center-skyline" aria-hidden="true" />
-        <Dice
-          values={engineState.dice}
-          rollKey={`${engineState.dice?.join("-") ?? "waiting"}-${engineState.log?.length ?? 0}`}
-        />
+        <Dice values={engineState.dice} />
         <div className="board-deck board-deck-chance" aria-hidden="true">
           <span className="board-deck-icon board-deck-icon-chance">?</span>
           <b>Chance</b>

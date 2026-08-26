@@ -4,6 +4,7 @@ import { MotionConfig } from "framer-motion";
 import App from "./App";
 import ErrorBoundary from "./ErrorBoundary";
 import "./index.css";
+import "./dice-codepen.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
