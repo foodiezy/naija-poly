@@ -6,6 +6,7 @@ import { GameState, Player } from "../../engine/types";
 import { RoomState } from "../../shared/room";
 import { zoneOfGroup } from "../lib/zones";
 import { IconHouse, IconHotel } from "./icons";
+import Dice from "./Dice";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
 // type, so drop the redundant "Airport"/"Corporation" suffix; the full name
@@ -178,6 +179,10 @@ export default function GameBoard({
       <div className="board-center">
         <div className="board-center-adire" aria-hidden="true" />
         <div className="board-center-skyline" aria-hidden="true" />
+        <Dice
+          values={engineState.dice}
+          rollKey={`${engineState.dice?.join("-") ?? "waiting"}-${engineState.log?.length ?? 0}`}
+        />
         <div className="board-deck board-deck-chance" aria-hidden="true">
           <span className="board-deck-icon board-deck-icon-chance">?</span>
           <b>Chance</b>
