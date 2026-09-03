@@ -842,6 +842,29 @@ a.v2-btn {
   color: var(--ink-3);
 }
 
+.v2-kick-player {
+  margin-left: auto;
+  min-height: 32px;
+  padding: 0 var(--s-2);
+  border: 1px solid var(--bad);
+  border-radius: var(--r-sm);
+  background: var(--sf);
+  color: var(--bad);
+  font: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.v2-kick-player:hover {
+  background: var(--bad-bg);
+}
+
+.v2-kick-player:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+}
+
 /* Gold is reserved for host / winner / Odogwu moments. Ink on gold rather
    than white keeps the 11px label readable (≈7.6:1). */
 .v2-host {

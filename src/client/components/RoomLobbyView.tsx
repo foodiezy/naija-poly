@@ -104,6 +104,7 @@ interface RoomLobbyViewProps {
   onCopyRoomCode: () => void;
   onSelectToken: (tokenId: string) => void;
   onAddAI: () => void;
+  onKickPlayer: (playerId: string) => void;
   onUpdateSettings: (settings: RoomSettings) => void;
   onStartGame: () => void;
   chatMessages: ChatMessage[];
@@ -128,6 +129,7 @@ export default function RoomLobbyView({
   onCopyRoomCode,
   onSelectToken,
   onAddAI,
+  onKickPlayer,
   onUpdateSettings,
   onStartGame,
   chatMessages,
@@ -290,6 +292,20 @@ export default function RoomLobbyView({
               <b>{pData.name}</b>
               {pId === room.sessionId && <span className="v2-you">(you)</span>}
               {pId === roomState?.hostId && <span className="v2-host">HOST</span>}
+              {isHost && pId !== room.sessionId && (
+                <button
+                  type="button"
+                  className="v2-kick-player"
+                  onClick={() => {
+                    if (window.confirm(`Remove ${pData.name} from this lobby?`)) {
+                      onKickPlayer(pId);
+                    }
+                  }}
+                  aria-label={`Remove ${pData.name} from lobby`}
+                >
+                  Remove
+                </button>
+              )}
             </div>
           ))}
 

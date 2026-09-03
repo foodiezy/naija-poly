@@ -58,6 +58,7 @@ export default function App() {
     sendAction: sendRoomAction,
     selectToken,
     addAI,
+    kickPlayer,
     updateSettings,
     startGame,
     sendChatMessage,
@@ -405,6 +406,7 @@ export default function App() {
               onCopyRoomCode={copyRoomCode}
               onSelectToken={selectToken}
               onAddAI={addAI}
+              onKickPlayer={kickPlayer}
               onUpdateSettings={updateSettings}
               onStartGame={startGame}
               chatMessages={chatMessages}

@@ -244,6 +244,14 @@ export function useGameRoom() {
 
       joinedRoom.onLeave(async (code: number) => {
         if (intentionalLeaveRef.current) return;
+        if (code === 4002) {
+          clearRoomState();
+          toast.error("The host removed you from the lobby.", {
+            autoClose: 5000,
+            toastId: "removed-from-lobby",
+          });
+          return;
+        }
         // 1000/4000 mean the server ended the session on purpose (room
         // disposed, deploy restart): the seat is NOT reserved, so retrying
         // the token would only hang. Tear down instead of freezing the board.
@@ -372,6 +380,10 @@ export function useGameRoom() {
     if (room) room.send("ADD_AI");
   };
 
+  const kickPlayer = (playerId: string) => {
+    if (room) room.send("KICK_PLAYER", { playerId });
+  };
+
   const updateSettings = (settings: RoomSettings) => {
     if (room) room.send("UPDATE_SETTINGS", settings);
   };
@@ -426,6 +438,7 @@ export function useGameRoom() {
     sendAction,
     selectToken,
     addAI,
+    kickPlayer,
     updateSettings,
     startGame,
     sendChatMessage,
