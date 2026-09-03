@@ -113,6 +113,10 @@ export class GameRoom extends Room<GameRoomState> {
   // stringify of the whole game state). Capacity allows a natural burst; refill
   // is generous enough that real play never trips it.
   private rateBuckets = new Map<string, { tokens: number; last: number }>();
+  // Lobby removals must not enter the normal reconnection grace period. Keep
+  // the id until onLeave observes the server-initiated close (or until a
+  // player who was already reconnecting returns), then reject that seat.
+  private kickedLobbyPlayers = new Set<string>();
   private static readonly RL_CAPACITY = 20; // max burst
   private static readonly RL_REFILL_PER_SEC = 8; // sustained rate
 
@@ -598,6 +602,46 @@ export class GameRoom extends Room<GameRoomState> {
       console.log(`Host added computer player ${aiId} (${ai.name})`);
     });
 
+    // The room host can remove a human or bot before the game starts. This is
+    // intentionally separate from the in-game vote-kick rule: the lobby has
+    // no game state yet, and its host needs to moderate their own room.
+    this.onMessage("KICK_PLAYER", (client, message: { playerId?: string }) => {
+      if (this.state.status !== "lobby") {
+        this.sendError(client, "Players can only be removed from the lobby");
+        return;
+      }
+      if (client.sessionId !== this.state.hostId) {
+        this.sendError(client, "Only the host can remove players");
+        return;
+      }
+
+      const targetId = typeof message?.playerId === "string" ? message.playerId : "";
+      if (!targetId || targetId === this.state.hostId) {
+        this.sendError(client, "The host cannot remove themselves");
+        return;
+      }
+
+      const target = this.state.lobbyPlayers.get(targetId);
+      if (!target) {
+        this.sendError(client, "That player is no longer in the lobby");
+        return;
+      }
+
+      this.kickedLobbyPlayers.add(targetId);
+      this.state.lobbyPlayers.delete(targetId);
+      this.rateBuckets.delete(targetId);
+
+      const targetClient = this.clients.find((candidate) => candidate.sessionId === targetId);
+      if (targetClient) {
+        targetClient.leave(4002, "Removed by host");
+      } else if (isAIPlayer(targetId)) {
+        // Bots have no socket/onLeave callback to consume the marker.
+        this.kickedLobbyPlayers.delete(targetId);
+      }
+
+      console.log(`Host ${client.sessionId} removed ${targetId} (${target.name}) from the lobby`);
+    });
+
     // Message handler to start game
     this.onMessage("START_GAME", (client, _message) => {
       if (this.state.status !== "lobby") {
@@ -837,40 +881,45 @@ export class GameRoom extends Room<GameRoomState> {
   async onLeave(client: Client, consented?: boolean) {
     console.log(`Client ${client.sessionId} left (consented: ${consented})`);
 
-    if (this.state.status === "lobby") {
-      // If still in lobby, remove immediately
-      this.state.lobbyPlayers.delete(client.sessionId);
-      this.rateBuckets.delete(client.sessionId);
-      // Never hand the host seat to a bot — the room would be unstartable.
-      this.migrateHostIfNeeded(client.sessionId);
-    } else {
-      // If game is in progress, allow 60 seconds to reconnect
+    // An intentional leave or a host removal is final. Accidental disconnects
+    // in BOTH lobby and game reserve the same session id for 60 seconds, so a
+    // reload cannot create a duplicate lobby player or silently transfer host.
+    const wasKicked = this.kickedLobbyPlayers.delete(client.sessionId);
+    if (!consented && !wasKicked) {
       try {
-        if (consented) {
-          throw new Error("consented leave");
+        const reconnected = await this.allowReconnection(client, 60);
+        // A host may remove a player while that player's socket is offline but
+        // its seat is reserved. If they reconnect, close the restored socket
+        // instead of bringing back a player already removed from the roster.
+        if (
+          this.kickedLobbyPlayers.delete(client.sessionId) ||
+          (this.state.status === "lobby" && !this.state.lobbyPlayers.has(client.sessionId))
+        ) {
+          reconnected.leave(4002, "Removed by host");
+          return;
         }
-        await this.allowReconnection(client, 60);
         console.log(`Client ${client.sessionId} successfully reconnected!`);
-      } catch (e) {
-        // Player failed to reconnect in 60s (or left intentionally). Forfeit
-        // them through the engine so turns keep flowing and the game can't
-        // stall waiting on someone who is gone.
-        console.log(`Client ${client.sessionId} permanently disconnected.`);
-        this.rateBuckets.delete(client.sessionId);
-        // A permanent leaver must not linger as a ghost: drop their lobby
-        // seat (so rematches don't deal them in) and migrate the host role to
-        // a connected human (so the room stays resettable).
-        this.state.lobbyPlayers.delete(client.sessionId);
-        this.migrateHostIfNeeded(client.sessionId);
-        if (this.state.status === "in_progress") {
-          try {
-            this.runEngineAction(client.sessionId, { type: "FORFEIT" });
-            console.log(`Client ${client.sessionId} forfeited after disconnect.`);
-          } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error(`Error forfeiting disconnected player: ${msg}`);
-          }
-        }
+        return;
+      } catch {
+        // The grace period expired. Continue into permanent cleanup below.
+      }
+    }
+
+    console.log(`Client ${client.sessionId} permanently disconnected.`);
+    this.kickedLobbyPlayers.delete(client.sessionId);
+    this.rateBuckets.delete(client.sessionId);
+    this.state.lobbyPlayers.delete(client.sessionId);
+    this.migrateHostIfNeeded(client.sessionId);
+
+    // A permanent mid-game disconnect forfeits through the engine so turns,
+    // trades, auctions and debts cannot remain blocked by the missing player.
+    if (this.state.status === "in_progress") {
+      try {
+        this.runEngineAction(client.sessionId, { type: "FORFEIT" });
+        console.log(`Client ${client.sessionId} forfeited after disconnect.`);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`Error forfeiting disconnected player: ${msg}`);
       }
     }
   }
