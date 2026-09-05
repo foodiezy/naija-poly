@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { BOARD, Tile, PropertyTile } from "../../data/board";
 import { getDevelopmentName, getRent } from "../../engine/engine";
@@ -7,6 +8,7 @@ import { RoomState } from "../../shared/room";
 import { zoneOfGroup } from "../lib/zones";
 import { IconHouse, IconHotel } from "./icons";
 import Dice from "./Dice";
+import BoardExplorer, { type BoardFocus } from "./BoardExplorer";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
 // type, so drop the redundant "Airport"/"Corporation" suffix; the full name
@@ -145,6 +147,8 @@ export default function GameBoard({
   displayedPositions: displayedPositionsProp,
   diceAnimating = false,
 }: GameBoardProps) {
+  const [boardFocus, setBoardFocus] = useState<BoardFocus>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
   if (!engineState) {
     return (
       <div className="glass-panel" style={{ padding: "2rem", textAlign: "center" }}>
@@ -175,225 +179,263 @@ export default function GameBoard({
   const getTokenEmoji = (playerId: string) => tokenEmoji(lobbyPlayers.get(playerId)?.tokenId);
 
   return (
-    <div className="monopoly-board">
-      {/* Board centre stays decorative only; gameplay status belongs around the board,
+    <div className="board-explorer-layout">
+      <BoardExplorer
+        state={engineState}
+        roomState={roomState}
+        mySessionId={mySessionId}
+        focus={boardFocus}
+        onFocus={setBoardFocus}
+        onTileClick={onTileClick}
+        onShowBoard={() => {
+          const container = boardRef.current?.parentElement;
+          if (container) container.scrollTop = container.scrollHeight;
+        }}
+        displayedPositions={displayedPositions}
+      />
+      <div
+        ref={boardRef}
+        className="monopoly-board"
+        data-exploring={boardFocus !== null ? "true" : undefined}
+      >
+        {/* Board centre stays decorative only; gameplay status belongs around the board,
           not covering the route players need to read. */}
-      <div className="board-center">
-        <div className="board-center-adire" aria-hidden="true" />
-        <div className="board-center-skyline" aria-hidden="true" />
-        <Dice values={engineState.dice} rolling={diceAnimating} />
-      </div>
+        <div className="board-center">
+          <div className="board-center-adire" aria-hidden="true" />
+          <div className="board-center-skyline" aria-hidden="true" />
+          <Dice values={engineState.dice} rolling={diceAnimating} />
+        </div>
 
-      {/* Render 40 tiles */}
-      {BOARD.map((tile: Tile) => {
-        const coords = getTileGridCoords(tile.pos);
-        const tileState = tilesState[tile.pos];
-        const isCorner = tile.pos % 10 === 0;
+        {/* Render 40 tiles */}
+        {BOARD.map((tile: Tile) => {
+          const coords = getTileGridCoords(tile.pos);
+          const tileState = tilesState[tile.pos];
+          const isCorner = tile.pos % 10 === 0;
 
-        // Find players on this tile (using their walking display position)
-        const playersOnTile = players.filter(
-          (p: Player) => getDisplayedPos(p) === tile.pos && !p.bankrupt,
-        );
-        const hasMyToken = myPosition === tile.pos;
-        const hasActivePlayer = playersOnTile.some((p: Player) => p.id === activePlayerId);
+          // Find players on this tile (using their walking display position)
+          const playersOnTile = players.filter(
+            (p: Player) => getDisplayedPos(p) === tile.pos && !p.bankrupt,
+          );
+          const hasMyToken = myPosition === tile.pos;
+          const hasActivePlayer = playersOnTile.some((p: Player) => p.id === activePlayerId);
 
-        // Render color bar for property tiles
-        const hasColorBar = tile.type === "property";
-        const groupColor = hasColorBar ? (tile as PropertyTile).group : null;
-        const tileIcon = !hasColorBar ? getSpecialTileIcon(tile) : "";
+          // Render color bar for property tiles
+          const hasColorBar = tile.type === "property";
+          const groupColor = hasColorBar ? (tile as PropertyTile).group : null;
+          const tileIcon = !hasColorBar ? getSpecialTileIcon(tile) : "";
 
-        // The tile's zone drives its band and its owned wash. Handing CSS two
-        // custom properties keeps every colour decision in the stylesheet —
-        // the alternative is eight `[data-zone="…"]` rules per surface.
-        const zoneSlug = groupColor ? zoneOfGroup(groupColor).slug : null;
-        const zoneVars = zoneSlug
-          ? ({
-              "--tile-zone": `var(--zone-${zoneSlug}-bar)`,
-              "--tile-zone-tint": `var(--zone-${zoneSlug}-tint)`,
-              "--tile-zone-ink": `var(--zone-${zoneSlug}-ink)`,
-            } as React.CSSProperties)
-          : {};
+          // The tile's zone drives its band and its owned wash. Handing CSS two
+          // custom properties keeps every colour decision in the stylesheet —
+          // the alternative is eight `[data-zone="…"]` rules per surface.
+          const zoneSlug = groupColor ? zoneOfGroup(groupColor).slug : null;
+          const zoneVars = zoneSlug
+            ? ({
+                "--tile-zone": `var(--zone-${zoneSlug}-bar)`,
+                "--tile-zone-tint": `var(--zone-${zoneSlug}-tint)`,
+                "--tile-zone-ink": `var(--zone-${zoneSlug}-ink)`,
+              } as React.CSSProperties)
+            : {};
 
-        // Render houses/hotels — richup.io style: one icon + a ×N count badge
-        // (a compact pill on the colour band) rather than repeating the icon.
-        const showHouses = tileState && tileState.houses > 0;
-        const isHotel = tileState && tileState.houses === 5;
-        const houseCount = tileState ? tileState.houses : 0;
+          // Render houses/hotels — richup.io style: one icon + a ×N count badge
+          // (a compact pill on the colour band) rather than repeating the icon.
+          const showHouses = tileState && tileState.houses > 0;
+          const isHotel = tileState && tileState.houses === 5;
+          const houseCount = tileState ? tileState.houses : 0;
 
-        // Price formatting
-        let priceLabel = "";
-        if ("price" in tile) {
-          priceLabel = `₦${(tile.price / 1000).toFixed(0)}k`;
-        } else if ("amount" in tile) {
-          priceLabel = `₦${(tile.amount / 1000).toFixed(0)}k`;
-        }
-
-        // Owner emoji
-        const ownerEmoji = tileState && tileState.ownerId ? getTokenEmoji(tileState.ownerId) : null;
-        const isMortgaged = tileState && tileState.mortgaged;
-
-        const getTileTitle = () => {
-          let t = tile.name;
-          if (tileState) {
-            if (tileState.mortgaged) {
-              t += " (Mortgaged)";
-            } else if (tileState.houses > 0) {
-              const devName = tileState.houses > 0 ? getDevelopmentName(tileState.houses) : "";
-              t += ` (${devName})`;
-            }
+          // Price formatting
+          let priceLabel = "";
+          if ("price" in tile) {
+            priceLabel = `₦${(tile.price / 1000).toFixed(0)}k`;
+          } else if ("amount" in tile) {
+            priceLabel = `₦${(tile.amount / 1000).toFixed(0)}k`;
           }
-          return t;
-        };
 
-        const getOwnerTitle = () => {
-          const ownerName =
-            players.find((p: Player) => p.id === tileState.ownerId)?.name || "Unknown";
-          if (isMortgaged) {
-            return `Owned by ${ownerName} (Mortgaged)`;
-          }
-          if (tileState.houses > 0) {
-            const devName = getDevelopmentName(tileState.houses);
-            return `Owned by ${ownerName} - ${devName}`;
-          }
-          return `Owned by ${ownerName}`;
-        };
+          // Owner emoji
+          const ownerEmoji =
+            tileState && tileState.ownerId ? getTokenEmoji(tileState.ownerId) : null;
+          const isMortgaged = tileState && tileState.mortgaged;
 
-        return (
-          <div
-            key={tile.pos}
-            className={`tile ${isCorner ? "tile-corner" : ""} edge-${getTileEdge(tile.pos)}${hasMyToken ? " tile-has-me" : ""}${playersOnTile.length > 0 ? " tile-has-player" : ""}${hasActivePlayer ? " tile-active-player" : ""}${isMortgaged ? " tile-mortgaged" : ""}`}
-            data-owned={ownerEmoji ? "" : undefined}
-            style={{
-              gridColumn: coords.col,
-              gridRow: coords.row,
-              cursor: "pointer",
-              ...zoneVars,
-              ...getColorBarPadding(tile.pos, hasColorBar, isCorner),
-            }}
-            onClick={() => onTileClick?.(tile.pos)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onTileClick?.(tile.pos);
+          const getTileTitle = () => {
+            let t = tile.name;
+            if (tileState) {
+              if (tileState.mortgaged) {
+                t += " (Mortgaged)";
+              } else if (tileState.houses > 0) {
+                const devName = tileState.houses > 0 ? getDevelopmentName(tileState.houses) : "";
+                t += ` (${devName})`;
               }
-            }}
-            role="button"
-            tabIndex={0}
-            aria-label={getTileTitle()}
-            title={getTileTitle()}
-          >
-            {/* No photo layer. A 30px tile rendered a city as a brown smear
+            }
+            return t;
+          };
+
+          const getOwnerTitle = () => {
+            const ownerName =
+              players.find((p: Player) => p.id === tileState.ownerId)?.name || "Unknown";
+            if (isMortgaged) {
+              return `Owned by ${ownerName} (Mortgaged)`;
+            }
+            if (tileState.houses > 0) {
+              const devName = getDevelopmentName(tileState.houses);
+              return `Owned by ${ownerName} - ${devName}`;
+            }
+            return `Owned by ${ownerName}`;
+          };
+
+          return (
+            <div
+              key={tile.pos}
+              className={`tile ${isCorner ? "tile-corner" : ""} edge-${getTileEdge(tile.pos)}${hasMyToken ? " tile-has-me" : ""}${playersOnTile.length > 0 ? " tile-has-player" : ""}${hasActivePlayer ? " tile-active-player" : ""}${isMortgaged ? " tile-mortgaged" : ""}`}
+              data-owned={ownerEmoji ? "" : undefined}
+              data-explorer-match={
+                boardFocus !== null &&
+                tileState &&
+                (boardFocus === "unowned"
+                  ? !tileState.ownerId
+                  : tileState.ownerId === boardFocus.playerId)
+                  ? "true"
+                  : undefined
+              }
+              data-explorer-position={
+                boardFocus &&
+                boardFocus !== "unowned" &&
+                playersOnTile.some((player) => player.id === boardFocus.playerId)
+                  ? "true"
+                  : undefined
+              }
+              style={{
+                gridColumn: coords.col,
+                gridRow: coords.row,
+                cursor: "pointer",
+                ...zoneVars,
+                ...getColorBarPadding(tile.pos, hasColorBar, isCorner),
+              }}
+              onClick={() => onTileClick?.(tile.pos)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onTileClick?.(tile.pos);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={getTileTitle()}
+              title={getTileTitle()}
+            >
+              {/* No photo layer. A 30px tile rendered a city as a brown smear
                 and cost 31 remote Wikimedia fetches on first paint; the deed
                 sheet shows the same photo at a size worth its bytes. */}
 
-            {/* Edge-aware color bar */}
-            {hasColorBar && groupColor && (
-              <div className="tile-color-bar" style={getColorBarStyle(tile.pos)} />
-            )}
+              {/* Edge-aware color bar */}
+              {hasColorBar && groupColor && (
+                <div className="tile-color-bar" style={getColorBarStyle(tile.pos)} />
+              )}
 
-            {/* House dots container */}
-            {showHouses && (
-              <div className="tile-houses">
-                {isHotel ? (
-                  <IconHotel className="hotel-dot" />
-                ) : (
-                  <>
-                    <IconHouse className="house-dot" />
-                    {houseCount > 1 && <span className="house-count">×{houseCount}</span>}
-                  </>
-                )}
-              </div>
-            )}
+              {/* House dots container */}
+              {showHouses && (
+                <div className="tile-houses">
+                  {isHotel ? (
+                    <IconHotel className="hotel-dot" />
+                  ) : (
+                    <>
+                      <IconHouse className="house-dot" />
+                      {houseCount > 1 && <span className="house-count">×{houseCount}</span>}
+                    </>
+                  )}
+                </div>
+              )}
 
-            {/* Special tile icon */}
-            {tileIcon || tile.type === "hustle" ? (
-              <span className={`tile-type-icon tile-type-${tile.type}`}>{tileIcon}</span>
-            ) : null}
+              {/* Special tile icon */}
+              {tileIcon || tile.type === "hustle" ? (
+                <span className={`tile-type-icon tile-type-${tile.type}`}>{tileIcon}</span>
+              ) : null}
 
-            {/* Side tiles use compact names; phone tiles rely on the location
+              {/* Side tiles use compact names; phone tiles rely on the location
                 ticker and deed sheet instead of squeezing text into the map. */}
-            <span className="tile-name">
-              <span className="tile-name-full">{boardLabel(tile)}</span>
-              <span className="tile-name-short">{tile.shortName ?? boardLabel(tile)}</span>
-            </span>
+              <span className="tile-name">
+                <span className="tile-name-full">{boardLabel(tile)}</span>
+                <span className="tile-name-short">{tile.shortName ?? boardLabel(tile)}</span>
+              </span>
 
-            {/* Richup.io permanent bottom price stripe. Mortgaged tiles keep the
+              {/* Richup.io permanent bottom price stripe. Mortgaged tiles keep the
                 price (the word "Mortgaged" overflows narrow side tiles); state is
                 shown by the greyed photo + 🔒 in the stripe and owner badge. */}
-            {priceLabel && (
-              <span className="tile-price">{isMortgaged ? <>🔒 {priceLabel}</> : priceLabel}</span>
-            )}
+              {priceLabel && (
+                <span className="tile-price">
+                  {isMortgaged ? <>🔒 {priceLabel}</> : priceLabel}
+                </span>
+              )}
 
-            {/* Owner badge */}
-            {ownerEmoji && (
-              <span className="tile-owner-indicator" title={getOwnerTitle()}>
-                {ownerEmoji} {isMortgaged && "🔒"}
-              </span>
-            )}
+              {/* Owner badge */}
+              {ownerEmoji && (
+                <span className="tile-owner-indicator" title={getOwnerTitle()}>
+                  {ownerEmoji} {isMortgaged && "🔒"}
+                </span>
+              )}
 
-            {/* Player tokens — each animates with layoutId so it slides across board */}
-            {playersOnTile.length > 0 && (
-              <div className="tile-tokens-container">
-                {playersOnTile.map((p: Player) => (
-                  <motion.div
-                    key={p.id}
-                    layoutId={`player-token-${p.id}`}
-                    className={`player-token${p.id === mySessionId ? " player-token-me" : ""}${p.id === activePlayerId ? " player-token-active" : ""}`}
-                    title={p.name}
-                    layout="position"
-                    transition={{
-                      layout: {
-                        type: "spring",
-                        stiffness: 200,
-                        damping: 22,
-                        duration: 0.6,
-                      },
-                    }}
-                    whileHover={{ scale: 1.3, zIndex: 50 }}
-                  >
-                    {getTokenEmoji(p.id)}
-                  </motion.div>
-                ))}
-              </div>
-            )}
-
-            {/* Hover tooltip — mini deed summary; click opens the full inspector */}
-            {(tile.type === "property" || tile.type === "airport" || tile.type === "utility") && (
-              <div className="tile-tooltip">
-                <div className="tile-tooltip-name">{tile.name}</div>
-                <div className="tile-tooltip-row">
-                  {tileState?.ownerId
-                    ? `Owned by ${players.find((p: Player) => p.id === tileState.ownerId)?.name ?? "—"}`
-                    : "Unowned"}
+              {/* Player tokens — each animates with layoutId so it slides across board */}
+              {playersOnTile.length > 0 && (
+                <div className="tile-tokens-container">
+                  {playersOnTile.map((p: Player) => (
+                    <motion.div
+                      key={p.id}
+                      layoutId={`player-token-${p.id}`}
+                      className={`player-token${p.id === mySessionId ? " player-token-me" : ""}${p.id === activePlayerId ? " player-token-active" : ""}`}
+                      title={p.name}
+                      layout="position"
+                      transition={{
+                        layout: {
+                          type: "spring",
+                          stiffness: 200,
+                          damping: 22,
+                          duration: 0.6,
+                        },
+                      }}
+                      whileHover={{ scale: 1.3, zIndex: 50 }}
+                    >
+                      {getTokenEmoji(p.id)}
+                    </motion.div>
+                  ))}
                 </div>
-                {tile.type === "property" && (
+              )}
+
+              {/* Hover tooltip — mini deed summary; click opens the full inspector */}
+              {(tile.type === "property" || tile.type === "airport" || tile.type === "utility") && (
+                <div className="tile-tooltip">
+                  <div className="tile-tooltip-name">{tile.name}</div>
                   <div className="tile-tooltip-row">
-                    Rent: ₦
-                    {/* When owned, use the engine's rent (doubles base rent for a
+                    {tileState?.ownerId
+                      ? `Owned by ${players.find((p: Player) => p.id === tileState.ownerId)?.name ?? "—"}`
+                      : "Unowned"}
+                  </div>
+                  {tile.type === "property" && (
+                    <div className="tile-tooltip-row">
+                      Rent: ₦
+                      {/* When owned, use the engine's rent (doubles base rent for a
                         full unimproved set); otherwise preview the base rate. */}
-                    {(tileState?.ownerId
-                      ? getRent(engineState, tile.pos, 7)
-                      : (tile as PropertyTile).rent[0]
-                    ).toLocaleString()}
-                    {(tileState?.houses ?? 0) > 0 && ` · ${getDevelopmentName(tileState.houses)}`}
-                  </div>
-                )}
-                {"price" in tile && (
-                  <div className="tile-tooltip-row tile-tooltip-muted">
-                    Price ₦{tile.price.toLocaleString()}
-                  </div>
-                )}
-                {tileState?.mortgaged && (
-                  <div className="tile-tooltip-row" style={{ color: "var(--color-danger)" }}>
-                    🔒 Mortgaged
-                  </div>
-                )}
-                <div className="tile-tooltip-row tile-tooltip-muted">Click for full deed</div>
-              </div>
-            )}
-          </div>
-        );
-      })}
+                      {(tileState?.ownerId
+                        ? getRent(engineState, tile.pos, 7)
+                        : (tile as PropertyTile).rent[0]
+                      ).toLocaleString()}
+                      {(tileState?.houses ?? 0) > 0 && ` · ${getDevelopmentName(tileState.houses)}`}
+                    </div>
+                  )}
+                  {"price" in tile && (
+                    <div className="tile-tooltip-row tile-tooltip-muted">
+                      Price ₦{tile.price.toLocaleString()}
+                    </div>
+                  )}
+                  {tileState?.mortgaged && (
+                    <div className="tile-tooltip-row" style={{ color: "var(--color-danger)" }}>
+                      🔒 Mortgaged
+                    </div>
+                  )}
+                  <div className="tile-tooltip-row tile-tooltip-muted">Click for full deed</div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
