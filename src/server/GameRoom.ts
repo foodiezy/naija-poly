@@ -17,7 +17,7 @@ import type { Action, GameState } from "../engine/types";
 const CHAOS_DECISION_MS = 20_000;
 import { TOKEN_IDS, MAX_PLAYERS } from "../data/tokens";
 import { CHAOS_CHANCE_CARDS } from "../data/board";
-import { censorProfanity } from "../data/profanity";
+import { censorProfanity, sanitisePlayerName } from "../data/profanity";
 import type { ChatMessage } from "../shared/chat";
 
 // Dev-only testing tools (e.g. force-a-specific-chaos-card) are compiled into
@@ -857,8 +857,9 @@ export class GameRoom extends Room<GameRoomState> {
       throw new Error("Room is full.");
     }
 
-    const rawName = (typeof options?.name === "string" ? options.name : "").trim().substring(0, 20);
-    const name = rawName || "Player";
+    // Names are public everywhere in the room (lobby, chat attribution and the
+    // game board), so apply the same server-authoritative filter used by chat.
+    const name = sanitisePlayerName(options?.name);
 
     const player = new LobbyPlayer();
     player.id = client.sessionId;

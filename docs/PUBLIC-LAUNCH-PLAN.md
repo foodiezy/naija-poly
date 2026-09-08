@@ -103,7 +103,7 @@ Initial release targets:
 
 **Target:** 3-5 days
 
-- [ ] Filter player names as well as chat.
+- [x] Filter player names as well as chat.
 - [ ] Add mute and report controls.
 - [ ] Allow a host to revoke an invite code.
 - [ ] Add per-IP room-creation limits.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { censorProfanity } from "./profanity";
+import { censorProfanity, sanitisePlayerName } from "./profanity";
 
 describe("censorProfanity", () => {
   it("censors a curse word to asterisks of the same length", () => {
@@ -33,5 +33,26 @@ describe("censorProfanity", () => {
     expect(censorProfanity("good game everyone, buy Ikoyi!")).toBe(
       "good game everyone, buy Ikoyi!",
     );
+  });
+});
+
+describe("sanitisePlayerName", () => {
+  it("trims names and keeps clean names unchanged", () => {
+    expect(sanitisePlayerName("  Ada Lovelace  ")).toBe("Ada Lovelace");
+  });
+
+  it("censors profanity and leetspeak before a name enters room state", () => {
+    expect(sanitisePlayerName("Sh1t King")).toBe("**** King");
+  });
+
+  it("uses the existing fallback for blank or invalid names", () => {
+    expect(sanitisePlayerName("   ")).toBe("Player");
+    expect(sanitisePlayerName(undefined)).toBe("Player");
+  });
+
+  it("limits names to 20 complete characters without splitting emoji", () => {
+    const result = sanitisePlayerName(`🎲${"a".repeat(25)}`);
+    expect(Array.from(result)).toHaveLength(20);
+    expect(result.startsWith("🎲")).toBe(true);
   });
 });
