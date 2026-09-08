@@ -88,3 +88,16 @@ export function censorProfanity(text: string): string {
   }
   return chars.join("");
 }
+
+/**
+ * Normalise a public player name before it enters room state.
+ *
+ * This lives beside the chat filter so player names and messages cannot drift
+ * into using different safety rules. Array.from keeps the 20-character limit
+ * from cutting an emoji/surrogate pair in half.
+ */
+export function sanitisePlayerName(value: unknown): string {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  const limited = Array.from(trimmed).slice(0, 20).join("");
+  return limited ? censorProfanity(limited) : "Player";
+}
