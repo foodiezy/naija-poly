@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import ConnectionStatus from "./ConnectionStatus";
 import { ScatterDecor } from "./decor";
 import { getStats } from "../utils/stats";
 import { loadPlayerName, MAX_NAME_LENGTH, savePlayerName } from "../utils/playerName";
@@ -153,6 +154,8 @@ export default function LandingView({ onCreateRoom, onJoinRoom, onQuickMatch }: 
         >
           {busy === "create" ? "Connecting…" : "Start a game"}
         </button>
+
+        {busy !== null && <ConnectionStatus />}
 
         <div className="v2-landing-links">
           <button

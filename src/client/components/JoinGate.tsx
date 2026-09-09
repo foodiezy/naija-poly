@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ConnectionStatus from "./ConnectionStatus";
 import { loadPlayerName, MAX_NAME_LENGTH, savePlayerName } from "../utils/playerName";
 
 interface JoinGateProps {
@@ -71,6 +72,7 @@ export default function JoinGate({ roomCode, onJoin, onStartOwn }: JoinGateProps
             >
               {joining ? "Joining…" : cleanName ? `Join as ${cleanName}` : "Enter name to join"}
             </button>
+            {joining && <ConnectionStatus />}
           </>
         ) : (
           <>
