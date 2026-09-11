@@ -996,6 +996,9 @@ h6 {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.5)),
     var(--tile-zone-tint, var(--sf-tint));
+  box-shadow:
+    inset 0 0 0 2px var(--owner-color),
+    inset 0 1px 0 rgba(255, 255, 255, 0.74);
 }
 
 /* Center area between the color band and the price stripe — name + icon
@@ -1233,27 +1236,18 @@ h6 {
 }
 
 .tile:is(.edge-left, .edge-right):not(.tile-corner) > .tile-name-landmark {
-  flex-direction: row;
+  /* This is the top/bottom landmark stack rotated with the side tile: the
+     logo and label use the wider side-tile axis instead of competing for its
+     short edge. Their sizes therefore stay identical to PH and MMA. */
+  flex-direction: column;
   gap: 2px;
   padding: 1px 2px;
-}
-
-/* A side card's readable axis is only one regular tile long. The shorter
-   Hustle label and slightly smaller briefcase keep the complete mark visible. */
-.tile:is(.edge-left, .edge-right):not(.tile-corner) > .tile-name-landmark:has(.tile-type-hustle) {
-  gap: 1px;
-  padding-inline: 1px;
-  font-size: 0.44rem;
-}
-
-.tile:is(.edge-left, .edge-right):not(.tile-corner) > .tile-name-landmark > .tile-type-hustle {
-  font-size: 0.62rem;
 }
 
 /* The right edge is rotated for readable text, so reverse the source flow to
    keep its icon visually above the label just like the other three edges. */
 .tile.edge-right:not(.tile-corner) > .tile-name-landmark {
-  flex-direction: row-reverse;
+  flex-direction: column-reverse;
 }
 
 .tile:is(.edge-left, .edge-right):not(.tile-corner) :is(.tile-name-full, .tile-name-short) {
@@ -1298,7 +1292,82 @@ h6 {
    so the locations stay the focus of the game map. Dice3D sets this variable
    inline, hence the scoped override. */
 .board-center .dice-wrapper {
-  --dice-size: clamp(64px, calc(var(--board-size) * 0.13), 90px) !important;
+  --dice-size: clamp(36px, calc(var(--board-size) * 0.075), 54px) !important;
+}
+
+.board-center > .v2-feed {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 55%;
+  text-align: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.board-center > .codepen-dice-stage {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+  flex: 0 0 auto;
+  padding: 10px 0;
+}
+
+.v2-pending-trade {
+  padding: 5px 8px;
+  font-size: 12px;
+  overflow: auto;
+  max-height: 55%;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--ln);
+}
+
+.v2-pending-trade summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.v2-auction-players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.v2-auction-players > .v2-status {
+  margin: 0;
+}
+
+.board-center .v2-feed-logs {
+  flex: 0 1 auto;
+  align-items: center;
+  text-align: center;
+  padding: 0 8px 6px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable both-edges;
+}
+
+.board-center .v2-feed-logs .log-entry {
+  width: 100%;
+  max-width: 38ch;
+  margin-inline: auto;
+  padding: 5px 0;
+  font-size: clamp(11px, 1.5vw, 13px);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  border: 0;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.board-center .v2-pending-trade {
+  text-align: center;
+  border: 0;
 }
 
 /* Mortgaged: the tile visibly "sleeps" — band drained, price muted, and a
@@ -1322,13 +1391,19 @@ h6 {
   position: absolute;
   top: 1px;
   right: 1px;
-  font-size: 0.5rem;
+  min-width: 1.35rem;
+  min-height: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-size: 0.7rem;
   line-height: 1;
   background: rgba(255, 255, 255, 0.94);
   padding: 1px 2px;
   border-radius: var(--r-full);
-  border: 1px solid rgba(75, 70, 58, 0.18);
-  box-shadow: 0 1px 3px rgba(20, 18, 14, 0.14);
+  border: 2px solid var(--owner-color);
+  box-shadow: 0 1px 4px rgba(20, 18, 14, 0.22);
   z-index: 11;
 }
 

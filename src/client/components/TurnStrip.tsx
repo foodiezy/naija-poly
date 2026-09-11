@@ -33,7 +33,7 @@ export default function TurnStrip({ engineState, roomState, mySessionId }: Props
   return (
     <nav className="v2-turnstrip" aria-label="Players">
       <ul className="v2-turnstrip-list">
-        {players.map((p: Player) => {
+        {players.map((p: Player, seatIndex) => {
           const isActive = p.id === activeId;
           const out = p.bankrupt || p.kicked;
           return (
@@ -41,6 +41,7 @@ export default function TurnStrip({ engineState, roomState, mySessionId }: Props
               key={p.id}
               ref={isActive ? activeRef : undefined}
               className={`v2-tp${isActive ? " active" : ""}${out ? " out" : ""}`}
+              style={{ "--owner-color": `var(--p${seatIndex + 1})` } as React.CSSProperties}
             >
               <span className="v2-tp-token" aria-hidden="true">
                 {tokenEmoji(roomState?.lobbyPlayers?.get(p.id)?.tokenId)}

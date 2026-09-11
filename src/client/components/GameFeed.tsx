@@ -1,14 +1,8 @@
 import { useEffect, useRef } from "react";
 import type { GameState } from "../../engine/types";
+import { BOARD } from "../../data/board";
 
-/**
- * The game feed, moved out of the board centre in B6 (spec §2: the centre
- * holds dice and whose turn, nothing else).
- *
- * On desktop this is the left rail's history. On a phone it does not render at
- * all — the ticker carries the newest line and the history sheet has the rest,
- * which is the whole reason the ticker exists.
- */
+/** Compact board-centre history and public pending-trade details. */
 
 function logClass(line: string): string {
   if (
@@ -28,6 +22,14 @@ function logClass(line: string): string {
 
 export default function GameFeed({ engineState }: { engineState: GameState }) {
   const log = engineState.log ?? [];
+  const trade = engineState.activeTrade;
+  const playerName = (id: string) => engineState.players.find((p) => p.id === id)?.name ?? "Player";
+  const assets = (cash: number, tiles: number[], cards = 0) =>
+    [
+      `₦${cash.toLocaleString()}`,
+      ...tiles.map((pos) => BOARD[pos].name),
+      ...(cards ? [`${cards} jail card(s)`] : []),
+    ].join(" + ");
   const endRef = useRef<HTMLDivElement>(null);
 
   // Pin to the newest line by scrolling the feed's OWN container. The old
@@ -40,7 +42,22 @@ export default function GameFeed({ engineState }: { engineState: GameState }) {
 
   return (
     <section className="v2-feed" aria-label="Game events">
-      <h2 className="v2-feed-title">Game Log</h2>
+      {trade && (
+        <details className="v2-pending-trade" key={JSON.stringify(trade)}>
+          <summary>
+            🤝 Proposed trade: {playerName(trade.fromId)} → {playerName(trade.toId)}
+          </summary>
+          <p>
+            <b>{playerName(trade.fromId)} offers:</b>{" "}
+            {assets(trade.giveCash, trade.giveTiles, trade.giveJailCards)}
+          </p>
+          <p>
+            <b>{playerName(trade.toId)} gives:</b>{" "}
+            {assets(trade.getCash, trade.getTiles, trade.getJailCards)}
+          </p>
+          <p>Waiting for {playerName(trade.toId)} to respond.</p>
+        </details>
+      )}
       <div className="v2-feed-logs" role="log" aria-live="polite">
         {log.length === 0 && <p className="v2-feed-empty">Nothing don happen yet.</p>}
         {log.map((line, i) => (

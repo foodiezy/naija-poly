@@ -7,6 +7,7 @@ import {
   defaultChaosResolution,
 } from "../engine/engine";
 import { getAIAction } from "../engine/ai";
+import { auctionClock } from "./auctionClock";
 import type { Action, GameState } from "../engine/types";
 
 // How long a Chaos-mode interactive decision (aim the blackout, stockpile
@@ -430,9 +431,9 @@ export class GameRoom extends Room<GameRoomState> {
   private armAuctionTimer(state: GameState) {
     this.clearAuctionTimer();
     if (state.phase === "auction" && state.auctionState) {
-      const duration = state.auctionState.bidDurationMs ?? 12000;
-      state.auctionState.deadline = Date.now() + duration;
-      this.auctionTimer = this.clock.setTimeout(() => this.onAuctionTimeout(), duration);
+      const { deadline, delay } = auctionClock(state.auctionState, Date.now());
+      state.auctionState.deadline = deadline;
+      this.auctionTimer = this.clock.setTimeout(() => this.onAuctionTimeout(), delay);
     }
   }
 
