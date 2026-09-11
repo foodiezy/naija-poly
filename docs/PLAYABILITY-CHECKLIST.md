@@ -1,5 +1,8 @@
 # Odogwu Empire Playability Gate
 
+Latest repository review and ordered next steps:
+[First playable beta readiness](BETA-READINESS.md) (11 September 2026).
+
 **Current priority:** prove the game is enjoyable and understandable on the free
 public demo before paying for hosting, a database, staging, or a custom domain.
 
