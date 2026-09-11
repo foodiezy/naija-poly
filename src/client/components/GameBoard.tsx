@@ -323,7 +323,9 @@ export default function GameBoard({
 
             {/* Side tiles use compact names; phone tiles rely on the location
                 ticker and deed sheet instead of squeezing text into the map. */}
-            <span className={`tile-name${hasInlineLandmark ? " tile-name-landmark" : ""}`}>
+            <span
+              className={`tile-name${hasInlineLandmark ? " tile-name-landmark" : ""}${tile.type === "hustle" ? " tile-name-hustle" : ""}`}
+            >
               {hasInlineLandmark && (
                 <span className={`tile-type-icon tile-type-${tile.type}`}>{tileIcon}</span>
               )}

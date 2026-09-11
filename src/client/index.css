@@ -1118,8 +1118,10 @@ h6 {
 }
 
 .tile-type-chance {
-  width: 1.25em;
-  height: 1.25em;
+  width: 1.05em;
+  height: 1.05em;
+  max-width: 1.05em;
+  max-height: 1.05em;
   display: grid;
   place-items: center;
   align-self: center;
@@ -1127,7 +1129,7 @@ h6 {
   background: radial-gradient(circle at 35% 30%, #fff3b0, #e59718 62%, #a75b00);
   color: #fff7d1;
   font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: 0.82rem;
   font-weight: 950;
   text-shadow: 0 1px 0 rgba(88, 49, 0, 0.35);
   box-shadow: 0 2px 5px rgba(126, 73, 0, 0.22);
@@ -1275,6 +1277,16 @@ h6 {
 
 .tile.edge-right:not(.tile-corner) > :is(.tile-name, .tile-price, .tile-type-icon) {
   transform: rotate(180deg);
+}
+
+/* Hustle is a compact upright badge on both side edges. This makes the visual
+   order unambiguous: the briefcase is physically above its horizontal label. */
+.tile:is(.edge-left, .edge-right):not(.tile-corner) > .tile-name-hustle {
+  width: 100%;
+  height: 100%;
+  writing-mode: horizontal-tb;
+  flex-direction: column;
+  transform: none;
 }
 
 .tile.edge-right:not(.tile-corner) > .tile-price {
@@ -1600,9 +1612,9 @@ h6 {
 
 /* Tokens positioned inside Tile */
 .tile-tokens-container {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 2px;
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: 1px;
   justify-content: center;
   align-items: center;
   position: absolute;
@@ -1618,32 +1630,32 @@ h6 {
    follow around the route. */
 .edge-bottom > .tile-tokens-container {
   top: -9px;
-  left: 50%;
+  left: 3px;
   width: auto;
-  transform: translate(-50%, -50%);
+  transform: translateY(-50%);
 }
 
 .edge-top > .tile-tokens-container {
   top: auto;
   bottom: -9px;
-  left: 50%;
+  left: 3px;
   width: auto;
-  transform: translate(-50%, 50%);
+  transform: translateY(50%);
 }
 
 .edge-left > .tile-tokens-container {
-  top: 50%;
+  top: 3px;
   right: -9px;
   left: auto;
   width: auto;
-  transform: translate(50%, -50%);
+  transform: translateX(50%);
 }
 
 .edge-right > .tile-tokens-container {
-  top: 50%;
+  top: 3px;
   left: -9px;
   width: auto;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
 }
 
 .player-token {
@@ -1699,6 +1711,17 @@ h6 {
    which would fight the ownership read. */
 .tile-has-player {
   border-color: rgba(123, 103, 64, 0.24);
+}
+
+/* Keep the destination readable while pieces move into place. The compact
+   label sits above the token animation and remains legible on ownership tints. */
+.tile-has-player > .tile-name > :is(.tile-name-full, .tile-name-short) {
+  position: relative;
+  z-index: 12;
+  padding: 1px;
+  border-radius: 2px;
+  background: var(--sf);
+  box-shadow: 0 0 0 1px var(--ln);
 }
 
 .tile-has-me {

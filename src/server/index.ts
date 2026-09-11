@@ -147,7 +147,9 @@ async function shutdown(reason: string): Promise<void> {
   shuttingDown = true;
   console.log(`[shutdown] ${reason} — draining for ${SHUTDOWN_DRAIN_MS}ms`);
 
-  notifyAllRooms("Server dey restart — hold on small, the game go come back.");
+  notifyAllRooms(
+    "Server dey restart — this game will end. Please create a new room when the server is back.",
+  );
   await new Promise((resolve) => setTimeout(resolve, SHUTDOWN_DRAIN_MS));
 
   try {
