@@ -74,7 +74,7 @@ export default function PlayerList({ engineState, mySessionId, liveState, onSend
       </div>
 
       <div className="players-panel-list">
-        {players.map((p: Player) => {
+        {players.map((p: Player, seatIndex) => {
           const isActive = p.id === currentPlayer?.id;
           const isMe = p.id === mySessionId;
           const status = statusLabel(p, isActive);
@@ -85,6 +85,7 @@ export default function PlayerList({ engineState, mySessionId, liveState, onSend
               key={p.id}
               layout
               className={`player-card${isActive ? " is-active" : ""}${isMe ? " is-me" : ""}${p.bankrupt ? " is-bankrupt" : ""}`}
+              style={{ "--owner-color": `var(--p${seatIndex + 1})` } as React.CSSProperties}
               transition={{ type: "spring", stiffness: 240, damping: 22 }}
             >
               <div className="player-card-row">

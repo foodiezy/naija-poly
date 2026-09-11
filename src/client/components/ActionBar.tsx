@@ -1,4 +1,6 @@
 import type { Action, GameState } from "../../engine/types";
+import { tokenEmoji } from "../../data/tokens";
+import type { RoomState } from "../../shared/room";
 import { playerInteractionState } from "../lib/gameInteractions";
 import { buildPrimaryCtx, primaryAction } from "../lib/primaryAction";
 
@@ -18,6 +20,7 @@ import { buildPrimaryCtx, primaryAction } from "../lib/primaryAction";
 
 interface Props {
   engineState: GameState;
+  roomState: RoomState | null;
   mySessionId: string;
   myTokenWalking: boolean;
   unreadChat: number;
@@ -31,6 +34,7 @@ interface Props {
 
 export default function ActionBar({
   engineState,
+  roomState,
   mySessionId,
   myTokenWalking,
   unreadChat,
@@ -81,6 +85,12 @@ export default function ActionBar({
         disabled={action.disabled}
         data-kind={action.kind}
       >
+        <span aria-hidden="true">
+          {tokenEmoji(
+            roomState?.lobbyPlayers?.get(engineState.players[engineState.currentPlayerIndex]?.id)
+              ?.tokenId,
+          )}{" "}
+        </span>
         {action.kind === "roll" ? "Roll Dice" : action.label}
       </button>
 

@@ -21,7 +21,11 @@ export function useSoundEffects(engineState: GameState | null, mySessionId: stri
         }
 
         // Sounds
-        if (logLine.includes("rolled")) {
+        if (logLine.includes("won the auction")) {
+          sound.playCash();
+        } else if (logLine.includes(" bid ₦")) {
+          sound.playYourTurn();
+        } else if (logLine.includes("rolled")) {
           sound.playRoll();
         } else if (
           logLine.includes("bought") ||

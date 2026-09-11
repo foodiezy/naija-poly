@@ -9,7 +9,6 @@ import JoinGate from "./components/JoinGate";
 import RoomLobbyView from "./components/RoomLobbyView";
 import GameBoard from "./components/GameBoard";
 import GameShell from "./components/GameShell";
-import GameFeed from "./components/GameFeed";
 import ChatPanel from "./components/ChatPanel";
 // (SettingsPanel removed in B5 — mute moved to the shell top bar and its
 // overflow menu, where it is reachable without scrolling a sidebar.)
@@ -274,22 +273,28 @@ export default function App() {
   }, [engineState?.phase, gameResultRecorded, mySessionId, engineState]);
 
   const copyRoomCode = useCallback(async () => {
-    if (!room) return;
+    if (!room) return false;
     // Share a tappable invite URL — one tap drops a friend straight into this
     // lobby with the code prefilled, instead of "copy code, open site, paste".
     const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${room.roomId}`;
     try {
       await navigator.clipboard.writeText(inviteUrl);
-      toast.success("🔗 Invite link copied — share it!", { autoClose: 1800, toastId: "copy" });
     } catch {
       const el = document.createElement("textarea");
       el.value = inviteUrl;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand("copy");
-      document.body.removeChild(el);
-      toast.success("🔗 Invite link copied — share it!", { autoClose: 1800, toastId: "copy" });
+      try {
+        document.body.appendChild(el);
+        el.select();
+        if (!document.execCommand("copy")) throw new Error("Copy failed");
+      } catch {
+        toast.error("Couldn't copy the invite link. Try again or share your room code.");
+        return false;
+      } finally {
+        el.remove();
+      }
     }
+    toast.success("🔗 Invite link copied — share it!", { autoClose: 1800, toastId: "copy" });
+    return true;
   }, [room]);
 
   // The in-game shell owns the whole viewport once play starts (spec §2): it
@@ -473,7 +478,6 @@ export default function App() {
                   onSendChatMessage={sendChatMessage}
                 />
               }
-              feed={<GameFeed engineState={engineState} />}
               overlays={
                 <>
                   {/* These decisions live at the game layer, not inside the
@@ -565,6 +569,7 @@ export default function App() {
                     engineState.phase === "auction" &&
                     engineState.auctionState && (
                       <AuctionPanel
+                        roomState={roomState}
                         auction={engineState.auctionState}
                         players={engineState.players}
                         mySessionId={mySessionId}

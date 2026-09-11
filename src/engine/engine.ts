@@ -18,6 +18,7 @@ import {
   HOUSE_SUPPLY,
   HOTEL_SUPPLY,
   AUCTION_BID_DURATION_MS,
+  AUCTION_MIN_BID_DURATION_MS,
   GENERATOR_COST,
   STOCKPILE_MULTIPLIER,
   EFCC_RICHEST_THRESHOLD,
@@ -1528,6 +1529,7 @@ function applyEndTurn(nextState: GameState, currentPlayer: Player): void {
     nextState.log.push(`${currentPlayer.name} gets another roll for rolling doubles.`);
   } else {
     // Advance player index
+    delete nextState.votekicks[currentPlayer.id];
     let nextIndex = (nextState.currentPlayerIndex + 1) % nextState.players.length;
     while (nextState.players[nextIndex].bankrupt) {
       nextIndex = (nextIndex + 1) % nextState.players.length;
@@ -1657,6 +1659,7 @@ function applyBid(
 
   auction.highestBid = amount;
   auction.highestBidderId = playerId;
+  auction.bidDurationMs = Math.max(AUCTION_MIN_BID_DURATION_MS, auction.bidDurationMs - 1000);
   auction.deadline = null; // the server resets the clock on each new bid
   nextState.log.push(`${bidder.name} bid ₦${amount.toLocaleString("en-NG")}!`);
 
@@ -2373,7 +2376,7 @@ function resolveLanding(
       // Landed on another player's property - pay rent!
       if (tileState.mortgaged) {
         state.log.push(
-          `${player.name} landed on ${tile.name} (owned by ${tileState.ownerId}), but it is mortgaged.`,
+          `${player.name} landed on ${tile.name} (owned by ${state.players.find((p) => p.id === tileState.ownerId)?.name ?? "another player"}), but it is mortgaged. No rent is due.`,
         );
         state.phase = "awaiting-end-turn";
       } else if (isBlackedOut(state, pos, tileState.ownerId)) {
