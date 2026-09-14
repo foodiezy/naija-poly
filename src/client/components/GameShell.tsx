@@ -214,7 +214,24 @@ export default function GameShell({
         title="Actions"
         maxWidth={560}
       >
-        <div className="v2-shell-sheet-panel">{sidebar}</div>
+        <div
+          className="v2-shell-sheet-panel"
+          onClick={(event) => {
+            if ((event.target as HTMLElement).closest(".holdings-card-clickable")) {
+              setActionsOpen(false);
+            }
+          }}
+          onKeyDown={(event) => {
+            if (
+              (event.key === "Enter" || event.key === " ") &&
+              (event.target as HTMLElement).closest(".holdings-card-clickable")
+            ) {
+              setActionsOpen(false);
+            }
+          }}
+        >
+          {sidebar}
+        </div>
       </Sheet>
 
       {!isDesktop && (

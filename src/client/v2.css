@@ -3132,6 +3132,26 @@ body.v2-sh-locked {
   }
 }
 
+/* Phone headers keep the complete room code visible. The crown remains the
+   menu affordance, while the wordmark yields its space to the invite code. */
+@media (max-width: 480px) {
+  .v2-gtop-brand {
+    flex: 0 0 40px;
+  }
+
+  .v2-gtop-brand-copy {
+    display: none;
+  }
+
+  .v2-gtop-center {
+    padding-inline: 0;
+  }
+
+  .v2-gtop-room {
+    padding-inline: 10px;
+  }
+}
+
 /* ── naija-poly.jpg reference match ───────────────────────────────────
    The social preview is a bright tabletop dashboard: cream chrome, quiet
    cards, a dominant board, and dark-green primary controls. Keep this layer

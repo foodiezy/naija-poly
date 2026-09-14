@@ -12,15 +12,16 @@ first playable beta; paid infrastructure is still deferred pending owner sign-of
 
 ## Evidence from this review
 
-| Check | Result |
-| --- | --- |
-| Repository formatting, TypeScript, and colour-token checks | Passed |
-| Unit and engine tests | 229 passed across 18 files |
-| Full deterministic two-player game | Reached bankruptcy and a winner in 384 actions |
-| Production client build | Passed |
-| Existing local server health | Reported healthy |
-| Real-server bot smoke test | Bot joined, took a turn, and returned control |
-| Three-client integration check | 11 passed: joining, private/general chat, game start, bid validation, timed auction resolution and ownership |
+| Check                                                      | Result                                                                                                                                             |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository formatting, TypeScript, and colour-token checks | Passed                                                                                                                                             |
+| Unit and engine tests                                      | 229 passed across 18 files                                                                                                                         |
+| Full deterministic two-player game                         | Reached bankruptcy and a winner in 384 actions                                                                                                     |
+| Production client build                                    | Passed                                                                                                                                             |
+| Existing local server health                               | Reported healthy                                                                                                                                   |
+| Real-server bot smoke test                                 | Bot joined, took a turn, and returned control                                                                                                      |
+| Three-client integration check                             | 11 passed: joining, private/general chat, game start, bid validation, timed auction resolution and ownership                                       |
+| Simulated phone pass (13 September 2026)                   | Two turns each at 360px and 390px with no horizontal overflow; buy, auction, chat, trade, property management, stacked tokens and reload exercised |
 
 The initial test attempt was blocked by Windows directory access; tests and build
 passed when rerun with the required access. Live checks used the server already
@@ -33,6 +34,13 @@ will end and asks players to create a new room afterward. Previously it promised
 the game would return, despite restart recovery still being unimplemented. The
 changed file passed formatting; the notice has not been tested through a live
 restart.
+
+The phone pass found and fixed two mobile blockers: the game header clipped the
+room code, and opening a holding from the Actions sheet placed its deed behind
+that sheet. The phone header now gives the complete invite code priority, and a
+holding opens its deed after closing Actions. Debt rescue and a second human
+client still need direct device testing before the remaining mobile and
+reconnection checks can be signed off.
 
 ## Remaining work, in order
 

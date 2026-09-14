@@ -35,8 +35,8 @@ and finish without the developer explaining what to press.
 
 ## Mobile and connection quality
 
-- [ ] Complete two turns at 360px and 390px widths without horizontal page scroll.
-- [ ] The current action, cash, active player, and board position remain readable.
+- [x] Complete two turns at 360px and 390px widths without horizontal page scroll.
+- [x] The current action, cash, active player, and board position remain readable.
 - [ ] Chat, property management, trades, auctions, and debt decisions fit on screen.
 - [ ] Disconnect and reconnect both host and guest during a game.
 - [ ] Open the sleeping free service from a cold start and show a clear loading state.
