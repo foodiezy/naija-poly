@@ -71,16 +71,16 @@
   --zone-kwara-bar: #0e86c4;
   --zone-kwara-tint: #e3f1fa;
   --zone-kwara-ink: #0a6a9b; /* KW · lightblue */
-  --zone-enugu-bar: #d6336c;
+  --zone-enugu-bar: #ad1457;
   --zone-enugu-tint: #fce8ef;
   --zone-enugu-ink: #a82552; /* EN · pink */
-  --zone-kaduna-bar: #e8590c;
+  --zone-kaduna-bar: #f97316;
   --zone-kaduna-tint: #fdeee2;
   --zone-kaduna-ink: #b34509; /* KD · orange */
-  --zone-edo-bar: #d92d20;
+  --zone-edo-bar: #c1121f;
   --zone-edo-tint: #fde9e7;
   --zone-edo-ink: #a81e14; /* ED · red */
-  --zone-rivers-bar: #c08a00;
+  --zone-rivers-bar: #eab308;
   --zone-rivers-tint: #fdf4d9;
   --zone-rivers-ink: #8a6300; /* RV · yellow */
   --zone-abuja-bar: #2b8a3e;
@@ -91,12 +91,12 @@
   --zone-lagos-ink: #16389f; /* LA · darkblue */
 
   /* ── Player colors (seat order; role never doubles a zone role) ── */
-  --p1: #e11d48;
-  --p2: #7c3aed;
-  --p3: #0891b2;
-  --p4: #ea580c;
-  --p5: #0f766e;
-  --p6: #475569;
+  --p1: #a80735; /* deep crimson */
+  --p2: #5521a8; /* royal violet */
+  --p3: #075985; /* ocean blue */
+  --p4: #9a6700; /* deep gold — distinct from player one's crimson */
+  --p5: #05603a; /* forest green */
+  --p6: #273447; /* charcoal navy */
 
   /* ── Spacing — 4px base ───────────────────────────────────────── */
   --s-05: 2px;

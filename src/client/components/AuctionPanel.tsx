@@ -3,9 +3,14 @@ import { AuctionState, Player, Action } from "../../engine/types";
 import { useDecisionSlot } from "../lib/decisionQueue";
 import { tileChip } from "../lib/zones";
 import Sheet from "./Sheet";
+import { useEffect, useState } from "react";
+import { tokenEmoji } from "../../data/tokens";
+import type { RoomState } from "../../shared/room";
+import { playAuctionPulse } from "../utils/sound";
 
 interface Props {
   auction: AuctionState;
+  roomState: RoomState | null;
   players: Player[];
   mySessionId: string;
   myCash: number;
@@ -28,12 +33,35 @@ const naira = (n: number) => `₦${n.toLocaleString()}`;
  */
 export default function AuctionPanel({
   auction,
+  roomState,
   players,
   mySessionId,
   myCash,
   onSendAction,
 }: Props) {
   const { visible, waiting } = useDecisionSlot("auction", true);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  useEffect(() => {
+    const update = () =>
+      setSecondsLeft(
+        Math.max(0, Math.ceil(((auction.deadline ?? Date.now()) - Date.now()) / 1000)),
+      );
+    update();
+    const timer = setInterval(update, 100);
+    return () => clearInterval(timer);
+  }, [auction.deadline]);
+  useEffect(() => {
+    if (!visible || !auction.deadline) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const pulse = () => {
+      const remaining = auction.deadline! - Date.now();
+      if (remaining <= 0) return;
+      playAuctionPulse(remaining <= 3000);
+      timer = setTimeout(pulse, remaining <= 3000 ? 350 : 800);
+    };
+    pulse();
+    return () => clearTimeout(timer);
+  }, [visible, auction.deadline]);
 
   const iPassed = auction.passedIds.includes(mySessionId);
   const iAmHighest = auction.highestBidderId === mySessionId;
@@ -102,8 +130,36 @@ export default function AuctionPanel({
         </span>
         <span>
           <span className="v2-auc-label">Leading</span>
-          <span className="v2-auc-holder">{holder}</span>
+          <span className="v2-auc-holder">
+            {auction.highestBidderId && (
+              <span aria-hidden="true">
+                {tokenEmoji(roomState?.lobbyPlayers?.get(auction.highestBidderId)?.tokenId)}{" "}
+              </span>
+            )}
+            {holder}
+          </span>
         </span>
+      </div>
+
+      <p className="v2-status" role="timer">
+        {secondsLeft}s · {secondsLeft <= 3 ? "Going… going…" : "Place your bid!"}
+      </p>
+      <div className="v2-auction-players" aria-label="Auction players">
+        {players
+          .filter((p) => auction.participantIds.includes(p.id))
+          .map((p) => (
+            <span key={p.id} className="v2-status">
+              <span aria-hidden="true">
+                {tokenEmoji(roomState?.lobbyPlayers?.get(p.id)?.tokenId)}
+              </span>{" "}
+              {p.name}
+              {auction.passedIds.includes(p.id)
+                ? " · Passed"
+                : auction.highestBidderId === p.id
+                  ? " · Leading"
+                  : " · Bidding"}
+            </span>
+          ))}
       </div>
 
       {iAmHighest && <div className="v2-status v2-status-win">You hold the top bid.</div>}

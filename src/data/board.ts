@@ -163,9 +163,10 @@ export const EFCC_RICHEST_THRESHOLD = 1_000_000;
 export const formatNaira = (n: number): string => "₦" + Math.round(n).toLocaleString("en-NG");
 
 // ----------------------------- Auctions --------------------------------------
-// Auctions are open-outcry, fixed-increment, and timed. Each bid window lasts
-// this long and is reset on every new bid (the server owns the clock).
-export const AUCTION_BID_DURATION_MS = 12_000;
+// Auctions start at eight seconds. Each accepted bid trims one second from
+// the next window down to the minimum; passing never extends the clock.
+export const AUCTION_BID_DURATION_MS = 8_000;
+export const AUCTION_MIN_BID_DURATION_MS = 3_000;
 
 // Derive the set of legal raise amounts from the tile's price so a ₦400k tile
 // auctions as briskly as a ₦60k one. Base step ≈ 10% of price, floored at ₦10k

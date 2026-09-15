@@ -414,3 +414,27 @@ export const playHotel = () => {
 };
 export const playYourTurn = () => play("your-turn", synthYourTurn);
 export const playGameOver = () => play("game-over", synthGameOver);
+
+/** Short auction heartbeat; each pulse observes the existing mute and volume controls. */
+export function playAuctionPulse(urgent: boolean) {
+  if (isMuted || document.hidden) return;
+  try {
+    const ctx = getAudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(urgent ? 660 : 330, ctx.currentTime);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
+    osc.connect(gain);
+    gain.connect(getMasterGain(ctx));
+    osc.onended = () => {
+      osc.disconnect();
+      gain.disconnect();
+    };
+    osc.start();
+    osc.stop(ctx.currentTime + 0.1);
+  } catch {
+    // Audio support must never block a bid.
+  }
+}

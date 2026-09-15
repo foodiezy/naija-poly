@@ -1,5 +1,8 @@
 # Odogwu Empire Playability Gate
 
+Latest repository review and ordered next steps:
+[First playable beta readiness](BETA-READINESS.md) (11 September 2026).
+
 **Current priority:** prove the game is enjoyable and understandable on the free
 public demo before paying for hosting, a database, staging, or a custom domain.
 
@@ -32,8 +35,8 @@ and finish without the developer explaining what to press.
 
 ## Mobile and connection quality
 
-- [ ] Complete two turns at 360px and 390px widths without horizontal page scroll.
-- [ ] The current action, cash, active player, and board position remain readable.
+- [x] Complete two turns at 360px and 390px widths without horizontal page scroll.
+- [x] The current action, cash, active player, and board position remain readable.
 - [ ] Chat, property management, trades, auctions, and debt decisions fit on screen.
 - [ ] Disconnect and reconnect both host and guest during a game.
 - [ ] Open the sleeping free service from a cold start and show a clear loading state.

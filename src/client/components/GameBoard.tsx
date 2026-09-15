@@ -7,6 +7,7 @@ import { RoomState } from "../../shared/room";
 import { zoneOfGroup } from "../lib/zones";
 import { IconHouse, IconHotel } from "./icons";
 import Dice from "./Dice";
+import GameFeed from "./GameFeed";
 
 // Shorter label for the cramped board tile. The ✈/⚡/📡 icon already conveys the
 // type, so drop the redundant "Airport"/"Corporation" suffix; the full name
@@ -173,12 +174,12 @@ export default function GameBoard({
 
   return (
     <div className="monopoly-board">
-      {/* Board centre stays decorative only; gameplay status belongs around the board,
-          not covering the route players need to read. */}
+      {/* Compact dice and live history stay inside the route, leaving tiles clear. */}
       <div className="board-center">
         <div className="board-center-adire" aria-hidden="true" />
         <div className="board-center-skyline" aria-hidden="true" />
         <Dice values={engineState.dice} rolling={diceAnimating} />
+        <GameFeed engineState={engineState} />
       </div>
 
       {/* Render 40 tiles */}
@@ -226,8 +227,17 @@ export default function GameBoard({
           priceLabel = `₦${(tile.amount / 1000).toFixed(0)}k`;
         }
 
-        // Owner emoji
+        // Owner identity. Seat colours are shared with the player roster so
+        // ownership remains readable even when several tokens look similar.
         const ownerEmoji = tileState && tileState.ownerId ? getTokenEmoji(tileState.ownerId) : null;
+        const ownerIndex = tileState?.ownerId
+          ? players.findIndex((player) => player.id === tileState.ownerId)
+          : -1;
+        const ownerName = ownerIndex >= 0 ? players[ownerIndex].name : "Unknown";
+        const ownerVars =
+          ownerIndex >= 0
+            ? ({ "--owner-color": `var(--p${ownerIndex + 1})` } as React.CSSProperties)
+            : {};
         const isMortgaged = tileState && tileState.mortgaged;
 
         const getTileTitle = () => {
@@ -266,6 +276,7 @@ export default function GameBoard({
               gridRow: coords.row,
               cursor: "pointer",
               ...zoneVars,
+              ...ownerVars,
               ...getColorBarPadding(tile.pos, hasColorBar, isCorner),
             }}
             onClick={() => onTileClick?.(tile.pos)}
@@ -312,11 +323,15 @@ export default function GameBoard({
 
             {/* Side tiles use compact names; phone tiles rely on the location
                 ticker and deed sheet instead of squeezing text into the map. */}
-            <span className={`tile-name${hasInlineLandmark ? " tile-name-landmark" : ""}`}>
+            <span
+              className={`tile-name${hasInlineLandmark ? " tile-name-landmark" : ""}${tile.type === "hustle" ? " tile-name-hustle" : ""}`}
+            >
               {hasInlineLandmark && (
                 <span className={`tile-type-icon tile-type-${tile.type}`}>{tileIcon}</span>
               )}
-              <span className="tile-name-full">{boardLabel(tile)}</span>
+              <span className="tile-name-full">
+                {tile.type === "airport" ? (tile.shortName ?? boardLabel(tile)) : boardLabel(tile)}
+              </span>
               <span className="tile-name-short">{tile.shortName ?? boardLabel(tile)}</span>
             </span>
 
@@ -329,8 +344,13 @@ export default function GameBoard({
 
             {/* Owner badge */}
             {ownerEmoji && (
-              <span className="tile-owner-indicator" title={getOwnerTitle()}>
-                {ownerEmoji} {isMortgaged && "🔒"}
+              <span
+                className="tile-owner-indicator"
+                title={getOwnerTitle()}
+                aria-label={`Owned by ${ownerName}${isMortgaged ? ", mortgaged" : ""}`}
+              >
+                <span aria-hidden="true">{ownerEmoji}</span>
+                {isMortgaged && <span aria-hidden="true">🔒</span>}
               </span>
             )}
 

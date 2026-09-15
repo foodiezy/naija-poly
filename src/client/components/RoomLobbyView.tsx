@@ -101,7 +101,7 @@ function Toggle({
 interface RoomLobbyViewProps {
   room: Room;
   roomState: RoomState | null;
-  onCopyRoomCode: () => void;
+  onCopyRoomCode: () => Promise<boolean>;
   onSelectToken: (tokenId: string) => void;
   onAddAI: () => void;
   onKickPlayer: (playerId: string) => void;
@@ -151,6 +151,26 @@ export default function RoomLobbyView({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [copyMessage, setCopyMessage] = useState("");
+  const [copying, setCopying] = useState(false);
+
+  const handleCopyInvite = async () => {
+    if (copying) return;
+    setCopying(true);
+    setCopyMessage("Copying invite link…");
+    try {
+      const copied = await onCopyRoomCode();
+      setCopyMessage(
+        copied
+          ? "Invite link copied — share it with your friends!"
+          : "Couldn't copy the link. Try again or share the room code above.",
+      );
+    } catch {
+      setCopyMessage("Couldn't copy the link. Try again or share the room code above.");
+    } finally {
+      setCopying(false);
+    }
+  };
 
   // Waiting timer: while the room can't start yet (fewer than 2 players), count
   // how long we've been waiting so the host knows to nudge friends. Capped at
@@ -251,7 +271,8 @@ export default function RoomLobbyView({
           <button
             type="button"
             className="v2-code"
-            onClick={onCopyRoomCode}
+            onClick={handleCopyInvite}
+            disabled={copying}
             aria-label={`Room code ${room.roomId} — tap to copy the invite link`}
           >
             <span className="v2-code-num">{room.roomId}</span>
@@ -263,8 +284,13 @@ export default function RoomLobbyView({
           </a>
 
           <div className="v2-two-up">
-            <button type="button" className="v2-btn v2-btn-sec" onClick={onCopyRoomCode}>
-              Copy link
+            <button
+              type="button"
+              className="v2-btn v2-btn-sec"
+              onClick={handleCopyInvite}
+              disabled={copying}
+            >
+              {copying ? "Copying…" : "Copy link"}
             </button>
             {canNativeShare && (
               <button type="button" className="v2-btn v2-btn-sec" onClick={handleNativeShare}>
@@ -272,6 +298,10 @@ export default function RoomLobbyView({
               </button>
             )}
           </div>
+
+          <p className="v2-share-note" role="status" aria-live="polite" aria-atomic="true">
+            {copyMessage}
+          </p>
 
           {isHost && (
             <p className="v2-share-note">Once the game starts the room locks — invite first.</p>
@@ -580,8 +610,9 @@ export default function RoomLobbyView({
             <button
               type="button"
               className="v2-menu-item"
+              disabled={copying}
               onClick={() => {
-                onCopyRoomCode();
+                void handleCopyInvite();
                 setMenuOpen(false);
               }}
             >
